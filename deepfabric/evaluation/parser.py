@@ -113,15 +113,20 @@ class GroundTruthParser:
         expected_tools: list[ExpectedToolCall] = []
         tool_schema: ToolDefinition | None = None
 
-        if conversation.tool_context is not None and conversation.tool_context.executions:
+        executions = (
+            conversation.tool_context.executions
+            if conversation.tool_context is not None and conversation.tool_context.executions
+            else []
+        )
+        if executions:
             # Get first tool execution for backwards compatibility
-            first_execution = conversation.tool_context.executions[0]
+            first_execution = executions[0]
             expected_tool = first_execution.function_name
             expected_parameters = first_execution.parsed_arguments
 
             # Extract ALL tool executions and deduplicate
             seen_signatures: set[str] = set()
-            for execution in conversation.tool_context.executions:
+            for execution in executions:
                 tool_call = ExpectedToolCall(
                     tool_name=execution.function_name,
                     parameters=execution.parsed_arguments,

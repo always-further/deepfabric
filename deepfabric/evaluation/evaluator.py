@@ -9,6 +9,7 @@ from datasets import Dataset as HFDataset
 from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from tqdm.auto import tqdm
 
 from ..metrics import trace
 from ..schemas import ToolDefinition
@@ -327,7 +328,7 @@ class Evaluator:
             role = msg.get("role")
 
             # Collect tool calls from assistant messages
-            if role == "assistant" and "tool_calls" in msg:
+            if role == "assistant" and "tool_calls" in msg and msg["tool_calls"]:
                 for tc in msg["tool_calls"]:
                     tc_id = tc.get("id")
                     func = tc.get("function", {})
@@ -605,8 +606,9 @@ class Evaluator:
             SampleEvaluation with computed metrics
         """
         # Build sets of tool names for comparison
-        expected_tool_names = {tc.tool_name for tc in ground_truth.expected_tools}
-        predicted_tool_names = {tc.get("name", "") for tc in predicted_tool_calls}
+        expected_tools_list = ground_truth.expected_tools or []
+        expected_tool_names = {tc.tool_name for tc in expected_tools_list}
+        predicted_tool_names = {tc.get("name", "") for tc in (predicted_tool_calls or [])}
 
         # Tool set coverage: what fraction of expected tools were called?
         if expected_tool_names:
@@ -674,12 +676,12 @@ class Evaluator:
         """
         # Build lookup of expected params by tool name
         expected_params_by_tool: dict[str, set[str]] = {}
-        for tc in expected_tools:
+        for tc in (expected_tools or []):
             if tc.tool_name not in expected_params_by_tool:
                 expected_params_by_tool[tc.tool_name] = set(tc.parameters.keys())
 
         # Check each predicted tool call
-        for pred_call in predicted_tool_calls:
+        for pred_call in (predicted_tool_calls or []):
             tool_name = pred_call.get("name", "")
             pred_args = pred_call.get("arguments", {})
 
@@ -765,25 +767,12 @@ class Evaluator:
         console.print("[bold blue]Running evaluation...[/bold blue]")
         evaluations = []
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task(
-                f"Evaluating {len(samples)} samples...",
-                total=len(samples),
-            )
+        for idx, sample in tqdm(enumerate(samples), total=len(samples), desc="Evaluating"):
+            eval_result = self.evaluate_sample(sample, idx)
+            evaluations.append(eval_result)
 
-            for idx, sample in enumerate(samples):
-                progress.update(task, description=f"Evaluating sample {idx + 1}/{len(samples)}...")
-                eval_result = self.evaluate_sample(sample, idx)
-                evaluations.append(eval_result)
-
-                # Stream sample to reporters (for cloud real-time tracking)
-                self.reporter.report_sample(eval_result)
-
-                progress.update(task, advance=1)
+            # Stream sample to reporters (for cloud real-time tracking)
+            self.reporter.report_sample(eval_result)
 
         console.print("[bold green]Evaluation complete![/bold green]")
 

@@ -1,17 +1,15 @@
 import json
 import logging
-import re
 
-from contextlib import suppress
 from typing import Any
 
 import torch
 
-from pydantic import BaseModel, ValidationError, field_validator
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from ...schemas import ToolDefinition
 from ..inference import InferenceBackend, InferenceConfig, ModelResponse
+from .tool_call_parsers import ToolCallParser, get_parser
 
 # Mistral-family architectures that require fix_mistral_regex=True
 MISTRAL_ARCHITECTURES = frozenset(
@@ -25,77 +23,6 @@ MISTRAL_ARCHITECTURES = frozenset(
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _extract_json_object(text: str, start_pos: int = 0) -> str | None:
-    """Extract a complete JSON object from text, handling nested braces.
-
-    Args:
-        text: Text containing JSON
-        start_pos: Starting position to search from
-
-    Returns:
-        Extracted JSON string or None if not found
-    """
-    # Find first opening brace
-    start = text.find("{", start_pos)
-    if start == -1:
-        return None
-
-    # Track brace depth to find matching closing brace
-    depth = 0
-    in_string = False
-    escape = False
-
-    for i in range(start, len(text)):
-        char = text[i]
-
-        # Handle string escaping
-        if escape:
-            escape = False
-            continue
-        if char == "\\":
-            escape = True
-            continue
-
-        # Track if we're inside a string
-        if char == '"':
-            in_string = not in_string
-            continue
-
-        # Only count braces outside of strings
-        if not in_string:
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    # Found matching closing brace
-                    return text[start : i + 1]
-
-    return None
-
-
-class ToolCall(BaseModel):
-    """Parsed tool call in OpenAI format."""
-
-    name: str
-    arguments: dict[str, Any] | str
-
-    @field_validator("arguments", mode="before")
-    @classmethod
-    def parse_arguments_string(cls, v: Any) -> dict[str, Any]:
-        """Parse arguments if they're a JSON string.
-
-        Raises:
-            ValueError: If arguments is a string but not valid JSON
-        """
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON in arguments field: {e}") from e
-        return v
 
 
 class TransformersBackend(InferenceBackend):
@@ -131,14 +58,36 @@ class TransformersBackend(InferenceBackend):
             dtype = torch.float32
             device_map = None
 
+        # Detect model architecture for parser selection and tokenizer config
+        self._architectures: list[str] = []
+        tokenizer_kwargs: dict[str, Any] = {}
+        try:
+            model_config = AutoConfig.from_pretrained(config.model_path)  # nosec
+            self._architectures = getattr(model_config, "architectures", []) or []
+            if any(arch in MISTRAL_ARCHITECTURES for arch in self._architectures):
+                tokenizer_kwargs["fix_mistral_regex"] = True
+                logger.debug("Detected Mistral architecture, enabling fix_mistral_regex")
+        except Exception as e:
+            logger.warning("Could not detect model architecture: %s", e)
+
+        # Initialize tool call parser based on detected architecture
+        self._tool_call_parser: ToolCallParser = get_parser(self._architectures)
+        logger.info(
+            "Using %s for model architectures: %s",
+            type(self._tool_call_parser).__name__,
+            self._architectures or ["unknown"],
+        )
+
         self.loaded_with_unsloth = False
-        # Load with Unsloth if requested and adapter is provided
-        if config.use_unsloth and config.adapter_path:
+        # Load with Unsloth if requested
+        if config.use_unsloth:
             try:
                 from unsloth import FastLanguageModel  # type: ignore # noqa: PLC0415
 
+                # Load from adapter path if provided, otherwise from model_path
+                load_path = config.adapter_path if config.adapter_path else config.model_path
                 self.model, self.tokenizer = FastLanguageModel.from_pretrained(
-                    model_name=config.adapter_path,
+                    model_name=load_path,
                     max_seq_length=config.max_seq_length,
                     dtype=dtype,
                     load_in_4bit=config.load_in_4bit,
@@ -146,22 +95,12 @@ class TransformersBackend(InferenceBackend):
                 FastLanguageModel.for_inference(self.model)
                 self.loaded_with_unsloth = True
             except ImportError:
-                logger.warning("Unsloth not installed, falling back to standard PEFT")
+                logger.warning("Unsloth not installed, falling back to standard transformers")
             except Exception as e:
-                logger.warning("Unsloth loading failed (%s), falling back to standard PEFT", e)
+                logger.warning("Unsloth loading failed (%s), falling back to standard transformers", e)
 
         # Standard transformers/PEFT loading
         if not self.loaded_with_unsloth:
-            # Check if model is Mistral architecture to apply regex fix
-            tokenizer_kwargs: dict[str, Any] = {}
-            try:
-                model_config = AutoConfig.from_pretrained(config.model_path)  #  nosec
-                architectures = getattr(model_config, "architectures", []) or []
-                if any(arch in MISTRAL_ARCHITECTURES for arch in architectures):
-                    tokenizer_kwargs["fix_mistral_regex"] = True
-                    logger.debug("Detected Mistral architecture, enabling fix_mistral_regex")
-            except Exception as e:
-                logger.warning("Could not detect model architecture: %s", e)
 
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec
                 config.model_path, **tokenizer_kwargs
@@ -183,11 +122,12 @@ class TransformersBackend(InferenceBackend):
             if self.device in ("cpu", "mps"):
                 self.model.to(self.device)  # type: ignore[arg-type]
 
-            # Enable optimizations for faster inference
-            # Compile model for better performance (PyTorch 2.0+)
-            with suppress(Exception):
-                # Use reduce-overhead mode for better latency on smaller batches
-                self.model = torch.compile(self.model, mode="reduce-overhead")  # type: ignore[assignment]
+            # Note: torch.compile disabled - causes very slow first inference
+            # due to CUDA graph compilation overhead. For evaluation workloads
+            # with many short inferences, the compilation cost isn't amortized.
+            # Uncomment for long-running inference servers:
+            # with suppress(Exception):
+            #     self.model = torch.compile(self.model, mode="reduce-overhead")
 
         # Set padding token if not set
         if self.tokenizer.pad_token is None:
@@ -238,7 +178,7 @@ class TransformersBackend(InferenceBackend):
         generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
 
         # Parse tool calls if present
-        tool_calls = self._parse_tool_calls(generated_text) if tools else []
+        tool_calls = self._tool_call_parser.parse(generated_text) if tools else []
         tool_call = tool_calls[0] if tool_calls else None
 
         return ModelResponse(
@@ -297,7 +237,7 @@ class TransformersBackend(InferenceBackend):
             generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
 
             # Parse tool calls if present
-            tool_calls = self._parse_tool_calls(generated_text) if tools else []
+            tool_calls = self._tool_call_parser.parse(generated_text) if tools else []
             tool_call = tool_calls[0] if tool_calls else None
 
             responses.append(
@@ -383,85 +323,3 @@ class TransformersBackend(InferenceBackend):
 
         prompt_parts.append("ASSISTANT:")
         return "\n\n".join(prompt_parts)
-
-    def _parse_tool_call(self, text: str) -> dict | None:
-        """Parse tool call from generated text.
-
-        Supports OpenAI-standard tool call formats:
-        - JSON: {"name": "func", "arguments": {...}}
-        - XML: <tool_call>{"name": "func", "arguments": {...}}</tool_call>
-
-        Args:
-            text: Generated text
-
-        Returns:
-            Dict with 'name' and 'arguments' if tool call found, None otherwise
-        """
-        # Try XML format first (common in chat templates)
-        xml_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
-        if xml_match:
-            try:
-                data = json.loads(xml_match.group(1).strip())
-                tool_call = ToolCall.model_validate(data)
-                return tool_call.model_dump()
-            except (json.JSONDecodeError, ValidationError):
-                pass  # Expected parsing or validation error
-
-        # Try JSON format - extract complete JSON object with proper nesting
-        json_str = _extract_json_object(text)
-        if json_str:
-            try:
-                data = json.loads(json_str)
-                # Verify it has required fields before validating
-                if "name" in data and "arguments" in data:
-                    tool_call = ToolCall.model_validate(data)
-                    return tool_call.model_dump()
-            except (json.JSONDecodeError, ValidationError):
-                pass  # Expected parsing or validation error
-
-        return None
-
-    def _parse_tool_calls(self, text: str) -> list[dict]:
-        """Parse all tool calls from generated text.
-
-        Supports multiple tool calls in the same response:
-        - Multiple XML: <tool_call>...</tool_call><tool_call>...</tool_call>
-        - Multiple JSON objects
-
-        Args:
-            text: Generated text
-
-        Returns:
-            List of dicts with 'name' and 'arguments', empty if none found
-        """
-        tool_calls = []
-
-        # Find all XML format tool calls
-        xml_matches = re.findall(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
-        for match in xml_matches:
-            try:
-                data = json.loads(match.strip())
-                tool_call = ToolCall.model_validate(data)
-                tool_calls.append(tool_call.model_dump())
-            except (json.JSONDecodeError, ValidationError):
-                pass  # Expected parsing or validation error
-
-        # If no XML matches, try JSON format
-        if not tool_calls:
-            # Find all JSON objects that look like tool calls
-            pos = 0
-            while pos < len(text):
-                json_str = _extract_json_object(text, pos)
-                if json_str is None:
-                    break
-                try:
-                    data = json.loads(json_str)
-                    if "name" in data and "arguments" in data:
-                        tool_call = ToolCall.model_validate(data)
-                        tool_calls.append(tool_call.model_dump())
-                except (json.JSONDecodeError, ValidationError):
-                    pass  # Expected parsing or validation error
-                # Move past this JSON object
-                pos = text.find(json_str, pos) + len(json_str)
-
-        return tool_calls
