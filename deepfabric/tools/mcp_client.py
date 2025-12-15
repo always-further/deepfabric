@@ -541,12 +541,11 @@ def save_tools_to_file(
             json.dump(data, f, indent=2)
 
 
-class SpinLoadResult:
+class SpinLoadResult(BaseModel):
     """Result from loading tools into Spin."""
 
-    def __init__(self, loaded: int, tool_names: list[str]):
-        self.loaded = loaded
-        self.tool_names = tool_names
+    loaded: int
+    tool_names: list[str]
 
 
 def push_tools_to_spin(
