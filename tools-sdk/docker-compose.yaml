@@ -1,0 +1,43 @@
+# =============================================================================
+# DeepFabric Tools-SDK Docker Compose
+# =============================================================================
+#
+# Quick Start:
+#   docker compose up -d
+#
+# With GitHub integration:
+#   GITHUB_TOKEN=ghp_xxx docker compose up -d
+#
+# Development mode (rebuild on changes):
+#   docker compose up --build
+#
+# =============================================================================
+
+services:
+  spin-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deepfabric/tools-sdk:latest
+    container_name: deepfabric-spin
+    ports:
+      - "${SPIN_PORT:-3000}:3000"
+    environment:
+      # GitHub integration (optional)
+      - SPIN_VARIABLE_GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - SPIN_VARIABLE_ALLOWED_REPOS=${ALLOWED_REPOS:-}
+      - SPIN_VARIABLE_ALLOW_WRITES=${ALLOW_WRITES:-false}
+    volumes:
+      # Persist KV store data between restarts
+      - spin-data:/app/.spin
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/vfs/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  spin-data:
+    driver: local

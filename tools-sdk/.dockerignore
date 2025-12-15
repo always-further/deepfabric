@@ -1,0 +1,37 @@
+# Build artifacts (we rebuild in container)
+**/target/
+**/*.wasm
+
+# Spin runtime data
+.spin/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in runtime)
+*.md
+!README.md
+
+# Examples (can be mounted separately if needed)
+examples/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Logs
+*.log
