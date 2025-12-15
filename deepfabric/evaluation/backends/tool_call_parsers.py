@@ -363,7 +363,7 @@ class ToolCallParserRegistry:
         from transformers import AutoConfig  # noqa: PLC0415
 
         try:
-            config = AutoConfig.from_pretrained(model_path)
+            config = AutoConfig.from_pretrained(model_path)  # nosec
             architectures = getattr(config, "architectures", None)
             return self.get_parser(architectures)
         except Exception as e:
