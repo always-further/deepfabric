@@ -544,8 +544,8 @@ def save_tools_to_file(
 class SpinLoadResult(BaseModel):
     """Result from loading tools into Spin."""
 
-    loaded: int
-    tool_names: list[str]
+    loaded: int = Field(description="The number of tools loaded into Spin.")
+    tool_names: list[str] = Field(alias="tools", description="The names of the tools loaded into Spin.")
 
 
 def push_tools_to_spin(
@@ -587,7 +587,7 @@ def push_tools_to_spin(
             data = response.json()
             return SpinLoadResult(
                 loaded=data.get("loaded", 0),
-                tool_names=data.get("tools", []),
+                tools=data.get("tools", []),
             )
 
     except httpx.HTTPStatusError as e:
