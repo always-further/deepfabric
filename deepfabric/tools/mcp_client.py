@@ -10,7 +10,7 @@ import logging
 import os
 import selectors
 import shlex
-import subprocess
+import subprocess  # nosec
 
 from typing import Any, Literal
 
@@ -158,6 +158,9 @@ class StdioMCPClient:
 
     def _read_line_with_timeout(self, timeout: float) -> str:
         """Read a line from stdout with timeout handling."""
+        if self.process is None or self.process.stdout is None:
+            raise ConfigurationError("MCP server process not started")
+
         sel = selectors.DefaultSelector()
         try:
             sel.register(self.process.stdout, selectors.EVENT_READ)
@@ -184,7 +187,7 @@ class StdioMCPClient:
     def _handle_empty_line(self) -> None:
         """Handle case where stdout returns empty line."""
         # Check if process has terminated
-        if self.process.poll() is not None:
+        if self.process is not None and self.process.poll() is not None:
             stderr_output = ""
             if self.process.stderr:
                 stderr_output = self.process.stderr.read()
@@ -205,7 +208,12 @@ class StdioMCPClient:
             raise ConfigurationError(f"Invalid command: {e}") from e
 
         try:
-            self.process = subprocess.Popen(  # noqa: S603
+            # Security note: Command execution is intentional here - users explicitly
+            # provide MCP server commands via --command flag. We use shlex.split() to
+            # safely parse the command string and pass a list to Popen (no shell=True),
+            # which prevents shell injection. This is a local CLI tool where the user
+            # is trusted to run commands on their own machine.
+            self.process = subprocess.Popen(  # nosec  # noqa: S603
                 args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -414,6 +422,42 @@ class HTTPMCPClient:
         self.stop()
 
 
+def _create_mcp_client(
+    transport: Literal["stdio", "http"],
+    command: str | None = None,
+    endpoint: str | None = None,
+    env: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
+    timeout: float = 30.0,
+) -> StdioMCPClient | HTTPMCPClient:
+    """Create an MCP client based on transport type.
+
+    Args:
+        transport: Transport type - "stdio" or "http"
+        command: Shell command to launch MCP server (required for stdio)
+        endpoint: HTTP endpoint URL (required for http)
+        env: Environment variables for stdio subprocess
+        headers: HTTP headers for authentication etc.
+        timeout: Request timeout in seconds
+
+    Returns:
+        Configured MCP client (StdioMCPClient or HTTPMCPClient)
+
+    Raises:
+        ConfigurationError: If required parameters are missing for the transport type
+    """
+    if transport == "stdio":
+        if not command:
+            raise ConfigurationError("command is required for stdio transport")
+        return StdioMCPClient(command, env=env)
+    if transport == "http":
+        if not endpoint:
+            raise ConfigurationError("endpoint is required for http transport")
+        return HTTPMCPClient(endpoint, headers=headers, timeout=timeout)
+
+    raise ConfigurationError(f"Unknown transport: {transport}")
+
+
 def fetch_tools_from_mcp(
     transport: Literal["stdio", "http"],
     command: str | None = None,
@@ -438,16 +482,14 @@ def fetch_tools_from_mcp(
     Raises:
         ConfigurationError: If transport params are invalid or server communication fails
     """
-    if transport == "stdio":
-        if not command:
-            raise ConfigurationError("command is required for stdio transport")
-        client: StdioMCPClient | HTTPMCPClient = StdioMCPClient(command, env=env)
-    elif transport == "http":
-        if not endpoint:
-            raise ConfigurationError("endpoint is required for http transport")
-        client = HTTPMCPClient(endpoint, headers=headers, timeout=timeout)
-    else:
-        raise ConfigurationError(f"Unknown transport: {transport}")
+    client = _create_mcp_client(
+        transport=transport,
+        command=command,
+        endpoint=endpoint,
+        env=env,
+        headers=headers,
+        timeout=timeout,
+    )
 
     with client:
         # Initialize the connection
@@ -554,7 +596,7 @@ def push_tools_to_spin(
         try:
             error_data = e.response.json()
             error_detail = error_data.get("error", "")
-        except Exception:
+        except json.JSONDecodeError:
             error_detail = e.response.text
         raise ConfigurationError(
             f"Spin server returned error {e.response.status_code}: {error_detail}"
@@ -596,16 +638,14 @@ def fetch_and_push_to_spin(
     Raises:
         ConfigurationError: If either MCP or Spin communication fails
     """
-    if transport == "stdio":
-        if not command:
-            raise ConfigurationError("command is required for stdio transport")
-        client: StdioMCPClient | HTTPMCPClient = StdioMCPClient(command, env=env)
-    elif transport == "http":
-        if not endpoint:
-            raise ConfigurationError("endpoint is required for http transport")
-        client = HTTPMCPClient(endpoint, headers=headers, timeout=timeout)
-    else:
-        raise ConfigurationError(f"Unknown transport: {transport}")
+    client = _create_mcp_client(
+        transport=transport,
+        command=command,
+        endpoint=endpoint,
+        env=env,
+        headers=headers,
+        timeout=timeout,
+    )
 
     with client:
         # Initialize the connection

@@ -1202,23 +1202,19 @@ def import_tools(
         tui.error("At least one of --output or --spin is required")
         sys.exit(1)
 
-    # Parse environment variables
-    env_dict: dict[str, str] = {}
-    for e in env:
-        if "=" not in e:
-            tui.error(f"Invalid env format: {e} (expected KEY=VALUE)")
-            sys.exit(1)
-        key, value = e.split("=", 1)
-        env_dict[key] = value
+    def parse_key_value_pairs(pairs: tuple[str, ...], pair_type: str) -> dict[str, str]:
+        """Parse a tuple of 'KEY=VALUE' strings into a dictionary."""
+        result: dict[str, str] = {}
+        for p in pairs:
+            if "=" not in p:
+                tui.error(f"Invalid {pair_type} format: {p} (expected KEY=VALUE)")
+                sys.exit(1)
+            key, value = p.split("=", 1)
+            result[key] = value
+        return result
 
-    # Parse headers
-    header_dict: dict[str, str] = {}
-    for h in header:
-        if "=" not in h:
-            tui.error(f"Invalid header format: {h} (expected KEY=VALUE)")
-            sys.exit(1)
-        key, value = h.split("=", 1)
-        header_dict[key] = value
+    env_dict = parse_key_value_pairs(env, "env")
+    header_dict = parse_key_value_pairs(header, "header")
 
     # Validate transport-specific options
     if transport == "stdio" and not command:
