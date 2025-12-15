@@ -1,0 +1,542 @@
+{
+  "description": "Comprehensive GitHub mock data for testing tool execution",
+  "version": "1.0.0",
+  "mockResponses": {
+    "get_file_contents": {
+      "defaultResponse": {
+        "path": "{{path}}",
+        "content": "import { useState, useEffect } from 'react';\nimport { ApiClient } from '../services/api';\n\nexport interface DataItem {\n  id: string;\n  name: string;\n  createdAt: Date;\n  status: 'active' | 'inactive' | 'pending';\n}\n\nexport function useDataFetcher<T>(endpoint: string) {\n  const [data, setData] = useState<T | null>(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<Error | null>(null);\n\n  useEffect(() => {\n    const fetchData = async () => {\n      try {\n        setLoading(true);\n        const response = await ApiClient.get<T>(endpoint);\n        setData(response.data);\n      } catch (err) {\n        setError(err instanceof Error ? err : new Error('Unknown error'));\n      } finally {\n        setLoading(false);\n      }\n    };\n\n    fetchData();\n  }, [endpoint]);\n\n  return { data, loading, error, refetch: () => fetchData() };\n}",
+        "encoding": "utf-8",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "size": 892,
+        "type": "file",
+        "html_url": "https://github.com/{{owner}}/{{repo}}/blob/main/{{path}}"
+      }
+    },
+    "read_file": {
+      "defaultResponse": {
+        "path": "{{path}}",
+        "content": "from typing import Optional, List\nfrom dataclasses import dataclass\nfrom datetime import datetime\n\n@dataclass\nclass Config:\n    debug: bool = False\n    max_retries: int = 3\n    timeout: float = 30.0\n    api_base_url: str = \"https://api.example.com\"\n\n    @classmethod\n    def from_env(cls) -> 'Config':\n        import os\n        return cls(\n            debug=os.getenv('DEBUG', 'false').lower() == 'true',\n            max_retries=int(os.getenv('MAX_RETRIES', '3')),\n            timeout=float(os.getenv('TIMEOUT', '30.0')),\n            api_base_url=os.getenv('API_BASE_URL', 'https://api.example.com')\n        )\n\ndef process_items(items: List[dict], config: Optional[Config] = None) -> List[dict]:\n    if config is None:\n        config = Config()\n    \n    results = []\n    for item in items:\n        if item.get('status') == 'active':\n            results.append({\n                **item,\n                'processed_at': datetime.utcnow().isoformat(),\n                'retry_count': 0\n            })\n    return results",
+        "encoding": "utf-8"
+      }
+    },
+    "write_file": {
+      "defaultResponse": {
+        "success": true,
+        "path": "{{path}}",
+        "sha": "new123sha456",
+        "message": "File written successfully",
+        "commit": {
+          "sha": "commit789abc",
+          "message": "Update {{path}}"
+        }
+      }
+    },
+    "list_files": {
+      "defaultResponse": {
+        "files": [
+          {"name": "README.md", "type": "file", "size": 2048, "sha": "readme123"},
+          {"name": "package.json", "type": "file", "size": 1256, "sha": "pkg456"},
+          {"name": "tsconfig.json", "type": "file", "size": 489, "sha": "ts789"},
+          {"name": ".gitignore", "type": "file", "size": 312, "sha": "git012"},
+          {"name": "Dockerfile", "type": "file", "size": 567, "sha": "docker345"},
+          {"name": "docker-compose.yml", "type": "file", "size": 823, "sha": "compose678"},
+          {"name": "src", "type": "directory"},
+          {"name": "tests", "type": "directory"},
+          {"name": "docs", "type": "directory"},
+          {"name": ".github", "type": "directory"}
+        ]
+      }
+    },
+    "list_issues": {
+      "defaultResponse": {
+        "totalCount": 5,
+        "pageInfo": {
+          "hasNextPage": false,
+          "hasPreviousPage": false,
+          "startCursor": "Y3Vyc29yOnYyOpHOAAECDw==",
+          "endCursor": "Y3Vyc29yOnYyOpHOAAEKEA=="
+        },
+        "nodes": [
+          {"id": "I_001", "number": 342, "title": "Authentication fails silently when session expires", "state": "OPEN", "author": {"login": "jane-developer"}, "labels": {"nodes": [{"name": "bug", "color": "d73a4a"}]}},
+          {"id": "I_002", "number": 341, "title": "Add dark mode support", "state": "OPEN", "author": {"login": "product-manager"}, "labels": {"nodes": [{"name": "enhancement", "color": "a2eeef"}]}},
+          {"id": "I_003", "number": 340, "title": "Performance regression in dashboard loading", "state": "OPEN", "author": {"login": "performance-team"}, "labels": {"nodes": [{"name": "bug", "color": "d73a4a"}, {"name": "performance", "color": "fbca04"}]}},
+          {"id": "I_004", "number": 339, "title": "Update React to version 19", "state": "CLOSED", "author": {"login": "tech-lead"}, "labels": {"nodes": [{"name": "dependencies", "color": "0366d6"}]}},
+          {"id": "I_005", "number": 338, "title": "API rate limiting not working correctly", "state": "OPEN", "author": {"login": "security-team"}, "labels": {"nodes": [{"name": "bug", "color": "d73a4a"}, {"name": "security", "color": "ee0701"}]}}
+        ]
+      }
+    },
+    "issue_read": {
+      "defaultResponse": {
+        "id": "I_kwDOAAMBNM5{{issue_number}}",
+        "number": "{{issue_number}}",
+        "title": "Issue #{{issue_number}}",
+        "state": "OPEN",
+        "body": "## Bug Description\n\nThe application crashes when processing large datasets (>10k records) due to memory exhaustion.\n\n## Steps to Reproduce\n\n1. Load a dataset with more than 10,000 records\n2. Click the 'Process All' button\n3. Observe the application becomes unresponsive\n4. Check browser console for OOM errors\n\n## Expected Behavior\n\nThe application should process large datasets efficiently using pagination or streaming.\n\n## Actual Behavior\n\nMemory usage spikes to 2GB+ and the tab crashes.\n\n## Environment\n\n- Browser: Chrome 120.0.6099.129\n- OS: macOS 14.2.1\n- Node: v20.10.0\n- App Version: 2.3.1\n\n## Possible Solution\n\nImplement virtual scrolling and batch processing with Web Workers.",
+        "author": {
+          "login": "test-user",
+          "id": 12345
+        },
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-01-20T14:45:00Z",
+        "labels": {
+          "nodes": [{"name": "bug", "color": "d73a4a"}, {"name": "memory", "color": "c5def5"}]
+        },
+        "comments": {
+          "totalCount": 3,
+          "nodes": [
+            {"author": {"login": "senior-dev"}, "body": "I can reproduce this. Profiling shows the issue is in `processDataBatch()` - it's loading everything into memory at once.", "createdAt": "2024-01-16T09:00:00Z"},
+            {"author": {"login": "tech-lead"}, "body": "We should implement chunked processing. I'll assign this to the performance sprint.", "createdAt": "2024-01-17T14:30:00Z"},
+            {"author": {"login": "test-user"}, "body": "Thanks for looking into this! Let me know if you need any additional info from my setup.", "createdAt": "2024-01-19T11:00:00Z"}
+          ]
+        }
+      }
+    },
+    "list_pull_requests": {
+      "defaultResponse": [
+        {"id": "PR_001", "number": 345, "title": "Fix silent authentication failure on session expiry", "state": "open", "user": {"login": "bob-engineer"}, "head": {"ref": "fix/auth-silent-failure"}, "base": {"ref": "main"}, "draft": false},
+        {"id": "PR_002", "number": 344, "title": "Add dark mode support", "state": "open", "user": {"login": "frontend-dev"}, "head": {"ref": "feature/dark-mode"}, "base": {"ref": "main"}, "draft": true},
+        {"id": "PR_003", "number": 343, "title": "Optimize dashboard API calls", "state": "open", "user": {"login": "senior-dev"}, "head": {"ref": "perf/dashboard-optimization"}, "base": {"ref": "main"}, "draft": false},
+        {"id": "PR_004", "number": 340, "title": "Update dependencies to latest versions", "state": "closed", "merged": true, "user": {"login": "dependabot[bot]"}, "head": {"ref": "dependabot/npm"}, "base": {"ref": "main"}, "draft": false}
+      ]
+    },
+    "pull_request_read": {
+      "defaultResponse": {
+        "id": "PR_kwDOAAMBNM5{{pullNumber}}",
+        "number": "{{pullNumber}}",
+        "title": "Pull Request #{{pullNumber}}",
+        "state": "open",
+        "body": "## Summary\n\nThis PR implements request batching to reduce API calls by 60%.\n\n## Changes\n\n- Added `RequestBatcher` class with configurable batch size and delay\n- Implemented request deduplication using content-based hashing\n- Added retry logic with exponential backoff\n- Updated dashboard components to use batched requests\n\n## Performance Impact\n\n| Metric | Before | After | Improvement |\n|--------|--------|-------|-------------|\n| API calls/page | 45 | 12 | -73% |\n| Load time | 2.3s | 0.8s | -65% |\n| Memory usage | 128MB | 95MB | -26% |\n\n## Testing\n\n- [x] Unit tests for RequestBatcher\n- [x] Integration tests for dashboard\n- [x] Load testing with 1000 concurrent users\n- [x] Memory leak testing over 24h\n\n## Screenshots\n\n![Performance comparison](./docs/perf-comparison.png)",
+        "head": {
+          "ref": "feature-branch",
+          "sha": "abc123def456"
+        },
+        "base": {
+          "ref": "main",
+          "sha": "def456abc789"
+        },
+        "author": {
+          "login": "contributor"
+        },
+        "createdAt": "2024-01-10T09:00:00Z",
+        "updatedAt": "2024-01-18T16:30:00Z",
+        "mergeable": true,
+        "additions": 347,
+        "deletions": 89,
+        "changedFiles": 12,
+        "commits": {
+          "totalCount": 5,
+          "nodes": [
+            {"sha": "abc123", "message": "Add RequestBatcher class", "author": {"name": "contributor"}},
+            {"sha": "def456", "message": "Implement request deduplication", "author": {"name": "contributor"}},
+            {"sha": "ghi789", "message": "Add retry logic with exponential backoff", "author": {"name": "contributor"}},
+            {"sha": "jkl012", "message": "Update dashboard to use batching", "author": {"name": "contributor"}},
+            {"sha": "mno345", "message": "Add comprehensive tests", "author": {"name": "contributor"}}
+          ]
+        },
+        "files": {
+          "nodes": [
+            {"path": "src/utils/RequestBatcher.ts", "additions": 156, "deletions": 0},
+            {"path": "src/hooks/useBatchedQuery.ts", "additions": 78, "deletions": 0},
+            {"path": "src/components/Dashboard.tsx", "additions": 45, "deletions": 67},
+            {"path": "tests/RequestBatcher.test.ts", "additions": 68, "deletions": 22}
+          ]
+        }
+      }
+    },
+    "search_repositories": {
+      "defaultResponse": {
+        "total_count": 3,
+        "incomplete_results": false,
+        "items": [
+          {"id": 10001, "name": "web-platform", "full_name": "acme-corp/web-platform", "description": "Modern web application with React and TypeScript", "html_url": "https://github.com/acme-corp/web-platform", "stargazers_count": 245, "language": "TypeScript", "topics": ["react", "typescript", "nextjs"]},
+          {"id": 10002, "name": "rust-cli-utils", "full_name": "opensource-tools/rust-cli-utils", "description": "High-performance CLI utilities in Rust", "html_url": "https://github.com/opensource-tools/rust-cli-utils", "stargazers_count": 890, "language": "Rust", "topics": ["cli", "rust", "utilities"]},
+          {"id": 10003, "name": "ml-pipeline", "full_name": "data-science-hub/ml-pipeline", "description": "End-to-end ML pipeline framework", "html_url": "https://github.com/data-science-hub/ml-pipeline", "stargazers_count": 1250, "language": "Python", "topics": ["machine-learning", "python", "scikit-learn"]}
+        ]
+      }
+    },
+    "search_issues": {
+      "defaultResponse": {
+        "total_count": 8,
+        "incomplete_results": false,
+        "items": [
+          {"id": 1001, "number": 342, "title": "Authentication fails silently when session expires", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "jane-developer"}, "labels": [{"name": "bug"}]},
+          {"id": 1002, "number": 341, "title": "Add dark mode support", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "product-manager"}, "labels": [{"name": "enhancement"}]},
+          {"id": 1003, "number": 340, "title": "Performance regression in dashboard loading", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "performance-team"}, "labels": [{"name": "bug"}, {"name": "performance"}]},
+          {"id": 1004, "number": 89, "title": "Add .gitignore support to fastgrep", "state": "open", "repository": {"full_name": "opensource-tools/rust-cli-utils"}, "user": {"login": "rust-user"}, "labels": [{"name": "enhancement"}]},
+          {"id": 1005, "number": 88, "title": "jsonq panics on malformed input", "state": "open", "repository": {"full_name": "opensource-tools/rust-cli-utils"}, "user": {"login": "bug-reporter"}, "labels": [{"name": "bug"}]},
+          {"id": 1006, "number": 234, "title": "Add PyTorch backend support", "state": "open", "repository": {"full_name": "data-science-hub/ml-pipeline"}, "user": {"login": "ml-engineer"}, "labels": [{"name": "enhancement"}]},
+          {"id": 1007, "number": 233, "title": "Memory leak in batch processing", "state": "open", "repository": {"full_name": "data-science-hub/ml-pipeline"}, "user": {"login": "data-scientist"}, "labels": [{"name": "bug"}]}
+        ]
+      }
+    },
+    "search_pull_requests": {
+      "defaultResponse": {
+        "total_count": 5,
+        "incomplete_results": false,
+        "items": [
+          {"id": 2001, "number": 345, "title": "Fix silent authentication failure on session expiry", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "bob-engineer"}, "draft": false},
+          {"id": 2002, "number": 344, "title": "Add dark mode support", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "frontend-dev"}, "draft": true},
+          {"id": 2003, "number": 343, "title": "Optimize dashboard API calls", "state": "open", "repository": {"full_name": "acme-corp/web-platform"}, "user": {"login": "senior-dev"}, "draft": false},
+          {"id": 2004, "number": 92, "title": "Fix jsonq panic on malformed input", "state": "open", "repository": {"full_name": "opensource-tools/rust-cli-utils"}, "user": {"login": "rust-contributor"}, "draft": false},
+          {"id": 2005, "number": 91, "title": "Document MSRV policy", "state": "open", "repository": {"full_name": "opensource-tools/rust-cli-utils"}, "user": {"login": "maintainer"}, "draft": false}
+        ]
+      }
+    },
+    "search_code": {
+      "defaultResponse": {
+        "total_count": 5,
+        "incomplete_results": false,
+        "items": [
+          {"name": "session.ts", "path": "src/auth/session.ts", "repository": {"full_name": "acme-corp/web-platform"}, "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/auth/session.ts", "text_matches": [{"fragment": "export async function validateSession(token: string): Promise<boolean> {\n  const decoded = jwt.verify(token, process.env.JWT_SECRET);\n  return !isExpired(decoded.exp);"}]},
+          {"name": "token.ts", "path": "src/auth/token.ts", "repository": {"full_name": "acme-corp/web-platform"}, "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/auth/token.ts", "text_matches": [{"fragment": "export async function refreshToken(oldToken: string): Promise<string> {\n  const { userId, role } = jwt.decode(oldToken);\n  return jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '1h' });"}]},
+          {"name": "api.ts", "path": "src/services/api.ts", "repository": {"full_name": "acme-corp/web-platform"}, "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/services/api.ts", "text_matches": [{"fragment": "const apiClient = axios.create({\n  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',\n  timeout: 10000,\n  withCredentials: true\n});"}]},
+          {"name": "Button.tsx", "path": "src/components/Button.tsx", "repository": {"full_name": "acme-corp/web-platform"}, "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/components/Button.tsx", "text_matches": [{"fragment": "export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'primary', isLoading }) => {\n  return (\n    <button className={cn(baseStyles, variants[variant])} onClick={onClick} disabled={isLoading}>"}]},
+          {"name": "fastgrep.rs", "path": "src/bin/fastgrep.rs", "repository": {"full_name": "opensource-tools/rust-cli-utils"}, "html_url": "https://github.com/opensource-tools/rust-cli-utils/blob/main/src/bin/fastgrep.rs", "text_matches": [{"fragment": "fn main() -> Result<(), Box<dyn Error>> {\n    let args = Args::parse();\n    let matcher = RegexMatcher::new(&args.pattern)?;\n    search_recursive(&matcher, &args.path, args.max_depth)?;"}]}
+        ]
+      }
+    },
+    "list_commits": {
+      "defaultResponse": [
+        {"sha": "abc123def456789", "commit": {"message": "feat(auth): implement token refresh with retry logic\n\nAdded exponential backoff for failed refresh attempts.\nMax retries configurable via AUTH_MAX_RETRIES env var.\n\nCloses #342", "author": {"name": "Bob Engineer", "email": "bob@acme-corp.com", "date": "2024-01-18T15:30:00Z"}}, "author": {"login": "bob-engineer"}},
+        {"sha": "def456ghi789012", "commit": {"message": "test(auth): add comprehensive tests for session management\n\n- Unit tests for token validation\n- Integration tests for refresh flow\n- Edge case tests for expired tokens", "author": {"name": "Alice Developer", "email": "alice@acme-corp.com", "date": "2024-01-17T11:00:00Z"}}, "author": {"login": "alice-dev"}},
+        {"sha": "ghi789jkl012345", "commit": {"message": "refactor(api): extract error handling into middleware\n\nMoved all API error handling to centralized middleware.\nAdded proper typing for error responses.", "author": {"name": "Charlie Coder", "email": "charlie@acme-corp.com", "date": "2024-01-16T09:45:00Z"}}, "author": {"login": "charlie-coder"}},
+        {"sha": "jkl012mno345678", "commit": {"message": "chore(deps): update dependencies\n\n- react 18.2.0 -> 18.3.0\n- typescript 5.2.0 -> 5.3.0\n- next 14.0.0 -> 14.1.0", "author": {"name": "Dependabot", "email": "dependabot@github.com", "date": "2024-01-15T08:00:00Z"}}, "author": {"login": "dependabot[bot]"}},
+        {"sha": "mno345pqr678901", "commit": {"message": "perf(dashboard): implement virtual scrolling for large datasets\n\nReplaced standard list rendering with react-window.\nReduces initial render time by 80% for 10k+ items.", "author": {"name": "Senior Dev", "email": "senior@acme-corp.com", "date": "2024-01-14T14:20:00Z"}}, "author": {"login": "senior-dev"}}
+      ]
+    },
+    "get_commit": {
+      "defaultResponse": {
+        "sha": "{{sha}}",
+        "commit": {
+          "message": "feat(api): add rate limiting middleware\n\nImplemented sliding window rate limiting using Redis.\n- Default: 100 requests per minute per IP\n- Configurable via RATE_LIMIT_* env vars\n- Returns 429 with Retry-After header when exceeded\n\nCloses #338",
+          "author": {
+            "name": "Security Team",
+            "email": "security@acme-corp.com",
+            "date": "2024-01-18T15:30:00Z"
+          }
+        },
+        "author": {"login": "security-engineer"},
+        "stats": {
+          "additions": 156,
+          "deletions": 23,
+          "total": 179
+        },
+        "files": [
+          {"filename": "src/middleware/rateLimit.ts", "status": "added", "additions": 89, "deletions": 0, "patch": "@@ -0,0 +1,89 @@\n+import { Redis } from 'ioredis';\n+import { NextRequest, NextResponse } from 'next/server';\n+\n+const redis = new Redis(process.env.REDIS_URL);\n+const WINDOW_SIZE = 60; // seconds\n+const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX || '100');\n+\n+export async function rateLimit(req: NextRequest) {\n+  const ip = req.ip || 'anonymous';\n+  const key = `rate_limit:${ip}`;\n+  ..."},
+          {"filename": "src/middleware.ts", "status": "modified", "additions": 12, "deletions": 3, "patch": "@@ -5,6 +5,7 @@ import { auth } from './middleware/auth';\n+import { rateLimit } from './middleware/rateLimit';\n \n export async function middleware(req: NextRequest) {\n+  const rateLimitResult = await rateLimit(req);\n+  if (rateLimitResult) return rateLimitResult;"},
+          {"filename": "tests/middleware/rateLimit.test.ts", "status": "added", "additions": 55, "deletions": 0, "patch": "@@ -0,0 +1,55 @@\n+import { rateLimit } from '../../src/middleware/rateLimit';\n+import { createMockRequest } from '../utils';\n+\n+describe('rateLimit middleware', () => {\n+  it('should allow requests under the limit', async () => {..."}
+        ]
+      }
+    },
+    "list_branches": {
+      "defaultResponse": [
+        {"name": "main", "commit": {"sha": "abc123def", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/abc123def"}, "protected": true},
+        {"name": "develop", "commit": {"sha": "def456ghi", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/def456ghi"}, "protected": false},
+        {"name": "fix/auth-silent-failure", "commit": {"sha": "ghi789jkl", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/ghi789jkl"}, "protected": false},
+        {"name": "feature/dark-mode", "commit": {"sha": "jkl012mno", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/jkl012mno"}, "protected": false},
+        {"name": "perf/dashboard-optimization", "commit": {"sha": "mno345pqr", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/mno345pqr"}, "protected": false},
+        {"name": "feature/api-v2", "commit": {"sha": "pqr678stu", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/pqr678stu"}, "protected": false},
+        {"name": "hotfix/security-patch", "commit": {"sha": "stu901vwx", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/stu901vwx"}, "protected": false}
+      ]
+    },
+    "list_tags": {
+      "defaultResponse": [
+        {"name": "v2.1.0", "commit": {"sha": "tag123abc", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/tag123abc"}, "zipball_url": "https://github.com/{{owner}}/{{repo}}/archive/v2.1.0.zip"},
+        {"name": "v2.0.0", "commit": {"sha": "tag456def", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/tag456def"}, "zipball_url": "https://github.com/{{owner}}/{{repo}}/archive/v2.0.0.zip"},
+        {"name": "v1.9.0", "commit": {"sha": "tag789ghi", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/tag789ghi"}, "zipball_url": "https://github.com/{{owner}}/{{repo}}/archive/v1.9.0.zip"},
+        {"name": "v1.8.5", "commit": {"sha": "tag012jkl", "url": "https://api.github.com/repos/{{owner}}/{{repo}}/commits/tag012jkl"}, "zipball_url": "https://github.com/{{owner}}/{{repo}}/archive/v1.8.5.zip"}
+      ]
+    },
+    "list_releases": {
+      "defaultResponse": [
+        {"id": 1001, "tag_name": "v2.1.0", "name": "Release 2.1.0 - Performance & Security", "body": "## What's Changed\n\n### Performance\n- Implemented virtual scrolling for large datasets (#340)\n- Reduced bundle size by 25% through code splitting\n- Added request batching to reduce API calls by 60%\n\n### Security\n- Added rate limiting middleware (#338)\n- Updated dependencies to patch CVE-2024-1234\n\n### Bug Fixes\n- Fixed silent authentication failure (#342)\n\n**Full Changelog**: https://github.com/acme-corp/web-platform/compare/v2.0.0...v2.1.0", "draft": false, "prerelease": false, "created_at": "2024-01-15T10:00:00Z", "author": {"login": "release-manager"}},
+        {"id": 1002, "tag_name": "v2.0.0", "name": "Release 2.0.0 - Major Redesign", "body": "## Breaking Changes\n\n- Migrated from REST to GraphQL API\n- Updated minimum Node.js version to 20.x\n- Renamed `user.name` to `user.displayName`\n\n## New Features\n\n- Complete UI redesign with new design system\n- Added real-time collaboration features\n- Implemented keyboard shortcuts\n\n## Migration Guide\n\nSee [MIGRATION.md](./docs/MIGRATION.md) for detailed upgrade instructions.\n\n**Full Changelog**: https://github.com/acme-corp/web-platform/compare/v1.9.0...v2.0.0", "draft": false, "prerelease": false, "created_at": "2024-01-01T10:00:00Z", "author": {"login": "release-manager"}}
+      ]
+    }
+  },
+  "fixtures": {
+    "get_file_contents": [
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "README.md"},
+        "response": {
+          "path": "README.md",
+          "content": "# Web Platform\n\nA modern, scalable web application built with React 18, TypeScript, and Next.js 14.\n\n## Features\n\n- **Authentication**: JWT-based auth with refresh token rotation\n- **Real-time Updates**: WebSocket integration for live data\n- **Dark Mode**: System-aware theme switching\n- **Internationalization**: Support for 12 languages\n- **Analytics Dashboard**: Real-time metrics visualization\n\n## Tech Stack\n\n| Category | Technology |\n|----------|------------|\n| Framework | Next.js 14 |\n| Language | TypeScript 5.3 |\n| Styling | TailwindCSS + CSS Modules |\n| State | Zustand + React Query |\n| Testing | Vitest + Playwright |\n| CI/CD | GitHub Actions |\n\n## Quick Start\n\n```bash\n# Install dependencies\npnpm install\n\n# Start development server\npnpm dev\n\n# Run tests\npnpm test\n\n# Build for production\npnpm build\n```\n\n## Environment Variables\n\n```bash\nNEXT_PUBLIC_API_URL=https://api.example.com\nDATABASE_URL=postgresql://...\nJWT_SECRET=your-secret-key\nREDIS_URL=redis://localhost:6379\n```\n\n## Contributing\n\nSee [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for guidelines.\n\n## License\n\nMIT - see [LICENSE](./LICENSE) for details.",
+          "encoding": "utf-8",
+          "sha": "readme123abc456",
+          "size": 1247,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/README.md"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "package.json"},
+        "response": {
+          "path": "package.json",
+          "content": "{\n  \"name\": \"@acme-corp/web-platform\",\n  \"version\": \"2.1.0\",\n  \"private\": true,\n  \"scripts\": {\n    \"dev\": \"next dev\",\n    \"build\": \"next build\",\n    \"start\": \"next start\",\n    \"lint\": \"eslint . --ext .ts,.tsx\",\n    \"test\": \"vitest\",\n    \"test:e2e\": \"playwright test\",\n    \"typecheck\": \"tsc --noEmit\"\n  },\n  \"dependencies\": {\n    \"@tanstack/react-query\": \"^5.17.0\",\n    \"axios\": \"^1.6.5\",\n    \"class-variance-authority\": \"^0.7.0\",\n    \"clsx\": \"^2.1.0\",\n    \"date-fns\": \"^3.2.0\",\n    \"next\": \"14.1.0\",\n    \"react\": \"18.3.0\",\n    \"react-dom\": \"18.3.0\",\n    \"tailwind-merge\": \"^2.2.0\",\n    \"zustand\": \"^4.5.0\"\n  },\n  \"devDependencies\": {\n    \"@playwright/test\": \"^1.41.0\",\n    \"@types/node\": \"^20.11.0\",\n    \"@types/react\": \"^18.2.48\",\n    \"@typescript-eslint/eslint-plugin\": \"^6.19.0\",\n    \"autoprefixer\": \"^10.4.17\",\n    \"eslint\": \"^8.56.0\",\n    \"postcss\": \"^8.4.33\",\n    \"tailwindcss\": \"^3.4.1\",\n    \"typescript\": \"^5.3.3\",\n    \"vitest\": \"^1.2.0\"\n  }\n}",
+          "encoding": "utf-8",
+          "sha": "pkg789def012",
+          "size": 1089,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/package.json"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "src/components/Button.tsx"},
+        "response": {
+          "path": "src/components/Button.tsx",
+          "content": "import React, { forwardRef } from 'react';\nimport { cva, type VariantProps } from 'class-variance-authority';\nimport { cn } from '@/lib/utils';\nimport { Loader2 } from 'lucide-react';\n\nconst buttonVariants = cva(\n  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',\n  {\n    variants: {\n      variant: {\n        default: 'bg-primary text-primary-foreground hover:bg-primary/90',\n        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',\n        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',\n        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',\n        ghost: 'hover:bg-accent hover:text-accent-foreground',\n        link: 'text-primary underline-offset-4 hover:underline',\n      },\n      size: {\n        default: 'h-10 px-4 py-2',\n        sm: 'h-9 rounded-md px-3',\n        lg: 'h-11 rounded-md px-8',\n        icon: 'h-10 w-10',\n      },\n    },\n    defaultVariants: {\n      variant: 'default',\n      size: 'default',\n    },\n  }\n);\n\nexport interface ButtonProps\n  extends React.ButtonHTMLAttributes<HTMLButtonElement>,\n    VariantProps<typeof buttonVariants> {\n  isLoading?: boolean;\n}\n\nconst Button = forwardRef<HTMLButtonElement, ButtonProps>(\n  ({ className, variant, size, isLoading, children, disabled, ...props }, ref) => {\n    return (\n      <button\n        className={cn(buttonVariants({ variant, size, className }))}\n        ref={ref}\n        disabled={disabled || isLoading}\n        {...props}\n      >\n        {isLoading && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n        {children}\n      </button>\n    );\n  }\n);\nButton.displayName = 'Button';\n\nexport { Button, buttonVariants };",
+          "encoding": "utf-8",
+          "sha": "button456def789",
+          "size": 1678,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/components/Button.tsx"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "src/services/api.ts"},
+        "response": {
+          "path": "src/services/api.ts",
+          "content": "import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';\nimport { getSession, refreshSession, clearSession } from '@/lib/auth';\n\nconst API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';\nconst TIMEOUT = 10000;\nconst MAX_RETRIES = 3;\n\nclass ApiClient {\n  private client: AxiosInstance;\n  private isRefreshing = false;\n  private failedQueue: Array<{\n    resolve: (token: string) => void;\n    reject: (error: Error) => void;\n  }> = [];\n\n  constructor() {\n    this.client = axios.create({\n      baseURL: API_BASE_URL,\n      timeout: TIMEOUT,\n      headers: {\n        'Content-Type': 'application/json',\n      },\n      withCredentials: true,\n    });\n\n    this.setupInterceptors();\n  }\n\n  private setupInterceptors(): void {\n    // Request interceptor - add auth token\n    this.client.interceptors.request.use(\n      async (config: InternalAxiosRequestConfig) => {\n        const session = await getSession();\n        if (session?.accessToken) {\n          config.headers.Authorization = `Bearer ${session.accessToken}`;\n        }\n        return config;\n      },\n      (error) => Promise.reject(error)\n    );\n\n    // Response interceptor - handle 401 and refresh token\n    this.client.interceptors.response.use(\n      (response) => response,\n      async (error: AxiosError) => {\n        const originalRequest = error.config;\n        \n        if (error.response?.status === 401 && originalRequest) {\n          if (this.isRefreshing) {\n            return new Promise((resolve, reject) => {\n              this.failedQueue.push({ resolve, reject });\n            }).then((token) => {\n              originalRequest.headers.Authorization = `Bearer ${token}`;\n              return this.client(originalRequest);\n            });\n          }\n\n          this.isRefreshing = true;\n          \n          try {\n            const newSession = await refreshSession();\n            this.processQueue(null, newSession.accessToken);\n            originalRequest.headers.Authorization = `Bearer ${newSession.accessToken}`;\n            return this.client(originalRequest);\n          } catch (refreshError) {\n            this.processQueue(refreshError as Error, null);\n            await clearSession();\n            window.location.href = '/login?expired=true';\n            return Promise.reject(refreshError);\n          } finally {\n            this.isRefreshing = false;\n          }\n        }\n        \n        return Promise.reject(error);\n      }\n    );\n  }\n\n  private processQueue(error: Error | null, token: string | null): void {\n    this.failedQueue.forEach((promise) => {\n      if (error) {\n        promise.reject(error);\n      } else if (token) {\n        promise.resolve(token);\n      }\n    });\n    this.failedQueue = [];\n  }\n\n  async get<T>(url: string, config = {}) {\n    return this.client.get<T>(url, config);\n  }\n\n  async post<T>(url: string, data = {}, config = {}) {\n    return this.client.post<T>(url, data, config);\n  }\n\n  async put<T>(url: string, data = {}, config = {}) {\n    return this.client.put<T>(url, data, config);\n  }\n\n  async delete<T>(url: string, config = {}) {\n    return this.client.delete<T>(url, config);\n  }\n}\n\nexport const apiClient = new ApiClient();",
+          "encoding": "utf-8",
+          "sha": "api789ghi012",
+          "size": 2847,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/services/api.ts"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "src/hooks/useAuth.ts"},
+        "response": {
+          "path": "src/hooks/useAuth.ts",
+          "content": "import { useCallback, useEffect, useState } from 'react';\nimport { useRouter } from 'next/navigation';\nimport { create } from 'zustand';\nimport { apiClient } from '@/services/api';\n\ninterface User {\n  id: string;\n  email: string;\n  displayName: string;\n  avatarUrl?: string;\n  role: 'user' | 'admin' | 'moderator';\n}\n\ninterface AuthState {\n  user: User | null;\n  isLoading: boolean;\n  isAuthenticated: boolean;\n  setUser: (user: User | null) => void;\n  setLoading: (loading: boolean) => void;\n}\n\nconst useAuthStore = create<AuthState>((set) => ({\n  user: null,\n  isLoading: true,\n  isAuthenticated: false,\n  setUser: (user) => set({ user, isAuthenticated: !!user }),\n  setLoading: (isLoading) => set({ isLoading }),\n}));\n\nexport function useAuth() {\n  const router = useRouter();\n  const { user, isLoading, isAuthenticated, setUser, setLoading } = useAuthStore();\n\n  useEffect(() => {\n    const initAuth = async () => {\n      try {\n        const { data } = await apiClient.get<User>('/auth/me');\n        setUser(data);\n      } catch {\n        setUser(null);\n      } finally {\n        setLoading(false);\n      }\n    };\n\n    initAuth();\n  }, [setUser, setLoading]);\n\n  const login = useCallback(async (email: string, password: string) => {\n    setLoading(true);\n    try {\n      const { data } = await apiClient.post<{ user: User }>('/auth/login', {\n        email,\n        password,\n      });\n      setUser(data.user);\n      router.push('/dashboard');\n    } finally {\n      setLoading(false);\n    }\n  }, [router, setUser, setLoading]);\n\n  const logout = useCallback(async () => {\n    await apiClient.post('/auth/logout');\n    setUser(null);\n    router.push('/login');\n  }, [router, setUser]);\n\n  const register = useCallback(async (email: string, password: string, displayName: string) => {\n    setLoading(true);\n    try {\n      const { data } = await apiClient.post<{ user: User }>('/auth/register', {\n        email,\n        password,\n        displayName,\n      });\n      setUser(data.user);\n      router.push('/onboarding');\n    } finally {\n      setLoading(false);\n    }\n  }, [router, setUser, setLoading]);\n\n  return {\n    user,\n    isLoading,\n    isAuthenticated,\n    login,\n    logout,\n    register,\n  };\n}",
+          "encoding": "utf-8",
+          "sha": "auth345jkl678",
+          "size": 2134,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/hooks/useAuth.ts"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "src/components/Dashboard.tsx"},
+        "response": {
+          "path": "src/components/Dashboard.tsx",
+          "content": "'use client';\n\nimport { useMemo, useState } from 'react';\nimport { useQuery } from '@tanstack/react-query';\nimport { FixedSizeList as List } from 'react-window';\nimport { format, subDays } from 'date-fns';\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';\nimport { Skeleton } from '@/components/ui/Skeleton';\nimport { apiClient } from '@/services/api';\nimport { cn } from '@/lib/utils';\n\ninterface MetricData {\n  id: string;\n  timestamp: Date;\n  value: number;\n  category: string;\n}\n\ninterface DashboardStats {\n  totalUsers: number;\n  activeUsers: number;\n  revenue: number;\n  growthRate: number;\n}\n\nconst ROW_HEIGHT = 48;\nconst VISIBLE_ROWS = 10;\n\nexport function Dashboard() {\n  const [dateRange, setDateRange] = useState(() => ({\n    start: subDays(new Date(), 30),\n    end: new Date(),\n  }));\n\n  const { data: stats, isLoading: statsLoading } = useQuery({\n    queryKey: ['dashboard-stats', dateRange],\n    queryFn: async () => {\n      const { data } = await apiClient.get<DashboardStats>('/dashboard/stats', {\n        params: dateRange,\n      });\n      return data;\n    },\n  });\n\n  const { data: metrics = [], isLoading: metricsLoading } = useQuery({\n    queryKey: ['dashboard-metrics', dateRange],\n    queryFn: async () => {\n      const { data } = await apiClient.get<MetricData[]>('/dashboard/metrics', {\n        params: { ...dateRange, limit: 10000 },\n      });\n      return data;\n    },\n  });\n\n  const sortedMetrics = useMemo(\n    () => [...metrics].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),\n    [metrics]\n  );\n\n  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {\n    const metric = sortedMetrics[index];\n    return (\n      <div style={style} className=\"flex items-center px-4 border-b hover:bg-muted/50\">\n        <span className=\"flex-1 truncate\">{metric.category}</span>\n        <span className=\"w-32 text-right\">{metric.value.toLocaleString()}</span>\n        <span className=\"w-40 text-right text-muted-foreground\">\n          {format(new Date(metric.timestamp), 'MMM d, HH:mm')}\n        </span>\n      </div>\n    );\n  };\n\n  if (statsLoading || metricsLoading) {\n    return <DashboardSkeleton />;\n  }\n\n  return (\n    <div className=\"space-y-6\">\n      <div className=\"grid gap-4 md:grid-cols-2 lg:grid-cols-4\">\n        <StatCard title=\"Total Users\" value={stats?.totalUsers ?? 0} />\n        <StatCard title=\"Active Users\" value={stats?.activeUsers ?? 0} />\n        <StatCard title=\"Revenue\" value={stats?.revenue ?? 0} prefix=\"$\" />\n        <StatCard title=\"Growth\" value={stats?.growthRate ?? 0} suffix=\"%\" />\n      </div>\n\n      <Card>\n        <CardHeader>\n          <CardTitle>Recent Metrics ({sortedMetrics.length.toLocaleString()} items)</CardTitle>\n        </CardHeader>\n        <CardContent>\n          <List\n            height={ROW_HEIGHT * VISIBLE_ROWS}\n            itemCount={sortedMetrics.length}\n            itemSize={ROW_HEIGHT}\n            width=\"100%\"\n          >\n            {Row}\n          </List>\n        </CardContent>\n      </Card>\n    </div>\n  );\n}\n\nfunction StatCard({ title, value, prefix = '', suffix = '' }: {\n  title: string;\n  value: number;\n  prefix?: string;\n  suffix?: string;\n}) {\n  return (\n    <Card>\n      <CardHeader className=\"pb-2\">\n        <CardTitle className=\"text-sm font-medium text-muted-foreground\">{title}</CardTitle>\n      </CardHeader>\n      <CardContent>\n        <div className=\"text-2xl font-bold\">\n          {prefix}{value.toLocaleString()}{suffix}\n        </div>\n      </CardContent>\n    </Card>\n  );\n}\n\nfunction DashboardSkeleton() {\n  return (\n    <div className=\"space-y-6\">\n      <div className=\"grid gap-4 md:grid-cols-2 lg:grid-cols-4\">\n        {[...Array(4)].map((_, i) => (\n          <Card key={i}>\n            <CardHeader className=\"pb-2\"><Skeleton className=\"h-4 w-24\" /></CardHeader>\n            <CardContent><Skeleton className=\"h-8 w-32\" /></CardContent>\n          </Card>\n        ))}\n      </div>\n      <Card>\n        <CardHeader><Skeleton className=\"h-6 w-48\" /></CardHeader>\n        <CardContent><Skeleton className=\"h-[480px] w-full\" /></CardContent>\n      </Card>\n    </div>\n  );\n}",
+          "encoding": "utf-8",
+          "sha": "dashboard901mno",
+          "size": 3812,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/src/components/Dashboard.tsx"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "Dockerfile"},
+        "response": {
+          "path": "Dockerfile",
+          "content": "# Build stage\nFROM node:20-alpine AS builder\n\nWORKDIR /app\n\n# Install pnpm\nRUN corepack enable && corepack prepare pnpm@latest --activate\n\n# Copy package files\nCOPY package.json pnpm-lock.yaml ./\n\n# Install dependencies\nRUN pnpm install --frozen-lockfile\n\n# Copy source files\nCOPY . .\n\n# Build the application\nENV NEXT_TELEMETRY_DISABLED=1\nRUN pnpm build\n\n# Production stage\nFROM node:20-alpine AS runner\n\nWORKDIR /app\n\n# Create non-root user\nRUN addgroup --system --gid 1001 nodejs && \\\n    adduser --system --uid 1001 nextjs\n\n# Copy built assets\nCOPY --from=builder /app/public ./public\nCOPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./\nCOPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static\n\nUSER nextjs\n\nEXPOSE 3000\n\nENV PORT=3000\nENV HOSTNAME=\"0.0.0.0\"\nENV NODE_ENV=production\n\nCMD [\"node\", \"server.js\"]",
+          "encoding": "utf-8",
+          "sha": "docker234pqr",
+          "size": 812,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/Dockerfile"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": ".github/workflows/ci.yml"},
+        "response": {
+          "path": ".github/workflows/ci.yml",
+          "content": "name: CI\n\non:\n  push:\n    branches: [main, develop]\n  pull_request:\n    branches: [main]\n\nenv:\n  NODE_VERSION: '20'\n  PNPM_VERSION: '8'\n\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v2\n        with:\n          version: ${{ env.PNPM_VERSION }}\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'pnpm'\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm lint\n      - run: pnpm typecheck\n\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v2\n        with:\n          version: ${{ env.PNPM_VERSION }}\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'pnpm'\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm test -- --coverage\n      - uses: codecov/codecov-action@v3\n        with:\n          token: ${{ secrets.CODECOV_TOKEN }}\n\n  e2e:\n    runs-on: ubuntu-latest\n    needs: [lint, test]\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v2\n        with:\n          version: ${{ env.PNPM_VERSION }}\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'pnpm'\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm exec playwright install --with-deps\n      - run: pnpm test:e2e\n      - uses: actions/upload-artifact@v4\n        if: failure()\n        with:\n          name: playwright-report\n          path: playwright-report/\n\n  build:\n    runs-on: ubuntu-latest\n    needs: [lint, test]\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v2\n        with:\n          version: ${{ env.PNPM_VERSION }}\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'pnpm'\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm build\n      - uses: actions/upload-artifact@v4\n        with:\n          name: build\n          path: .next/",
+          "encoding": "utf-8",
+          "sha": "ci567stu890",
+          "size": 1923,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/.github/workflows/ci.yml"
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "path": "tests/api.test.ts"},
+        "response": {
+          "path": "tests/api.test.ts",
+          "content": "import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';\nimport axios from 'axios';\nimport { apiClient } from '../src/services/api';\nimport * as auth from '../src/lib/auth';\n\nvi.mock('axios');\nvi.mock('../src/lib/auth');\n\ndescribe('ApiClient', () => {\n  beforeEach(() => {\n    vi.clearAllMocks();\n    vi.mocked(auth.getSession).mockResolvedValue({\n      accessToken: 'test-token',\n      refreshToken: 'refresh-token',\n      expiresAt: Date.now() + 3600000,\n    });\n  });\n\n  afterEach(() => {\n    vi.restoreAllMocks();\n  });\n\n  describe('request interceptor', () => {\n    it('should add authorization header when session exists', async () => {\n      const mockGet = vi.fn().mockResolvedValue({ data: { success: true } });\n      vi.mocked(axios.create).mockReturnValue({ get: mockGet } as any);\n\n      await apiClient.get('/test');\n\n      expect(mockGet).toHaveBeenCalledWith('/test', expect.objectContaining({\n        headers: expect.objectContaining({\n          Authorization: 'Bearer test-token',\n        }),\n      }));\n    });\n\n    it('should not add authorization header when no session', async () => {\n      vi.mocked(auth.getSession).mockResolvedValue(null);\n      const mockGet = vi.fn().mockResolvedValue({ data: { success: true } });\n      vi.mocked(axios.create).mockReturnValue({ get: mockGet } as any);\n\n      await apiClient.get('/test');\n\n      expect(mockGet).toHaveBeenCalledWith('/test', expect.not.objectContaining({\n        headers: expect.objectContaining({\n          Authorization: expect.any(String),\n        }),\n      }));\n    });\n  });\n\n  describe('response interceptor - 401 handling', () => {\n    it('should refresh token and retry on 401', async () => {\n      const error401 = {\n        response: { status: 401 },\n        config: { headers: {} },\n      };\n      \n      vi.mocked(auth.refreshSession).mockResolvedValue({\n        accessToken: 'new-token',\n        refreshToken: 'new-refresh',\n        expiresAt: Date.now() + 3600000,\n      });\n\n      const mockGet = vi.fn()\n        .mockRejectedValueOnce(error401)\n        .mockResolvedValueOnce({ data: { success: true } });\n\n      vi.mocked(axios.create).mockReturnValue({ get: mockGet } as any);\n\n      const result = await apiClient.get('/test');\n\n      expect(auth.refreshSession).toHaveBeenCalled();\n      expect(result.data).toEqual({ success: true });\n    });\n\n    it('should redirect to login when refresh fails', async () => {\n      const error401 = {\n        response: { status: 401 },\n        config: { headers: {} },\n      };\n      \n      vi.mocked(auth.refreshSession).mockRejectedValue(new Error('Refresh failed'));\n      vi.mocked(auth.clearSession).mockResolvedValue(undefined);\n\n      const mockGet = vi.fn().mockRejectedValue(error401);\n      vi.mocked(axios.create).mockReturnValue({ get: mockGet } as any);\n\n      // Mock window.location\n      const locationAssignMock = vi.fn();\n      Object.defineProperty(window, 'location', {\n        value: { href: '', assign: locationAssignMock },\n        writable: true,\n      });\n\n      await expect(apiClient.get('/test')).rejects.toThrow();\n      expect(auth.clearSession).toHaveBeenCalled();\n    });\n\n    it('should queue requests during token refresh', async () => {\n      // This test verifies that concurrent 401s are queued\n      // and all retried with the new token\n      const error401 = {\n        response: { status: 401 },\n        config: { headers: {} },\n      };\n\n      let refreshResolve: (value: any) => void;\n      const refreshPromise = new Promise((resolve) => {\n        refreshResolve = resolve;\n      });\n\n      vi.mocked(auth.refreshSession).mockReturnValue(refreshPromise as any);\n\n      const mockGet = vi.fn().mockRejectedValue(error401);\n      vi.mocked(axios.create).mockReturnValue({ get: mockGet } as any);\n\n      // Start multiple requests\n      const request1 = apiClient.get('/test1');\n      const request2 = apiClient.get('/test2');\n      const request3 = apiClient.get('/test3');\n\n      // Resolve the refresh\n      refreshResolve!({\n        accessToken: 'new-token',\n        refreshToken: 'new-refresh',\n        expiresAt: Date.now() + 3600000,\n      });\n\n      // refreshSession should only be called once\n      expect(auth.refreshSession).toHaveBeenCalledTimes(1);\n    });\n  });\n});",
+          "encoding": "utf-8",
+          "sha": "test678vwx",
+          "size": 3891,
+          "type": "file",
+          "html_url": "https://github.com/acme-corp/web-platform/blob/main/tests/api.test.ts"
+        }
+      },
+      {
+        "match": {"owner": "opensource-tools", "repo": "rust-cli-utils", "path": "README.md"},
+        "response": {
+          "path": "README.md",
+          "content": "# Rust CLI Utils\n\nA collection of high-performance command-line utilities written in Rust.\n\n## Tools\n\n### fastgrep\n\nA blazingly fast grep alternative with support for regex patterns, gitignore rules, and parallel search.\n\n```bash\n# Basic usage\nfastgrep \"pattern\" ./src\n\n# With regex\nfastgrep -e \"fn\\s+\\w+\" ./src\n\n# Ignore patterns from .gitignore\nfastgrep -g \"TODO\" .\n\n# Limit search depth\nfastgrep -d 3 \"error\" ./logs\n```\n\n### jsonq\n\nA lightweight JSON query tool with JQ-like syntax.\n\n```bash\n# Extract a field\ncat data.json | jsonq '.users[0].name'\n\n# Filter arrays\ncat data.json | jsonq '.users[] | select(.active == true)'\n\n# Transform output\ncat data.json | jsonq '.users | map(.email)'\n```\n\n## Installation\n\n### From crates.io\n\n```bash\ncargo install rust-cli-utils\n```\n\n### From source\n\n```bash\ngit clone https://github.com/opensource-tools/rust-cli-utils\ncd rust-cli-utils\ncargo build --release\n```\n\n## Performance\n\nBenchmarks against similar tools (searching 10GB codebase):\n\n| Tool | Time | Memory |\n|------|------|--------|\n| fastgrep | 1.2s | 45MB |\n| ripgrep | 1.4s | 52MB |\n| grep -r | 12.3s | 8MB |\n| ag | 3.1s | 128MB |\n\n## Contributing\n\nSee [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.\n\n## License\n\nMIT License - see [LICENSE](./LICENSE)",
+          "encoding": "utf-8",
+          "sha": "rustreadme567",
+          "size": 1289,
+          "type": "file",
+          "html_url": "https://github.com/opensource-tools/rust-cli-utils/blob/main/README.md"
+        }
+      },
+      {
+        "match": {"owner": "opensource-tools", "repo": "rust-cli-utils", "path": "src/bin/fastgrep.rs"},
+        "response": {
+          "path": "src/bin/fastgrep.rs",
+          "content": "use std::path::{Path, PathBuf};\nuse std::sync::Arc;\nuse anyhow::{Context, Result};\nuse clap::Parser;\nuse ignore::WalkBuilder;\nuse rayon::prelude::*;\nuse regex::Regex;\n\n#[derive(Parser, Debug)]\n#[command(name = \"fastgrep\")]\n#[command(about = \"A fast, parallel grep alternative\", long_about = None)]\nstruct Args {\n    /// The pattern to search for\n    pattern: String,\n\n    /// Path to search (defaults to current directory)\n    #[arg(default_value = \".\")]\n    path: PathBuf,\n\n    /// Use regex pattern matching\n    #[arg(short = 'e', long)]\n    regex: bool,\n\n    /// Respect .gitignore files\n    #[arg(short = 'g', long)]\n    gitignore: bool,\n\n    /// Maximum search depth\n    #[arg(short = 'd', long)]\n    max_depth: Option<usize>,\n\n    /// Show line numbers\n    #[arg(short = 'n', long, default_value = \"true\")]\n    line_numbers: bool,\n\n    /// Case insensitive search\n    #[arg(short = 'i', long)]\n    ignore_case: bool,\n\n    /// Show only filenames with matches\n    #[arg(short = 'l', long)]\n    files_only: bool,\n\n    /// Number of context lines before match\n    #[arg(short = 'B', long, default_value = \"0\")]\n    before_context: usize,\n\n    /// Number of context lines after match\n    #[arg(short = 'A', long, default_value = \"0\")]\n    after_context: usize,\n}\n\nstruct Matcher {\n    regex: Regex,\n    ignore_case: bool,\n}\n\nimpl Matcher {\n    fn new(pattern: &str, is_regex: bool, ignore_case: bool) -> Result<Self> {\n        let pattern = if is_regex {\n            pattern.to_string()\n        } else {\n            regex::escape(pattern)\n        };\n\n        let pattern = if ignore_case {\n            format!(\"(?i){}\", pattern)\n        } else {\n            pattern\n        };\n\n        let regex = Regex::new(&pattern)\n            .context(\"Invalid regex pattern\")?;\n\n        Ok(Self { regex, ignore_case })\n    }\n\n    fn find_matches(&self, content: &str) -> Vec<(usize, String)> {\n        content\n            .lines()\n            .enumerate()\n            .filter(|(_, line)| self.regex.is_match(line))\n            .map(|(num, line)| (num + 1, line.to_string()))\n            .collect()\n    }\n}\n\nfn search_file(path: &Path, matcher: &Matcher, args: &Args) -> Result<Vec<String>> {\n    let content = std::fs::read_to_string(path)\n        .context(format!(\"Failed to read {}\", path.display()))?;\n\n    let matches = matcher.find_matches(&content);\n\n    if matches.is_empty() {\n        return Ok(vec![]);\n    }\n\n    if args.files_only {\n        return Ok(vec![path.display().to_string()]);\n    }\n\n    let results: Vec<String> = matches\n        .iter()\n        .map(|(line_num, line)| {\n            if args.line_numbers {\n                format!(\"{}:{}:{}\", path.display(), line_num, line)\n            } else {\n                format!(\"{}:{}\", path.display(), line)\n            }\n        })\n        .collect();\n\n    Ok(results)\n}\n\nfn main() -> Result<()> {\n    let args = Args::parse();\n    let matcher = Arc::new(Matcher::new(&args.pattern, args.regex, args.ignore_case)?);\n    let args = Arc::new(args);\n\n    let mut builder = WalkBuilder::new(&args.path);\n    builder.hidden(false);\n\n    if args.gitignore {\n        builder.git_ignore(true);\n        builder.git_global(true);\n    }\n\n    if let Some(depth) = args.max_depth {\n        builder.max_depth(Some(depth));\n    }\n\n    let files: Vec<PathBuf> = builder\n        .build()\n        .filter_map(|entry| entry.ok())\n        .filter(|entry| entry.file_type().map(|ft| ft.is_file()).unwrap_or(false))\n        .map(|entry| entry.path().to_path_buf())\n        .collect();\n\n    let results: Vec<String> = files\n        .par_iter()\n        .filter_map(|path| {\n            search_file(path, &matcher, &args).ok()\n        })\n        .flatten()\n        .collect();\n\n    for result in results {\n        println!(\"{}\", result);\n    }\n\n    Ok(())\n}",
+          "encoding": "utf-8",
+          "sha": "fastgrep890abc",
+          "size": 3456,
+          "type": "file",
+          "html_url": "https://github.com/opensource-tools/rust-cli-utils/blob/main/src/bin/fastgrep.rs"
+        }
+      },
+      {
+        "match": {"owner": "opensource-tools", "repo": "rust-cli-utils", "path": "Cargo.toml"},
+        "response": {
+          "path": "Cargo.toml",
+          "content": "[package]\nname = \"rust-cli-utils\"\nversion = \"0.5.2\"\nedition = \"2021\"\nauthors = [\"Rust CLI Utils Contributors\"]\ndescription = \"High-performance command-line utilities\"\nlicense = \"MIT\"\nrepository = \"https://github.com/opensource-tools/rust-cli-utils\"\nkeywords = [\"cli\", \"grep\", \"json\", \"utilities\"]\ncategories = [\"command-line-utilities\"]\nrust-version = \"1.70\"\n\n[dependencies]\nanyhow = \"1.0\"\nclap = { version = \"4.4\", features = [\"derive\"] }\nignore = \"0.4\"\nrayon = \"1.8\"\nregex = \"1.10\"\nserde = { version = \"1.0\", features = [\"derive\"] }\nserde_json = \"1.0\"\nthiserror = \"1.0\"\n\n[dev-dependencies]\nassert_cmd = \"2.0\"\npredicates = \"3.0\"\ntempfile = \"3.9\"\ncriterion = \"0.5\"\n\n[[bin]]\nname = \"fastgrep\"\npath = \"src/bin/fastgrep.rs\"\n\n[[bin]]\nname = \"jsonq\"\npath = \"src/bin/jsonq.rs\"\n\n[[bench]]\nname = \"search_benchmark\"\nharness = false\n\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = \"abort\"\nstrip = true",
+          "encoding": "utf-8",
+          "sha": "cargo123def",
+          "size": 923,
+          "type": "file",
+          "html_url": "https://github.com/opensource-tools/rust-cli-utils/blob/main/Cargo.toml"
+        }
+      },
+      {
+        "match": {"owner": "data-science-hub", "repo": "ml-pipeline", "path": "README.md"},
+        "response": {
+          "path": "README.md",
+          "content": "# ML Pipeline\n\nAn end-to-end machine learning pipeline framework for production deployments.\n\n## Features\n\n- **Data Processing**: Scalable data preprocessing with Pandas and Polars\n- **Model Training**: Support for scikit-learn, XGBoost, and LightGBM\n- **Experiment Tracking**: Built-in MLflow integration\n- **Model Serving**: FastAPI-based REST endpoints\n- **Pipeline Orchestration**: DAG-based workflow execution\n\n## Installation\n\n```bash\npip install ml-pipeline\n\n# With optional backends\npip install ml-pipeline[xgboost,lightgbm]\n```\n\n## Quick Start\n\n```python\nfrom ml_pipeline import Pipeline, DataLoader, Trainer\nfrom ml_pipeline.transformers import StandardScaler, OneHotEncoder\nfrom ml_pipeline.models import XGBoostClassifier\n\n# Define pipeline\npipeline = Pipeline([\n    DataLoader(\"s3://bucket/data.parquet\"),\n    StandardScaler(columns=[\"age\", \"income\"]),\n    OneHotEncoder(columns=[\"category\"]),\n    Trainer(\n        model=XGBoostClassifier(n_estimators=100),\n        target=\"label\",\n        test_size=0.2,\n    ),\n])\n\n# Run pipeline\nresults = pipeline.run()\nprint(f\"Accuracy: {results.metrics['accuracy']:.4f}\")\n\n# Save model\npipeline.save(\"models/classifier_v1\")\n```\n\n## Configuration\n\n```yaml\n# pipeline.yaml\npipeline:\n  name: customer-churn\n  version: \"1.0.0\"\n\ndata:\n  source: s3://bucket/customers.parquet\n  validation_split: 0.2\n\npreprocessing:\n  numeric:\n    - column: age\n      transform: standard_scaler\n    - column: monthly_charges\n      transform: min_max_scaler\n  categorical:\n    - column: contract_type\n      transform: one_hot\n\nmodel:\n  type: xgboost\n  params:\n    n_estimators: 200\n    max_depth: 6\n    learning_rate: 0.1\n\ntracking:\n  mlflow_uri: http://mlflow:5000\n  experiment_name: churn-prediction\n```\n\n## License\n\nApache 2.0",
+          "encoding": "utf-8",
+          "sha": "mlreadme456",
+          "size": 1678,
+          "type": "file",
+          "html_url": "https://github.com/data-science-hub/ml-pipeline/blob/main/README.md"
+        }
+      },
+      {
+        "match": {"owner": "data-science-hub", "repo": "ml-pipeline", "path": "src/ml_pipeline/trainer.py"},
+        "response": {
+          "path": "src/ml_pipeline/trainer.py",
+          "content": "\"\"\"Model training utilities with MLflow integration.\"\"\"\n\nfrom typing import Any, Dict, Optional, Union\nimport logging\nfrom dataclasses import dataclass, field\nfrom pathlib import Path\n\nimport numpy as np\nimport pandas as pd\nfrom sklearn.base import BaseEstimator\nfrom sklearn.model_selection import train_test_split, cross_val_score\nfrom sklearn.metrics import (\n    accuracy_score,\n    precision_score,\n    recall_score,\n    f1_score,\n    roc_auc_score,\n)\n\ntry:\n    import mlflow\n    HAS_MLFLOW = True\nexcept ImportError:\n    HAS_MLFLOW = False\n\nlogger = logging.getLogger(__name__)\n\n\n@dataclass\nclass TrainingConfig:\n    \"\"\"Configuration for model training.\"\"\"\n    target: str\n    test_size: float = 0.2\n    random_state: int = 42\n    cv_folds: int = 5\n    early_stopping_rounds: Optional[int] = None\n    mlflow_tracking: bool = True\n    experiment_name: Optional[str] = None\n    metrics: list = field(default_factory=lambda: [\"accuracy\", \"f1\", \"roc_auc\"])\n\n\n@dataclass\nclass TrainingResults:\n    \"\"\"Results from model training.\"\"\"\n    model: BaseEstimator\n    metrics: Dict[str, float]\n    cv_scores: Optional[np.ndarray] = None\n    feature_importance: Optional[Dict[str, float]] = None\n    run_id: Optional[str] = None\n\n\nclass Trainer:\n    \"\"\"Trains ML models with experiment tracking.\"\"\"\n\n    def __init__(\n        self,\n        model: BaseEstimator,\n        config: Optional[TrainingConfig] = None,\n        **kwargs\n    ):\n        self.model = model\n        self.config = config or TrainingConfig(**kwargs)\n        self._validate_config()\n\n    def _validate_config(self) -> None:\n        if not self.config.target:\n            raise ValueError(\"Target column must be specified\")\n        if not 0 < self.config.test_size < 1:\n            raise ValueError(\"test_size must be between 0 and 1\")\n\n    def fit(\n        self,\n        data: pd.DataFrame,\n        validation_data: Optional[pd.DataFrame] = None,\n    ) -> TrainingResults:\n        \"\"\"Train the model on the provided data.\"\"\"\n        logger.info(f\"Starting training with {len(data)} samples\")\n\n        # Prepare data\n        X = data.drop(columns=[self.config.target])\n        y = data[self.config.target]\n\n        X_train, X_test, y_train, y_test = train_test_split(\n            X, y,\n            test_size=self.config.test_size,\n            random_state=self.config.random_state,\n            stratify=y if self._is_classification() else None,\n        )\n\n        # Start MLflow run if enabled\n        run_id = None\n        if self.config.mlflow_tracking and HAS_MLFLOW:\n            mlflow.set_experiment(self.config.experiment_name or \"default\")\n            mlflow.start_run()\n            mlflow.log_params(self._get_model_params())\n            run_id = mlflow.active_run().info.run_id\n\n        try:\n            # Train model\n            self.model.fit(X_train, y_train)\n\n            # Compute metrics\n            y_pred = self.model.predict(X_test)\n            metrics = self._compute_metrics(y_test, y_pred)\n\n            # Cross-validation\n            cv_scores = None\n            if self.config.cv_folds > 1:\n                cv_scores = cross_val_score(\n                    self.model, X, y,\n                    cv=self.config.cv_folds,\n                    scoring=\"accuracy\" if self._is_classification() else \"r2\",\n                )\n                metrics[\"cv_mean\"] = cv_scores.mean()\n                metrics[\"cv_std\"] = cv_scores.std()\n\n            # Feature importance\n            feature_importance = self._get_feature_importance(X.columns)\n\n            # Log to MLflow\n            if self.config.mlflow_tracking and HAS_MLFLOW:\n                mlflow.log_metrics(metrics)\n                if feature_importance:\n                    for name, importance in feature_importance.items():\n                        mlflow.log_metric(f\"importance_{name}\", importance)\n\n            logger.info(f\"Training complete. Metrics: {metrics}\")\n\n            return TrainingResults(\n                model=self.model,\n                metrics=metrics,\n                cv_scores=cv_scores,\n                feature_importance=feature_importance,\n                run_id=run_id,\n            )\n\n        finally:\n            if self.config.mlflow_tracking and HAS_MLFLOW:\n                mlflow.end_run()\n\n    def _is_classification(self) -> bool:\n        return hasattr(self.model, \"predict_proba\")\n\n    def _compute_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:\n        metrics = {}\n        if self._is_classification():\n            metrics[\"accuracy\"] = accuracy_score(y_true, y_pred)\n            metrics[\"precision\"] = precision_score(y_true, y_pred, average=\"weighted\")\n            metrics[\"recall\"] = recall_score(y_true, y_pred, average=\"weighted\")\n            metrics[\"f1\"] = f1_score(y_true, y_pred, average=\"weighted\")\n            if hasattr(self.model, \"predict_proba\"):\n                y_proba = self.model.predict_proba(y_pred)\n                if y_proba.shape[1] == 2:\n                    metrics[\"roc_auc\"] = roc_auc_score(y_true, y_proba[:, 1])\n        return metrics\n\n    def _get_model_params(self) -> Dict[str, Any]:\n        return self.model.get_params() if hasattr(self.model, \"get_params\") else {}\n\n    def _get_feature_importance(self, feature_names: pd.Index) -> Optional[Dict[str, float]]:\n        if hasattr(self.model, \"feature_importances_\"):\n            return dict(zip(feature_names, self.model.feature_importances_))\n        return None\n\n    def save(self, path: Union[str, Path]) -> None:\n        \"\"\"Save the trained model.\"\"\"\n        import joblib\n        path = Path(path)\n        path.parent.mkdir(parents=True, exist_ok=True)\n        joblib.dump(self.model, path)\n        logger.info(f\"Model saved to {path}\")\n\n    @classmethod\n    def load(cls, path: Union[str, Path]) -> BaseEstimator:\n        \"\"\"Load a trained model.\"\"\"\n        import joblib\n        return joblib.load(path)",
+          "encoding": "utf-8",
+          "sha": "trainer789ghi",
+          "size": 5234,
+          "type": "file",
+          "html_url": "https://github.com/data-science-hub/ml-pipeline/blob/main/src/ml_pipeline/trainer.py"
+        }
+      }
+    ],
+    "issue_read": [
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "issue_number": 342},
+        "response": {
+          "id": "I_kwDOAAMBNM5342",
+          "number": 342,
+          "title": "Authentication fails silently when session expires",
+          "state": "OPEN",
+          "body": "## Bug Description\n\nWhen a user's session token expires, the application fails silently instead of redirecting to the login page or showing an error message. The user sees the UI freeze with no feedback.\n\n## Steps to Reproduce\n\n1. Log in to the application\n2. Open DevTools and delete the `authToken` from localStorage\n3. Try to navigate to a protected page or perform any authenticated action\n4. Observe that nothing happens - no error, no redirect\n\n## Expected Behavior\n\nThe user should be:\n1. Redirected to `/login?expired=true`\n2. Shown a toast notification explaining the session expired\n3. Able to re-authenticate seamlessly\n\n## Actual Behavior\n\n- The UI appears frozen\n- Network tab shows 401 responses being received\n- No user feedback is provided\n- Console shows unhandled promise rejections\n\n## Technical Analysis\n\nLooking at `src/services/api.ts`, the response interceptor catches 401 errors but the token refresh logic doesn't handle the case where the refresh token itself is invalid or expired.\n\n```typescript\n// Current problematic code\nif (error.response?.status === 401) {\n  const newToken = await refreshToken();\n  // If refreshToken() fails, error is swallowed\n}\n```\n\n## Environment\n\n- Browser: Chrome 120.0.6099.129 (arm64)\n- OS: macOS 14.2.1 (Sonoma)\n- App Version: 2.0.5\n- Node: v20.10.0\n\n## Logs\n\n```\n[API] 401 Unauthorized - GET /api/v1/user/profile\n[Auth] Attempting token refresh...\n[API] 401 Unauthorized - POST /api/v1/auth/refresh\nUncaught (in promise) Error: Network Error\n```\n\n## Suggested Fix\n\nUpdate the interceptor to properly handle refresh failures:\n\n```typescript\ntry {\n  const newSession = await refreshSession();\n  // retry original request\n} catch (refreshError) {\n  await clearSession();\n  window.location.href = '/login?expired=true';\n  return Promise.reject(refreshError);\n}\n```",
+          "author": {"login": "jane-developer", "id": 12345},
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-18T16:45:00Z",
+          "labels": {"nodes": [{"name": "bug", "color": "d73a4a"}, {"name": "authentication", "color": "5319e7"}, {"name": "priority: high", "color": "b60205"}]},
+          "comments": {
+            "totalCount": 4,
+            "nodes": [
+              {"author": {"login": "bob-engineer"}, "body": "I can confirm this issue. Looking at the interceptor code, the problem is in `src/services/api.ts:45-67`. The error handling doesn't account for the refresh token also being expired.\n\nI'll take a look at implementing the suggested fix with some additional improvements:\n- Add exponential backoff for retries\n- Queue concurrent requests during refresh\n- Add proper TypeScript types for the error handling", "createdAt": "2024-01-15T14:00:00Z"},
+              {"author": {"login": "tech-lead"}, "body": "This is a critical UX issue affecting all authenticated users. Let's prioritize this for the current sprint.\n\n@bob-engineer Can you also add some tests for these edge cases? We should cover:\n- Expired access token with valid refresh token\n- Expired access token with expired refresh token\n- Concurrent 401s during refresh\n- Network failure during refresh", "createdAt": "2024-01-16T09:00:00Z"},
+              {"author": {"login": "bob-engineer"}, "body": "Found the root cause - the error interceptor chains aren't properly handling the async refresh flow. When multiple requests fail simultaneously, they all try to refresh the token independently.\n\nI've implemented a request queue that holds pending requests while a refresh is in progress. Here's the approach:\n\n```typescript\nprivate isRefreshing = false;\nprivate failedQueue: Array<{resolve, reject}> = [];\n\n// Queue requests during refresh\nif (this.isRefreshing) {\n  return new Promise((resolve, reject) => {\n    this.failedQueue.push({ resolve, reject });\n  });\n}\n```\n\nWorking on tests now.", "createdAt": "2024-01-17T11:30:00Z"},
+              {"author": {"login": "bob-engineer"}, "body": "PR #345 is up for review. Includes:\n- Fixed token refresh error handling\n- Request queuing during refresh\n- Proper redirect on auth failure\n- Comprehensive test coverage (92%)\n\ncc @tech-lead @jane-developer", "createdAt": "2024-01-18T15:00:00Z"}
+            ]
+          }
+        }
+      },
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "issue_number": 341},
+        "response": {
+          "id": "I_kwDOAAMBNM5341",
+          "number": 341,
+          "title": "Add dark mode support",
+          "state": "OPEN",
+          "body": "## Feature Request\n\nAs a user, I want to be able to switch between light and dark themes to reduce eye strain during night-time usage and match my system preferences.\n\n## User Stories\n\n- As a user, I want the app to respect my OS theme preference by default\n- As a user, I want to manually toggle between light/dark themes\n- As a user, I want my theme preference to persist across sessions\n- As a user, I want smooth transitions when switching themes\n\n## Acceptance Criteria\n\n- [ ] Add theme toggle button in the top navigation bar\n- [ ] Persist theme preference in localStorage\n- [ ] Respect `prefers-color-scheme` media query on first visit\n- [ ] All components support both themes without layout shifts\n- [ ] Transition animations between themes (300ms ease)\n- [ ] Support for `system` | `light` | `dark` options\n\n## Design Mockups\n\n| Light Mode | Dark Mode |\n|------------|----------|\n| ![light](./docs/designs/light-mode.png) | ![dark](./docs/designs/dark-mode.png) |\n\n## Technical Approach\n\n### Option 1: CSS Custom Properties (Recommended)\n\nUse CSS variables for theme colors, toggled via a class on `<html>`:\n\n```css\n:root {\n  --background: 0 0% 100%;\n  --foreground: 222.2 84% 4.9%;\n}\n\n.dark {\n  --background: 222.2 84% 4.9%;\n  --foreground: 210 40% 98%;\n}\n```\n\n### Option 2: Tailwind Dark Mode\n\nUse Tailwind's built-in `dark:` variant with `class` strategy:\n\n```javascript\n// tailwind.config.js\nmodule.exports = {\n  darkMode: 'class',\n  // ...\n}\n```\n\n## Implementation Notes\n\n- Consider using `next-themes` for SSR-safe theme handling\n- Ensure no flash of wrong theme on page load\n- Update all color tokens in the design system\n- Test with reduced motion preferences",
+          "author": {"login": "product-manager", "id": 23456},
+          "createdAt": "2024-01-14T09:00:00Z",
+          "updatedAt": "2024-01-17T14:30:00Z",
+          "labels": {"nodes": [{"name": "enhancement", "color": "a2eeef"}, {"name": "ui/ux", "color": "f9d0c4"}, {"name": "good first issue", "color": "7057ff"}]},
+          "comments": {
+            "totalCount": 3,
+            "nodes": [
+              {"author": {"login": "frontend-dev"}, "body": "I'll take this one! I've been wanting to implement this for a while.\n\nI'm planning to use `next-themes` since we're on Next.js - it handles SSR hydration issues and localStorage persistence out of the box.\n\nWill start with the theme provider and toggle component, then update the design tokens.", "createdAt": "2024-01-14T14:00:00Z"},
+              {"author": {"login": "design-lead"}, "body": "Here are the updated color tokens for dark mode:\n\n```json\n{\n  \"dark\": {\n    \"background\": \"hsl(222.2 84% 4.9%)\",\n    \"foreground\": \"hsl(210 40% 98%)\",\n    \"card\": \"hsl(222.2 84% 4.9%)\",\n    \"primary\": \"hsl(210 40% 98%)\",\n    \"secondary\": \"hsl(217.2 32.6% 17.5%)\",\n    \"muted\": \"hsl(217.2 32.6% 17.5%)\",\n    \"accent\": \"hsl(217.2 32.6% 17.5%)\"\n  }\n}\n```\n\nPlease ensure the contrast ratios meet WCAG AA standards.", "createdAt": "2024-01-15T10:00:00Z"},
+              {"author": {"login": "frontend-dev"}, "body": "Draft PR #344 is up. Still working on:\n- [ ] Dashboard charts need dark mode colors\n- [ ] Code syntax highlighting theme\n- [ ] Email templates (if applicable)\n\nThe core theme system is working. Would appreciate early feedback on the implementation approach!", "createdAt": "2024-01-17T10:00:00Z"}
+            ]
+          }
+        }
+      },
+      {
+        "match": {"owner": "opensource-tools", "repo": "rust-cli-utils", "issue_number": 89},
+        "response": {
+          "id": "I_kwDOBBB89",
+          "number": 89,
+          "title": "Add .gitignore support to fastgrep",
+          "state": "OPEN",
+          "body": "## Feature Request\n\n`fastgrep` should respect `.gitignore` patterns by default when searching in a git repository.\n\n## Current Behavior\n\nCurrently, `fastgrep` searches all files including:\n- `node_modules/`\n- `.git/`\n- Build outputs (`dist/`, `target/`, etc.)\n- Other ignored files\n\nThis makes searches slow and returns irrelevant results.\n\n## Proposed Behavior\n\n```bash\n# Respect .gitignore (default in git repos)\nfastgrep \"pattern\" .\n\n# Explicitly search all files\nfastgrep --no-ignore \"pattern\" .\n\n# Use custom ignore file\nfastgrep --ignore-file .customignore \"pattern\" .\n```\n\n## Implementation Notes\n\nConsider using the `ignore` crate which provides:\n- `.gitignore` parsing\n- `.ignore` file support (like ripgrep)\n- Global gitignore support\n- Parallel directory traversal\n\n## Related\n\n- ripgrep uses `ignore` crate: https://github.com/BurntSushi/ripgrep\n- ignore crate docs: https://docs.rs/ignore",
+          "author": {"login": "rust-user", "id": 34567},
+          "createdAt": "2024-01-12T08:00:00Z",
+          "updatedAt": "2024-01-14T11:00:00Z",
+          "labels": {"nodes": [{"name": "enhancement", "color": "a2eeef"}, {"name": "help wanted", "color": "008672"}]},
+          "comments": {
+            "totalCount": 2,
+            "nodes": [
+              {"author": {"login": "maintainer"}, "body": "Good suggestion! The `ignore` crate is a great choice - it's battle-tested and used by ripgrep.\n\nI'd suggest we make gitignore support opt-in via `-g` flag first, then consider making it default in v1.0.\n\nWould you be interested in implementing this?", "createdAt": "2024-01-12T14:00:00Z"},
+              {"author": {"login": "rust-user"}, "body": "I can take a stab at it! Will open a PR this weekend.", "createdAt": "2024-01-14T11:00:00Z"}
+            ]
+          }
+        }
+      }
+    ],
+    "pull_request_read": [
+      {
+        "match": {"owner": "acme-corp", "repo": "web-platform", "pullNumber": 345},
+        "response": {
+          "id": "PR_kwDOAAMBNM5345",
+          "number": 345,
+          "title": "Fix silent authentication failure on session expiry",
+          "state": "open",
+          "body": "## Summary\n\nFixes #342 - Authentication now properly handles expired sessions by redirecting users to login with appropriate feedback.\n\n## Problem\n\nWhen a user's session expires, the application would fail silently because:\n1. The response interceptor didn't handle refresh token failures\n2. Concurrent 401 errors each triggered independent refresh attempts\n3. Users received no feedback about the authentication failure\n\n## Solution\n\n### 1. Request Queuing\nImplemented a queue system that holds requests while a token refresh is in progress:\n\n```typescript\nif (this.isRefreshing) {\n  return new Promise((resolve, reject) => {\n    this.failedQueue.push({ resolve, reject });\n  }).then((token) => {\n    originalRequest.headers.Authorization = `Bearer ${token}`;\n    return this.client(originalRequest);\n  });\n}\n```\n\n### 2. Proper Error Handling\nAdded comprehensive error handling for refresh failures:\n\n```typescript\ntry {\n  const newSession = await refreshSession();\n  this.processQueue(null, newSession.accessToken);\n  // Retry original request\n} catch (refreshError) {\n  this.processQueue(refreshError, null);\n  await clearSession();\n  window.location.href = '/login?expired=true';\n}\n```\n\n### 3. User Feedback\n- Added redirect to `/login?expired=true` on auth failure\n- Login page shows toast: \"Your session has expired. Please log in again.\"\n\n## Changes\n\n| File | Changes |\n|------|----------|\n| `src/services/api.ts` | Added request queuing and error handling |\n| `src/hooks/useAuth.ts` | Updated to handle expired session state |\n| `src/app/login/page.tsx` | Added expired session message |\n| `tests/api.test.ts` | Added comprehensive auth flow tests |\n\n## Testing\n\n- [x] Unit tests for ApiClient (15 new tests)\n- [x] Unit tests for useAuth hook (8 new tests)\n- [x] Integration tests for auth flow\n- [x] Manual testing scenarios:\n  - [x] Expired access token with valid refresh token\n  - [x] Expired access token with expired refresh token\n  - [x] Concurrent requests during token refresh\n  - [x] Network failure during refresh\n\n## Screenshots\n\n### Before (no feedback)\n![before](./docs/screenshots/auth-before.png)\n\n### After (clear feedback)\n![after](./docs/screenshots/auth-after.png)\n\n## Checklist\n\n- [x] Tests pass locally\n- [x] Code follows project style guidelines\n- [x] Self-reviewed the code\n- [x] Added tests for new functionality\n- [x] Updated documentation if needed",
+          "head": {"ref": "fix/auth-silent-failure", "sha": "abc123def456"},
+          "base": {"ref": "main", "sha": "def456abc789"},
+          "author": {"login": "bob-engineer"},
+          "createdAt": "2024-01-18T14:00:00Z",
+          "updatedAt": "2024-01-18T16:30:00Z",
+          "mergeable": true,
+          "additions": 287,
+          "deletions": 45,
+          "changedFiles": 4,
+          "commits": {
+            "totalCount": 4,
+            "nodes": [
+              {"sha": "abc123", "message": "feat(auth): add request queuing during token refresh\n\nImplements a queue system to hold concurrent requests while\na token refresh is in progress. All queued requests are\nretried with the new token once refresh completes.", "author": {"name": "Bob Engineer"}},
+              {"sha": "def456", "message": "feat(auth): handle refresh token failures gracefully\n\nAdds proper error handling when the refresh token itself\nis expired or invalid. Users are redirected to login with\na message explaining the session expired.", "author": {"name": "Bob Engineer"}},
+              {"sha": "ghi789", "message": "feat(auth): add expired session message to login page\n\nShows a toast notification when users are redirected due\nto session expiry.", "author": {"name": "Bob Engineer"}},
+              {"sha": "jkl012", "message": "test(auth): add comprehensive auth flow tests\n\nAdds 23 new tests covering:\n- Token refresh scenarios\n- Request queuing\n- Error handling\n- Edge cases", "author": {"name": "Bob Engineer"}}
+            ]
+          },
+          "files": {
+            "nodes": [
+              {"path": "src/services/api.ts", "additions": 95, "deletions": 23, "status": "modified"},
+              {"path": "src/hooks/useAuth.ts", "additions": 34, "deletions": 12, "status": "modified"},
+              {"path": "src/app/login/page.tsx", "additions": 18, "deletions": 2, "status": "modified"},
+              {"path": "tests/api.test.ts", "additions": 140, "deletions": 8, "status": "modified"}
+            ]
+          },
+          "reviews": {
+            "nodes": [
+              {"author": {"login": "tech-lead"}, "state": "APPROVED", "body": "Excellent work! The request queuing implementation is clean and the test coverage is comprehensive.\n\nA few minor suggestions:\n1. Consider adding a max queue size to prevent memory issues\n2. Maybe add telemetry for auth failures\n\nBut these can be follow-ups. LGTM!"},
+              {"author": {"login": "security-reviewer"}, "state": "APPROVED", "body": "Security review passed. The auth flow changes look good:\n- No tokens exposed in logs\n- Proper cleanup on failure\n- Redirect uses safe URL construction"}
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

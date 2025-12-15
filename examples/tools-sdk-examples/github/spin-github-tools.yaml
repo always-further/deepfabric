@@ -1,0 +1,93 @@
+#####################################################################
+# Spin GitHub Tools Dataset Configuration
+#####################################################################
+# This configuration demonstrates using real GitHub API tools via Spin.
+# Prerequisites:
+#   1. Build the Spin service:
+#      cd tools-sdk
+#      spin build
+#   2. Run with GitHub token:
+#      SPIN_VARIABLE_GITHUB_TOKEN=ghp_xxx spin up
+#   3. Run deepfabric:
+#      deepfabric start examples/spin-github-tools.yaml
+#####################################################################
+
+# Topic generation - creates a tree of GitHub-related topics
+topics:
+  prompt: "GitHub repository analysis, code review, and issue management tasks"
+  mode: graph
+  system_prompt: ""
+  depth: 3
+  degree: 3
+  save_as: "github-topics.jsonl"
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash-lite"
+    temperature: 0.8
+
+# Data generation with real GitHub API execution
+generation:
+  system_prompt: |
+    Generate examples of GitHub workflow tasks for the repository octocat/Spoon-Knife
+    The assistant should read files, analyze code structure, review commits,
+    and help users understand the repository.
+
+    Always use owner="octocat" and repo="Spoon-Knife" when calling GitHub tools.
+
+    instructions: "Create scenarios involving analysis of the octocat/Spoon-Knife repository."
+
+  conversation:
+    type: chain_of_thought
+    reasoning_style: agent
+    agent_mode: multi_turn
+
+  tools:
+    # Spin service endpoint for real tool execution
+    # GitHub component available at /github/...
+    spin_endpoint: "http://localhost:3000"
+
+    # Available GitHub tools
+    available:
+      - gh_get_file_contents      # Read files from repos
+      - gh_search_code            # Search code across GitHub
+      - gh_search_repositories    # Find repositories
+      - gh_list_issues            # List issues in a repo
+      - gh_get_issue              # Get issue details
+      - gh_list_pull_requests     # List PRs in a repo
+      - gh_get_pull_request       # Get PR details
+      - gh_list_commits           # List recent commits
+      - gh_get_commit             # Get commit details
+      - gh_list_branches          # List branches
+      # file system tools for managing local files
+      - file_path
+      - read_file
+      - write_file
+      - list_files
+
+    max_per_query: 4
+    strict: false
+
+    # ReAct loop configuration - agent thinks step-by-step
+    max_agent_steps: 6  # GitHub queries may need more steps
+
+  max_retries: 3
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash-lite"
+    temperature: 0.7
+
+# Output configuration
+output:
+  system_prompt: |
+    You are an AI assistant with access to GitHub API tools for the octocat/Spoon-Knife repository.
+    When given a task:
+    1. Use the GitHub tools to query the repository (owner="octocat", repo="Spoon-Knife")
+    2. Analyze the results and provide actionable insights
+    3. Support your answers with specific data from the repository
+
+  include_system_message: false
+  num_samples: 2
+  batch_size: 1
+  save_as: "github-dataset.jsonl"

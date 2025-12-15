@@ -1,0 +1,586 @@
+{
+  "description": "Comprehensive Figma mock data for testing tool execution with design assistant scenarios",
+  "version": "1.0.0",
+  "mockResponses": {
+    "get_figma_data": {
+      "defaultResponse": {
+        "name": "{{fileKey}} Design File",
+        "lastModified": "2024-12-10T14:30:00Z",
+        "thumbnailUrl": "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/{{fileKey}}/thumb.png",
+        "version": "1234567890",
+        "document": {
+          "id": "0:0",
+          "name": "Document",
+          "type": "DOCUMENT",
+          "children": [
+            {
+              "id": "1:2",
+              "name": "Page 1",
+              "type": "CANVAS",
+              "children": [
+                {
+                  "id": "2:1",
+                  "name": "Frame",
+                  "type": "FRAME",
+                  "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 900},
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "components": {},
+        "styles": {}
+      }
+    },
+    "download_figma_images": {
+      "defaultResponse": {
+        "success": true,
+        "downloaded": [
+          {
+            "nodeId": "{{nodes[0].nodeId}}",
+            "fileName": "{{nodes[0].fileName}}",
+            "localPath": "{{localPath}}/{{nodes[0].fileName}}",
+            "format": "png",
+            "size": 24576
+          }
+        ],
+        "errors": []
+      }
+    }
+  },
+  "fixtures": {
+    "get_figma_data": [
+      {
+        "match": {"fileKey": "abc123xyz"},
+        "response": {
+          "name": "E-Commerce Dashboard",
+          "lastModified": "2024-12-14T09:15:00Z",
+          "thumbnailUrl": "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/abc123xyz/thumb.png",
+          "version": "9876543210",
+          "document": {
+            "id": "0:0",
+            "name": "Document",
+            "type": "DOCUMENT",
+            "children": [
+              {
+                "id": "1:2",
+                "name": "Dashboard",
+                "type": "CANVAS",
+                "backgroundColor": {"r": 0.96, "g": 0.96, "b": 0.98, "a": 1},
+                "children": [
+                  {
+                    "id": "10:1",
+                    "name": "Header",
+                    "type": "FRAME",
+                    "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 72},
+                    "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                    "paddingLeft": 24,
+                    "paddingRight": 24,
+                    "paddingTop": 16,
+                    "paddingBottom": 16,
+                    "itemSpacing": 16,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "SPACE_BETWEEN",
+                    "counterAxisAlignItems": "CENTER",
+                    "children": [
+                      {
+                        "id": "10:2",
+                        "name": "Logo",
+                        "type": "VECTOR",
+                        "absoluteBoundingBox": {"x": 24, "y": 20, "width": 120, "height": 32},
+                        "fills": [{"type": "SOLID", "color": {"r": 0.2, "g": 0.4, "b": 0.9, "a": 1}}]
+                      },
+                      {
+                        "id": "10:3",
+                        "name": "Navigation",
+                        "type": "FRAME",
+                        "layoutMode": "HORIZONTAL",
+                        "itemSpacing": 32,
+                        "children": [
+                          {"id": "10:4", "name": "Dashboard", "type": "TEXT", "characters": "Dashboard", "style": {"fontFamily": "Inter", "fontWeight": 600, "fontSize": 14, "lineHeightPx": 20}},
+                          {"id": "10:5", "name": "Products", "type": "TEXT", "characters": "Products", "style": {"fontFamily": "Inter", "fontWeight": 400, "fontSize": 14, "lineHeightPx": 20}},
+                          {"id": "10:6", "name": "Orders", "type": "TEXT", "characters": "Orders", "style": {"fontFamily": "Inter", "fontWeight": 400, "fontSize": 14, "lineHeightPx": 20}},
+                          {"id": "10:7", "name": "Customers", "type": "TEXT", "characters": "Customers", "style": {"fontFamily": "Inter", "fontWeight": 400, "fontSize": 14, "lineHeightPx": 20}}
+                        ]
+                      },
+                      {
+                        "id": "10:8",
+                        "name": "User Avatar",
+                        "type": "ELLIPSE",
+                        "absoluteBoundingBox": {"x": 1384, "y": 20, "width": 32, "height": 32},
+                        "fills": [{"type": "IMAGE", "imageRef": "user-avatar-123"}]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "20:1",
+                    "name": "Stats Cards",
+                    "type": "FRAME",
+                    "absoluteBoundingBox": {"x": 24, "y": 96, "width": 1392, "height": 120},
+                    "layoutMode": "HORIZONTAL",
+                    "itemSpacing": 24,
+                    "children": [
+                      {
+                        "id": "20:2",
+                        "name": "Revenue Card",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 96, "width": 336, "height": 120},
+                        "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                        "cornerRadius": 12,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingTop": 20,
+                        "paddingBottom": 20,
+                        "effects": [{"type": "DROP_SHADOW", "color": {"r": 0, "g": 0, "b": 0, "a": 0.08}, "offset": {"x": 0, "y": 2}, "radius": 8}],
+                        "children": [
+                          {"id": "20:3", "name": "Label", "type": "TEXT", "characters": "Total Revenue", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.4, "g": 0.45, "b": 0.5, "a": 1}}]},
+                          {"id": "20:4", "name": "Value", "type": "TEXT", "characters": "$124,592.00", "style": {"fontFamily": "Inter", "fontWeight": 700, "fontSize": 32, "lineHeightPx": 40}, "fills": [{"type": "SOLID", "color": {"r": 0.1, "g": 0.1, "b": 0.15, "a": 1}}]},
+                          {"id": "20:5", "name": "Change", "type": "TEXT", "characters": "+12.5%", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.13, "g": 0.77, "b": 0.45, "a": 1}}]}
+                        ]
+                      },
+                      {
+                        "id": "20:10",
+                        "name": "Orders Card",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 384, "y": 96, "width": 336, "height": 120},
+                        "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                        "cornerRadius": 12,
+                        "paddingLeft": 24,
+                        "paddingRight": 24,
+                        "paddingTop": 20,
+                        "paddingBottom": 20,
+                        "effects": [{"type": "DROP_SHADOW", "color": {"r": 0, "g": 0, "b": 0, "a": 0.08}, "offset": {"x": 0, "y": 2}, "radius": 8}],
+                        "children": [
+                          {"id": "20:11", "name": "Label", "type": "TEXT", "characters": "Total Orders", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.4, "g": 0.45, "b": 0.5, "a": 1}}]},
+                          {"id": "20:12", "name": "Value", "type": "TEXT", "characters": "1,429", "style": {"fontFamily": "Inter", "fontWeight": 700, "fontSize": 32, "lineHeightPx": 40}, "fills": [{"type": "SOLID", "color": {"r": 0.1, "g": 0.1, "b": 0.15, "a": 1}}]},
+                          {"id": "20:13", "name": "Change", "type": "TEXT", "characters": "+8.2%", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.13, "g": 0.77, "b": 0.45, "a": 1}}]}
+                        ]
+                      },
+                      {
+                        "id": "20:20",
+                        "name": "Customers Card",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 744, "y": 96, "width": 336, "height": 120},
+                        "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                        "cornerRadius": 12,
+                        "children": [
+                          {"id": "20:21", "name": "Label", "type": "TEXT", "characters": "New Customers", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}},
+                          {"id": "20:22", "name": "Value", "type": "TEXT", "characters": "284", "style": {"fontFamily": "Inter", "fontWeight": 700, "fontSize": 32, "lineHeightPx": 40}},
+                          {"id": "20:23", "name": "Change", "type": "TEXT", "characters": "+23.1%", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.13, "g": 0.77, "b": 0.45, "a": 1}}]}
+                        ]
+                      },
+                      {
+                        "id": "20:30",
+                        "name": "Conversion Card",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 1104, "y": 96, "width": 336, "height": 120},
+                        "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                        "cornerRadius": 12,
+                        "children": [
+                          {"id": "20:31", "name": "Label", "type": "TEXT", "characters": "Conversion Rate", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}},
+                          {"id": "20:32", "name": "Value", "type": "TEXT", "characters": "3.24%", "style": {"fontFamily": "Inter", "fontWeight": 700, "fontSize": 32, "lineHeightPx": 40}},
+                          {"id": "20:33", "name": "Change", "type": "TEXT", "characters": "-0.4%", "style": {"fontFamily": "Inter", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 0.92, "g": 0.34, "b": 0.34, "a": 1}}]}
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "components": {
+            "C:1": {"key": "card-component", "name": "Stats Card", "description": "Reusable statistics card with label, value, and change indicator"}
+          },
+          "styles": {
+            "S:heading-lg": {"key": "heading-lg", "name": "Heading/Large", "styleType": "TEXT", "description": "Large heading style - 32px Inter Bold"},
+            "S:body-md": {"key": "body-md", "name": "Body/Medium", "styleType": "TEXT", "description": "Medium body text - 14px Inter Regular"},
+            "S:primary-blue": {"key": "primary-blue", "name": "Primary/Blue", "styleType": "FILL", "description": "Primary brand blue color"}
+          }
+        }
+      },
+      {
+        "match": {"fileKey": "def456uvw"},
+        "response": {
+          "name": "Mobile App - Login Flow",
+          "lastModified": "2024-12-13T16:45:00Z",
+          "thumbnailUrl": "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/def456uvw/thumb.png",
+          "version": "5544332211",
+          "document": {
+            "id": "0:0",
+            "name": "Document",
+            "type": "DOCUMENT",
+            "children": [
+              {
+                "id": "1:2",
+                "name": "Login Screens",
+                "type": "CANVAS",
+                "backgroundColor": {"r": 0.98, "g": 0.98, "b": 0.98, "a": 1},
+                "children": [
+                  {
+                    "id": "100:1",
+                    "name": "Login Screen",
+                    "type": "FRAME",
+                    "absoluteBoundingBox": {"x": 0, "y": 0, "width": 375, "height": 812},
+                    "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                    "children": [
+                      {
+                        "id": "100:2",
+                        "name": "Logo",
+                        "type": "VECTOR",
+                        "absoluteBoundingBox": {"x": 127, "y": 120, "width": 120, "height": 40},
+                        "fills": [{"type": "SOLID", "color": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1}}]
+                      },
+                      {
+                        "id": "100:3",
+                        "name": "Welcome Text",
+                        "type": "TEXT",
+                        "characters": "Welcome back",
+                        "style": {"fontFamily": "SF Pro Display", "fontWeight": 700, "fontSize": 28, "lineHeightPx": 34, "textAlignHorizontal": "CENTER"},
+                        "absoluteBoundingBox": {"x": 24, "y": 200, "width": 327, "height": 34},
+                        "fills": [{"type": "SOLID", "color": {"r": 0.1, "g": 0.1, "b": 0.12, "a": 1}}]
+                      },
+                      {
+                        "id": "100:4",
+                        "name": "Subtitle",
+                        "type": "TEXT",
+                        "characters": "Sign in to continue",
+                        "style": {"fontFamily": "SF Pro Text", "fontWeight": 400, "fontSize": 16, "lineHeightPx": 22, "textAlignHorizontal": "CENTER"},
+                        "absoluteBoundingBox": {"x": 24, "y": 242, "width": 327, "height": 22},
+                        "fills": [{"type": "SOLID", "color": {"r": 0.5, "g": 0.52, "b": 0.55, "a": 1}}]
+                      },
+                      {
+                        "id": "100:10",
+                        "name": "Email Input",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 300, "width": 327, "height": 56},
+                        "backgroundColor": {"r": 0.96, "g": 0.97, "b": 0.98, "a": 1},
+                        "cornerRadius": 12,
+                        "paddingLeft": 16,
+                        "paddingRight": 16,
+                        "paddingTop": 16,
+                        "paddingBottom": 16,
+                        "children": [
+                          {"id": "100:11", "name": "Placeholder", "type": "TEXT", "characters": "Email address", "style": {"fontFamily": "SF Pro Text", "fontWeight": 400, "fontSize": 16, "lineHeightPx": 22}, "fills": [{"type": "SOLID", "color": {"r": 0.6, "g": 0.62, "b": 0.65, "a": 1}}]}
+                        ]
+                      },
+                      {
+                        "id": "100:20",
+                        "name": "Password Input",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 372, "width": 327, "height": 56},
+                        "backgroundColor": {"r": 0.96, "g": 0.97, "b": 0.98, "a": 1},
+                        "cornerRadius": 12,
+                        "paddingLeft": 16,
+                        "paddingRight": 16,
+                        "paddingTop": 16,
+                        "paddingBottom": 16,
+                        "children": [
+                          {"id": "100:21", "name": "Placeholder", "type": "TEXT", "characters": "Password", "style": {"fontFamily": "SF Pro Text", "fontWeight": 400, "fontSize": 16, "lineHeightPx": 22}, "fills": [{"type": "SOLID", "color": {"r": 0.6, "g": 0.62, "b": 0.65, "a": 1}}]},
+                          {"id": "100:22", "name": "Eye Icon", "type": "VECTOR", "absoluteBoundingBox": {"x": 319, "y": 388, "width": 24, "height": 24}}
+                        ]
+                      },
+                      {
+                        "id": "100:30",
+                        "name": "Forgot Password",
+                        "type": "TEXT",
+                        "characters": "Forgot password?",
+                        "style": {"fontFamily": "SF Pro Text", "fontWeight": 500, "fontSize": 14, "lineHeightPx": 20, "textAlignHorizontal": "RIGHT"},
+                        "absoluteBoundingBox": {"x": 24, "y": 444, "width": 327, "height": 20},
+                        "fills": [{"type": "SOLID", "color": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1}}]
+                      },
+                      {
+                        "id": "100:40",
+                        "name": "Sign In Button",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 500, "width": 327, "height": 56},
+                        "backgroundColor": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1},
+                        "cornerRadius": 12,
+                        "layoutMode": "HORIZONTAL",
+                        "primaryAxisAlignItems": "CENTER",
+                        "counterAxisAlignItems": "CENTER",
+                        "children": [
+                          {"id": "100:41", "name": "Button Text", "type": "TEXT", "characters": "Sign In", "style": {"fontFamily": "SF Pro Text", "fontWeight": 600, "fontSize": 16, "lineHeightPx": 22}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                        ]
+                      },
+                      {
+                        "id": "100:50",
+                        "name": "Divider",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 580, "width": 327, "height": 20},
+                        "layoutMode": "HORIZONTAL",
+                        "itemSpacing": 16,
+                        "primaryAxisAlignItems": "CENTER",
+                        "children": [
+                          {"id": "100:51", "name": "Line Left", "type": "LINE", "strokeWeight": 1},
+                          {"id": "100:52", "name": "Or", "type": "TEXT", "characters": "or continue with", "style": {"fontFamily": "SF Pro Text", "fontWeight": 400, "fontSize": 14}},
+                          {"id": "100:53", "name": "Line Right", "type": "LINE", "strokeWeight": 1}
+                        ]
+                      },
+                      {
+                        "id": "100:60",
+                        "name": "Social Buttons",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 624, "width": 327, "height": 56},
+                        "layoutMode": "HORIZONTAL",
+                        "itemSpacing": 16,
+                        "children": [
+                          {
+                            "id": "100:61",
+                            "name": "Google Button",
+                            "type": "FRAME",
+                            "absoluteBoundingBox": {"x": 24, "y": 624, "width": 155, "height": 56},
+                            "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                            "cornerRadius": 12,
+                            "strokes": [{"type": "SOLID", "color": {"r": 0.9, "g": 0.91, "b": 0.92, "a": 1}}],
+                            "strokeWeight": 1,
+                            "children": [
+                              {"id": "100:62", "name": "Google Icon", "type": "VECTOR", "absoluteBoundingBox": {"x": 89, "y": 640, "width": 24, "height": 24}}
+                            ]
+                          },
+                          {
+                            "id": "100:63",
+                            "name": "Apple Button",
+                            "type": "FRAME",
+                            "absoluteBoundingBox": {"x": 196, "y": 624, "width": 155, "height": 56},
+                            "backgroundColor": {"r": 0, "g": 0, "b": 0, "a": 1},
+                            "cornerRadius": 12,
+                            "children": [
+                              {"id": "100:64", "name": "Apple Icon", "type": "VECTOR", "absoluteBoundingBox": {"x": 261, "y": 640, "width": 24, "height": 24}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "100:70",
+                        "name": "Sign Up Link",
+                        "type": "FRAME",
+                        "absoluteBoundingBox": {"x": 24, "y": 760, "width": 327, "height": 20},
+                        "layoutMode": "HORIZONTAL",
+                        "itemSpacing": 4,
+                        "primaryAxisAlignItems": "CENTER",
+                        "children": [
+                          {"id": "100:71", "name": "Text", "type": "TEXT", "characters": "Don't have an account?", "style": {"fontFamily": "SF Pro Text", "fontWeight": 400, "fontSize": 14}, "fills": [{"type": "SOLID", "color": {"r": 0.5, "g": 0.52, "b": 0.55, "a": 1}}]},
+                          {"id": "100:72", "name": "Link", "type": "TEXT", "characters": "Sign Up", "style": {"fontFamily": "SF Pro Text", "fontWeight": 600, "fontSize": 14}, "fills": [{"type": "SOLID", "color": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1}}]}
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "components": {
+            "C:input": {"key": "input-field", "name": "Input Field", "description": "Standard text input with placeholder"},
+            "C:button-primary": {"key": "button-primary", "name": "Button/Primary", "description": "Primary action button"},
+            "C:button-social": {"key": "button-social", "name": "Button/Social", "description": "Social login button"}
+          },
+          "styles": {
+            "S:title": {"key": "title", "name": "Title", "styleType": "TEXT"},
+            "S:body": {"key": "body", "name": "Body", "styleType": "TEXT"},
+            "S:primary": {"key": "primary", "name": "Primary", "styleType": "FILL"}
+          }
+        }
+      },
+      {
+        "match": {"fileKey": "ghi789rst"},
+        "response": {
+          "name": "Design System - Button Components",
+          "lastModified": "2024-12-12T11:20:00Z",
+          "thumbnailUrl": "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/ghi789rst/thumb.png",
+          "version": "1122334455",
+          "document": {
+            "id": "0:0",
+            "name": "Document",
+            "type": "DOCUMENT",
+            "children": [
+              {
+                "id": "1:2",
+                "name": "Buttons",
+                "type": "CANVAS",
+                "children": [
+                  {
+                    "id": "200:1",
+                    "name": "Button / Primary / Large",
+                    "type": "COMPONENT",
+                    "absoluteBoundingBox": {"x": 0, "y": 0, "width": 200, "height": 56},
+                    "backgroundColor": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1},
+                    "cornerRadius": 8,
+                    "paddingLeft": 24,
+                    "paddingRight": 24,
+                    "paddingTop": 16,
+                    "paddingBottom": 16,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "CENTER",
+                    "counterAxisAlignItems": "CENTER",
+                    "itemSpacing": 8,
+                    "children": [
+                      {"id": "200:2", "name": "Label", "type": "TEXT", "characters": "Button", "style": {"fontFamily": "Inter", "fontWeight": 600, "fontSize": 16, "lineHeightPx": 24}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                    ]
+                  },
+                  {
+                    "id": "200:10",
+                    "name": "Button / Primary / Medium",
+                    "type": "COMPONENT",
+                    "absoluteBoundingBox": {"x": 0, "y": 80, "width": 160, "height": 44},
+                    "backgroundColor": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1},
+                    "cornerRadius": 8,
+                    "paddingLeft": 20,
+                    "paddingRight": 20,
+                    "paddingTop": 12,
+                    "paddingBottom": 12,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "CENTER",
+                    "counterAxisAlignItems": "CENTER",
+                    "itemSpacing": 8,
+                    "children": [
+                      {"id": "200:11", "name": "Label", "type": "TEXT", "characters": "Button", "style": {"fontFamily": "Inter", "fontWeight": 600, "fontSize": 14, "lineHeightPx": 20}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                    ]
+                  },
+                  {
+                    "id": "200:20",
+                    "name": "Button / Secondary / Large",
+                    "type": "COMPONENT",
+                    "absoluteBoundingBox": {"x": 0, "y": 160, "width": 200, "height": 56},
+                    "backgroundColor": {"r": 1, "g": 1, "b": 1, "a": 1},
+                    "cornerRadius": 8,
+                    "paddingLeft": 24,
+                    "paddingRight": 24,
+                    "paddingTop": 16,
+                    "paddingBottom": 16,
+                    "strokes": [{"type": "SOLID", "color": {"r": 0.85, "g": 0.87, "b": 0.9, "a": 1}}],
+                    "strokeWeight": 1,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "CENTER",
+                    "counterAxisAlignItems": "CENTER",
+                    "itemSpacing": 8,
+                    "children": [
+                      {"id": "200:21", "name": "Label", "type": "TEXT", "characters": "Button", "style": {"fontFamily": "Inter", "fontWeight": 600, "fontSize": 16, "lineHeightPx": 24}, "fills": [{"type": "SOLID", "color": {"r": 0.2, "g": 0.22, "b": 0.25, "a": 1}}]}
+                    ]
+                  },
+                  {
+                    "id": "200:30",
+                    "name": "Button / Danger / Large",
+                    "type": "COMPONENT",
+                    "absoluteBoundingBox": {"x": 0, "y": 240, "width": 200, "height": 56},
+                    "backgroundColor": {"r": 0.92, "g": 0.27, "b": 0.27, "a": 1},
+                    "cornerRadius": 8,
+                    "paddingLeft": 24,
+                    "paddingRight": 24,
+                    "paddingTop": 16,
+                    "paddingBottom": 16,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "CENTER",
+                    "counterAxisAlignItems": "CENTER",
+                    "itemSpacing": 8,
+                    "children": [
+                      {"id": "200:31", "name": "Label", "type": "TEXT", "characters": "Delete", "style": {"fontFamily": "Inter", "fontWeight": 600, "fontSize": 16, "lineHeightPx": 24}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                    ]
+                  },
+                  {
+                    "id": "200:40",
+                    "name": "Icon Button / Primary",
+                    "type": "COMPONENT",
+                    "absoluteBoundingBox": {"x": 240, "y": 0, "width": 44, "height": 44},
+                    "backgroundColor": {"r": 0.25, "g": 0.47, "b": 0.96, "a": 1},
+                    "cornerRadius": 8,
+                    "layoutMode": "HORIZONTAL",
+                    "primaryAxisAlignItems": "CENTER",
+                    "counterAxisAlignItems": "CENTER",
+                    "children": [
+                      {"id": "200:41", "name": "Icon", "type": "VECTOR", "absoluteBoundingBox": {"x": 250, "y": 10, "width": 24, "height": 24}, "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1, "a": 1}}]}
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "components": {
+            "C:btn-primary-lg": {"key": "btn-primary-lg", "name": "Button / Primary / Large", "description": "Large primary action button - 56px height"},
+            "C:btn-primary-md": {"key": "btn-primary-md", "name": "Button / Primary / Medium", "description": "Medium primary action button - 44px height"},
+            "C:btn-secondary-lg": {"key": "btn-secondary-lg", "name": "Button / Secondary / Large", "description": "Large secondary button with border"},
+            "C:btn-danger-lg": {"key": "btn-danger-lg", "name": "Button / Danger / Large", "description": "Large danger/destructive action button"},
+            "C:btn-icon-primary": {"key": "btn-icon-primary", "name": "Icon Button / Primary", "description": "Square icon-only button"}
+          },
+          "styles": {
+            "S:btn-text": {"key": "btn-text", "name": "Button Text", "styleType": "TEXT", "description": "16px Inter SemiBold"},
+            "S:primary-fill": {"key": "primary-fill", "name": "Primary Fill", "styleType": "FILL", "description": "rgba(64, 120, 245, 1)"},
+            "S:danger-fill": {"key": "danger-fill", "name": "Danger Fill", "styleType": "FILL", "description": "rgba(235, 69, 69, 1)"}
+          }
+        }
+      }
+    ],
+    "download_figma_images": [
+      {
+        "match": {"fileKey": "abc123xyz"},
+        "response": {
+          "success": true,
+          "downloaded": [
+            {
+              "nodeId": "10:2",
+              "fileName": "logo.svg",
+              "localPath": "/assets/images/logo.svg",
+              "format": "svg",
+              "size": 4892
+            },
+            {
+              "nodeId": "10:8",
+              "fileName": "user-avatar.png",
+              "localPath": "/assets/images/user-avatar.png",
+              "format": "png",
+              "size": 15360,
+              "dimensions": {"width": 64, "height": 64}
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "match": {"fileKey": "def456uvw"},
+        "response": {
+          "success": true,
+          "downloaded": [
+            {
+              "nodeId": "100:2",
+              "fileName": "app-logo.svg",
+              "localPath": "/assets/images/app-logo.svg",
+              "format": "svg",
+              "size": 3456
+            },
+            {
+              "nodeId": "100:62",
+              "fileName": "google-icon.svg",
+              "localPath": "/assets/icons/google-icon.svg",
+              "format": "svg",
+              "size": 1234
+            },
+            {
+              "nodeId": "100:64",
+              "fileName": "apple-icon.svg",
+              "localPath": "/assets/icons/apple-icon.svg",
+              "format": "svg",
+              "size": 987
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "match": {"fileKey": "ghi789rst"},
+        "response": {
+          "success": true,
+          "downloaded": [
+            {
+              "nodeId": "200:41",
+              "fileName": "plus-icon.svg",
+              "localPath": "/assets/icons/plus-icon.svg",
+              "format": "svg",
+              "size": 456
+            }
+          ],
+          "errors": []
+        }
+      }
+    ]
+  }
+}
