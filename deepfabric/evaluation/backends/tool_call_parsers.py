@@ -343,7 +343,9 @@ class ToolCallParserRegistry:
         if architectures:
             for arch in architectures:
                 if arch in self._parsers:
-                    logger.debug("Using %s parser for architecture %s", self._parsers[arch].__name__, arch)
+                    logger.debug(
+                        "Using %s parser for architecture %s", self._parsers[arch].__name__, arch
+                    )
                     return self._parsers[arch]()
 
         logger.debug("No specific parser found, using generic fallback")

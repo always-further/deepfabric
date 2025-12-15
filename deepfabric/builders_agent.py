@@ -504,7 +504,16 @@ Generate only the user's question:"""
         Returns:
             Signature string combining tool name and arguments
         """
-        return f"{pending_call.function_name}:{pending_call.arguments}"
+        try:
+            # Normalize arguments by parsing and re-dumping JSON to handle
+            # differences in whitespace and key order.
+            args = json.loads(pending_call.arguments)
+            normalized_args = json.dumps(args, sort_keys=True)
+            return f"{pending_call.function_name}:{normalized_args}"  # noqa: TRY300
+        except json.JSONDecodeError:
+            # Fallback for any case where arguments are not valid JSON,
+            # though this should be caught by Pydantic validation.
+            return f"{pending_call.function_name}:{pending_call.arguments}"
 
     async def _execute_step_tools(self, tool_calls: list[PendingToolCall]) -> list[ToolExecution]:
         """Execute tool calls for a single ReAct step.
@@ -524,9 +533,7 @@ Generate only the user's question:"""
             # Check for duplicate
             signature = self._get_tool_signature(pending_call)
             if signature in self._seen_tool_signatures:
-                logger.debug(
-                    "Skipping duplicate tool call: %s", pending_call.function_name
-                )
+                logger.debug("Skipping duplicate tool call: %s", pending_call.function_name)
                 continue
 
             # Mark as seen

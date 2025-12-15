@@ -97,11 +97,12 @@ class TransformersBackend(InferenceBackend):
             except ImportError:
                 logger.warning("Unsloth not installed, falling back to standard transformers")
             except Exception as e:
-                logger.warning("Unsloth loading failed (%s), falling back to standard transformers", e)
+                logger.warning(
+                    "Unsloth loading failed (%s), falling back to standard transformers", e
+                )
 
         # Standard transformers/PEFT loading
         if not self.loaded_with_unsloth:
-
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec
                 config.model_path, **tokenizer_kwargs
             )

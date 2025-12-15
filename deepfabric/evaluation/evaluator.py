@@ -6,9 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from datasets import Dataset as HFDataset
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from tqdm.auto import tqdm
 
 from ..metrics import trace
@@ -20,7 +19,7 @@ from .metrics import (
     SampleEvaluation,
     compute_metrics,
 )
-from .parser import GroundTruth, GroundTruthParser
+from .parser import ExpectedToolCall, GroundTruth, GroundTruthParser
 from .reporters import BaseReporter, CloudReporter, FileReporter, MultiReporter
 
 console = Console()
@@ -263,7 +262,7 @@ class Evaluator:
 
         return parser.parse(conversation)
 
-    def prepare_messages(self, sample: dict[str, Any]) -> list[dict[str, str]]:
+    def prepare_messages(self, sample: dict[str, Any]) -> list[dict[str, Any]]:
         """Prepare messages for model inference.
 
         Extracts conversation up to the assistant's tool call.
@@ -303,9 +302,7 @@ class Evaluator:
         # Convert from OpenAI format back to ToolDefinition
         return [ToolDefinition.from_openai(tool) for tool in conversation.tools]
 
-    def build_tool_response_lookup(
-        self, sample: dict[str, Any]
-    ) -> dict[str, dict[str, str]]:
+    def build_tool_response_lookup(self, sample: dict[str, Any]) -> dict[str, dict[str, str]]:
         """Build lookup of tool responses by tool name and arguments.
 
         For multi-turn evaluation, we need to look up tool responses when the
@@ -344,7 +341,13 @@ class Evaluator:
                 if tc_id and tc_id in pending_tool_calls:
                     call_info = pending_tool_calls[tc_id]
                     # Create lookup key from tool name + normalized arguments
-                    key = f"{call_info['name']}:{call_info['arguments']}"
+                    try:
+                        args_dict = json.loads(call_info["arguments"])
+                        normalized_args = json.dumps(args_dict, sort_keys=True)
+                        key = f"{call_info['name']}:{normalized_args}"
+                    except (json.JSONDecodeError, TypeError):
+                        # Fallback if arguments are not a valid JSON string
+                        key = f"{call_info['name']}:{call_info['arguments']}"
                     lookup[key] = {"content": content, "tool_call_id": tc_id}
 
         return lookup
@@ -447,8 +450,8 @@ class Evaluator:
                 expected_tool = gt.expected_tool
                 expected_params = gt.expected_parameters
                 expected_answer = gt.expected_answer
-            except Exception:  # noqa: BLE001, S110
-                pass  # nosec
+            except (KeyError, AttributeError, ValidationError):
+                pass
 
             return SampleEvaluation(
                 sample_id=sample_id,
@@ -525,25 +528,31 @@ class Evaluator:
                         }
 
                     # Add assistant message with tool call to conversation
-                    messages.append({
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [{
-                            "id": tool_response["tool_call_id"],
-                            "type": "function",
-                            "function": {
-                                "name": tool_call.get("name", ""),
-                                "arguments": json.dumps(tool_call.get("arguments", {})),
-                            },
-                        }],
-                    })
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": tool_response["tool_call_id"],
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_call.get("name", ""),
+                                        "arguments": json.dumps(tool_call.get("arguments", {})),
+                                    },
+                                }
+                            ],
+                        }
+                    )
 
                     # Add tool response to conversation
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_response["tool_call_id"],
-                        "content": tool_response["content"],
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_response["tool_call_id"],
+                            "content": tool_response["content"],
+                        }
+                    )
 
             # Now compute metrics comparing predicted vs expected tool calls
             return self._compute_multi_turn_metrics(
@@ -566,8 +575,8 @@ class Evaluator:
                 expected_tool = gt.expected_tool
                 expected_params = gt.expected_parameters
                 expected_answer = gt.expected_answer
-            except Exception:  # noqa: BLE001, S110
-                pass  # nosec
+            except (KeyError, AttributeError, ValidationError):
+                pass
 
             return SampleEvaluation(
                 sample_id=sample_id,
@@ -630,7 +639,9 @@ class Evaluator:
 
         # For backwards compatibility, use first predicted/expected tool
         first_predicted_tool = predicted_tool_calls[0].get("name") if predicted_tool_calls else None
-        first_predicted_params = predicted_tool_calls[0].get("arguments", {}) if predicted_tool_calls else {}
+        first_predicted_params = (
+            predicted_tool_calls[0].get("arguments", {}) if predicted_tool_calls else {}
+        )
 
         # Parameter accuracy: for matched tools, check if params are structurally correct
         params_correct = self._check_parameter_structure(
@@ -647,7 +658,9 @@ class Evaluator:
             expected_tool=ground_truth.expected_tool,
             predicted_tool=first_predicted_tool,
             expected_parameters=ground_truth.expected_parameters,
-            predicted_parameters=first_predicted_params if isinstance(first_predicted_params, dict) else {},
+            predicted_parameters=first_predicted_params
+            if isinstance(first_predicted_params, dict)
+            else {},
             expected_answer=ground_truth.expected_answer,
             predicted_answer=final_content,
             tool_selection_correct=tool_selection_correct,
@@ -659,7 +672,7 @@ class Evaluator:
 
     def _check_parameter_structure(
         self,
-        expected_tools: list,
+        expected_tools: list[ExpectedToolCall],
         predicted_tool_calls: list[dict],
     ) -> bool:
         """Check if predicted tool calls have correct parameter structure.
@@ -676,12 +689,12 @@ class Evaluator:
         """
         # Build lookup of expected params by tool name
         expected_params_by_tool: dict[str, set[str]] = {}
-        for tc in (expected_tools or []):
+        for tc in expected_tools or []:
             if tc.tool_name not in expected_params_by_tool:
                 expected_params_by_tool[tc.tool_name] = set(tc.parameters.keys())
 
         # Check each predicted tool call
-        for pred_call in (predicted_tool_calls or []):
+        for pred_call in predicted_tool_calls or []:
             tool_name = pred_call.get("name", "")
             pred_args = pred_call.get("arguments", {})
 
