@@ -1098,5 +1098,195 @@ def evaluate(
 cli.add_command(auth_group)
 
 
+@cli.command("import-tools")
+@click.option(
+    "--transport",
+    type=click.Choice(["stdio", "http"]),
+    required=True,
+    help="MCP transport type: stdio (subprocess) or http (Streamable HTTP)",
+)
+@click.option(
+    "--command",
+    "-c",
+    help="Shell command to launch MCP server (required for stdio transport)",
+)
+@click.option(
+    "--endpoint",
+    "-e",
+    help="HTTP endpoint URL for MCP server (required for http transport)",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file path (.json or .yaml). Optional if --spin is used.",
+)
+@click.option(
+    "--spin",
+    "-s",
+    "spin_endpoint",
+    help="Spin server URL to push tools to (e.g., http://localhost:3000)",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["deepfabric", "openai"]),
+    default="deepfabric",
+    help="Output format: deepfabric (native) or openai (TRL compatible)",
+)
+@click.option(
+    "--env",
+    multiple=True,
+    help="Environment variables for stdio (format: KEY=VALUE, can be repeated)",
+)
+@click.option(
+    "--header",
+    multiple=True,
+    help="HTTP headers for authentication (format: KEY=VALUE, can be repeated)",
+)
+@click.option(
+    "--timeout",
+    type=float,
+    default=30.0,
+    help="Request timeout in seconds (default: 30)",
+)
+def import_tools(
+    transport: str,
+    command: str | None,
+    endpoint: str | None,
+    output: str | None,
+    spin_endpoint: str | None,
+    output_format: str,
+    env: tuple[str, ...],
+    header: tuple[str, ...],
+    timeout: float,
+) -> None:
+    """Import tool definitions from an MCP (Model Context Protocol) server.
+
+    This command connects to an MCP server, fetches available tools via the
+    tools/list method, and either saves them to a file or pushes them to a
+    Spin server (or both).
+
+    Supports both MCP transport types:
+
+    \b
+    STDIO: Launches the MCP server as a subprocess
+      deepfabric import-tools --transport stdio \\
+        --command "npx -y @modelcontextprotocol/server-filesystem /tmp" \\
+        --output tools.json
+
+    \b
+    HTTP: Connects to a running MCP server via HTTP
+      deepfabric import-tools --transport http \\
+        --endpoint "http://localhost:3000/mcp" \\
+        --output tools.json
+
+    \b
+    Push directly to Spin server:
+      deepfabric import-tools --transport stdio \\
+        --command "npx -y figma-developer-mcp --stdio" \\
+        --env "FIGMA_API_KEY=your-key" \\
+        --spin http://localhost:3000
+
+    \b
+    Both save to file and push to Spin:
+      deepfabric import-tools --transport stdio \\
+        --command "your-mcp-server" \\
+        --output tools.json \\
+        --spin http://localhost:3000
+    """
+    tui = get_tui()
+
+    # Validate that at least one output is specified
+    if not output and not spin_endpoint:
+        tui.error("At least one of --output or --spin is required")
+        sys.exit(1)
+
+    # Parse environment variables
+    env_dict: dict[str, str] = {}
+    for e in env:
+        if "=" not in e:
+            tui.error(f"Invalid env format: {e} (expected KEY=VALUE)")
+            sys.exit(1)
+        key, value = e.split("=", 1)
+        env_dict[key] = value
+
+    # Parse headers
+    header_dict: dict[str, str] = {}
+    for h in header:
+        if "=" not in h:
+            tui.error(f"Invalid header format: {h} (expected KEY=VALUE)")
+            sys.exit(1)
+        key, value = h.split("=", 1)
+        header_dict[key] = value
+
+    # Validate transport-specific options
+    if transport == "stdio" and not command:
+        tui.error("--command is required for stdio transport")
+        sys.exit(1)
+    if transport == "http" and not endpoint:
+        tui.error("--endpoint is required for http transport")
+        sys.exit(1)
+
+    try:
+        # Lazy import to avoid slow startup
+        from typing import Literal, cast  # noqa: PLC0415
+
+        from .tools.mcp_client import (  # noqa: PLC0415
+            fetch_and_push_to_spin,
+            fetch_tools_from_mcp,
+            save_tools_to_file,
+        )
+
+        tui.info(f"Connecting to MCP server via {transport}...")
+
+        # If pushing to Spin, use the combined function
+        if spin_endpoint:
+            registry, spin_result = fetch_and_push_to_spin(
+                transport=cast(Literal["stdio", "http"], transport),
+                spin_endpoint=spin_endpoint,
+                command=command,
+                endpoint=endpoint,
+                env=env_dict if env_dict else None,
+                headers=header_dict if header_dict else None,
+                timeout=timeout,
+            )
+            tui.success(f"Pushed {spin_result.loaded} tools to Spin server at {spin_endpoint}")
+        else:
+            # Just fetch without pushing to Spin
+            registry = fetch_tools_from_mcp(
+                transport=cast(Literal["stdio", "http"], transport),
+                command=command,
+                endpoint=endpoint,
+                env=env_dict if env_dict else None,
+                headers=header_dict if header_dict else None,
+                timeout=timeout,
+            )
+
+        if not registry.tools:
+            tui.warning("No tools found from MCP server")
+            sys.exit(0)
+
+        # Save to file if output path specified
+        if output:
+            save_tools_to_file(
+                registry,
+                output,
+                output_format=cast(Literal["deepfabric", "openai"], output_format),
+            )
+            tui.success(f"Saved {len(registry.tools)} tools to {output}")
+
+        # List the tools
+        tui.console.print("\nImported tools:", style="cyan bold")
+        for tool in registry.tools:
+            param_count = len(tool.parameters)
+            desc = tool.description[:60] if tool.description else "(no description)"
+            tui.console.print(f"  - {tool.name} ({param_count} params): {desc}...")
+
+    except Exception as e:
+        tui.error(f"Failed to import tools: {str(e)}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()
