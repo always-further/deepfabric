@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from .progress import ProgressReporter
 from .schemas import ChatMessage, Conversation
+from .stream_simulator import simulate_stream
 
 if TYPE_CHECKING:
     from .generator import DataSetGeneratorConfig
@@ -155,37 +156,15 @@ class SingleShotBuilder(ConversationBuilder):
         # Build the generation prompt
         generation_prompt = self._build_prompt(topic_prompt, error_feedback)
 
-        # Use streaming if progress reporter is available
-        conversation = None
-        if self.progress_reporter:
-            # Stream generation (no ProgressStep needed - generator emits sample-level steps)
-            try:
-                async for chunk, result in self.llm.generate_async_stream(
-                    prompt=generation_prompt,
-                    schema=Conversation,
-                    max_retries=self.config.max_retries,
-                    max_tokens=self.config.max_tokens,
-                    temperature=self.config.temperature,
-                ):
-                    if chunk:
-                        self.progress_reporter.emit_chunk("conversation_gen", chunk)
-                    if result:
-                        conversation = result
-            except Exception as e:
-                # Fallback to non-streaming on any streaming error
-                logger.debug(
-                    "Streaming generation failed, falling back to non-streaming: %s",
-                    str(e),
-                    exc_info=True,
-                )
-                conversation = await self._generate_non_streaming(generation_prompt)
-        else:
-            # Fallback to non-streaming
-            conversation = await self._generate_non_streaming(generation_prompt)
+        # Always use non-streaming for reliable structured output
+        conversation = await self._generate_non_streaming(generation_prompt)
 
-        if conversation is None:
-            msg = "Failed to generate conversation"
-            raise ValueError(msg)
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            conversation.model_dump_json(indent=2),
+            source="conversation_gen",
+        )
 
         # Ensure type checker knows this is a Conversation
         conversation = cast(Conversation, conversation)

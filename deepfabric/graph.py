@@ -17,6 +17,7 @@ from .llm import LLMClient
 from .metrics import trace
 from .prompts import GRAPH_EXPANSION_PROMPT
 from .schemas import GraphSubtopics
+from .stream_simulator import simulate_stream
 from .topic_model import TopicModel
 
 if TYPE_CHECKING:  # only for type hints to avoid runtime cycles
@@ -328,41 +329,21 @@ class Graph(TopicModel):
         last_error = None
         for attempt in range(MAX_RETRY_ATTEMPTS):
             try:
-                response = None
+                # Always use non-streaming for reliable structured output
+                response = await self.llm_client.generate_async(
+                    prompt=graph_prompt,
+                    schema=GraphSubtopics,
+                    max_retries=1,  # Don't retry inside - we handle it here
+                    max_tokens=DEFAULT_MAX_TOKENS,
+                    temperature=self.temperature,
+                )
 
-                # Try streaming first for TUI preview, with fallback to non-streaming
-                if self.progress_reporter:
-                    try:
-                        async for chunk, result in self.llm_client.generate_async_stream(
-                            prompt=graph_prompt,
-                            schema=GraphSubtopics,
-                            max_retries=1,  # Don't retry inside streaming - we handle it here
-                            max_tokens=DEFAULT_MAX_TOKENS,
-                            temperature=self.temperature,
-                        ):
-                            if chunk:
-                                self.progress_reporter.emit_chunk("graph_generation", chunk)
-                            if result:
-                                response = result
-                    except Exception:
-                        # Fallback to non-streaming on any streaming error
-                        # This provides reliability while still attempting streaming preview
-                        response = await self.llm_client.generate_async(
-                            prompt=graph_prompt,
-                            schema=GraphSubtopics,
-                            max_retries=1,  # Don't retry inside - we handle it here
-                            max_tokens=DEFAULT_MAX_TOKENS,
-                            temperature=self.temperature,
-                        )
-                else:
-                    # No progress reporter - use non-streaming directly (more reliable)
-                    response = await self.llm_client.generate_async(
-                        prompt=graph_prompt,
-                        schema=GraphSubtopics,
-                        max_retries=1,  # Don't retry inside - we handle it here
-                        max_tokens=DEFAULT_MAX_TOKENS,
-                        temperature=self.temperature,
-                    )
+                # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+                simulate_stream(
+                    self.progress_reporter,
+                    response.model_dump_json(indent=2),
+                    source="graph_generation",
+                )
 
                 # Process structured response
                 for subtopic_data in response.subtopics:

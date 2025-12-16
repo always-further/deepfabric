@@ -88,3 +88,7 @@ INTERRUPTED_DATASET_FILENAME = "interrupted_dataset.jsonl"
 ERROR_DATASET_FILENAME = "error_dataset.jsonl"
 PARTIAL_TREE_FILENAME = "partial_tree.jsonl"
 FAILED_TREE_SUFFIX = "_failed.jsonl"
+
+# Stream simulation defaults
+STREAM_SIM_CHUNK_SIZE = 8  # characters per chunk
+STREAM_SIM_CHUNK_DELAY_MS = 10.0  # milliseconds between chunks

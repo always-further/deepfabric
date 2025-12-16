@@ -612,7 +612,9 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
     def complete_depth_level(self, depth: int) -> None:
         """Complete a depth level."""
         if self.simple_mode:
-            self.console.print(f"    Depth {depth} complete (nodes: {self.nodes_count}, edges: {self.edges_count})")
+            self.console.print(
+                f"    Depth {depth} complete (nodes: {self.nodes_count}, edges: {self.edges_count})"
+            )
         elif self.progress and self.overall_task is not None:
             self.progress.advance(self.overall_task, 1)
         self.events_log.append(f"✓ Depth {depth} complete")

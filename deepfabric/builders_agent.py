@@ -3,7 +3,7 @@ import logging
 import random
 import uuid
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,7 @@ from .schemas import (
     generate_tool_call_id,
 )
 from .spin import SpinClient, SpinSession
+from .stream_simulator import simulate_stream
 from .utils import is_validation_error
 
 if TYPE_CHECKING:
@@ -326,29 +327,20 @@ Example format: "Can you tell me the weather in Paris tomorrow and suggest what 
 
 Generate only the user's question:"""
 
-        response: UserQuestion
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=UserQuestion,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk("user_question", chunk)
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                raise DataSetGeneratorError("Failed to generate user question")
-            response = cast(UserQuestion, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=UserQuestion,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=UserQuestion,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source="user_question",
+        )
 
         return ChatMessage(role="user", content=response.content)
 
@@ -434,30 +426,20 @@ Generate only the user's question:"""
 
         prompt = "\n".join(prompt_parts)
 
-        response: AgentStep
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=AgentStep,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk("agent_step", chunk)
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                msg = "Failed to generate agent step"
-                raise DataSetGeneratorError(msg)
-            response = cast(AgentStep, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=AgentStep,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=AgentStep,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source="agent_step",
+        )
 
         return response
 
@@ -661,30 +643,20 @@ You executed these tools:
 Based on these results, provide a clear, helpful response to the user.
 Remember: You have access to the tools listed above and have used them in this conversation."""
 
-        response: AgentResponse
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=AgentResponse,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk("agent_response", chunk)
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                msg = "Failed to generate agent response"
-                raise DataSetGeneratorError(msg)
-            response = cast(AgentResponse, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=AgentResponse,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=AgentResponse,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source="agent_response",
+        )
 
         return ChatMessage(role="assistant", content=response.content)
 
@@ -953,30 +925,20 @@ class MultiTurnAgentBuilder(SingleTurnAgentBuilder):
             f"Keep it brief (2-3 sentences) but ensure multi-step complexity with clear tool dependencies."
         )
 
-        response: Scenario
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=Scenario,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk("scenario_gen", chunk)
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                msg = "Failed to generate scenario"
-                raise DataSetGeneratorError(msg)
-            response = cast(Scenario, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=Scenario,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=Scenario,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source="scenario_gen",
+        )
 
         return response.description
 
@@ -1095,30 +1057,20 @@ class MultiTurnAgentBuilder(SingleTurnAgentBuilder):
 
         prompt = "\n".join(prompt_parts)
 
-        response: AgentStep
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=AgentStep,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk("agent_step_mt", chunk)
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                msg = "Failed to generate agent step for multi-turn"
-                raise DataSetGeneratorError(msg)
-            response = cast(AgentStep, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=AgentStep,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=AgentStep,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source="agent_step_mt",
+        )
 
         return response
 
@@ -1158,32 +1110,21 @@ Guidance: {guidance}
 The message should reference or build upon previous conversation if applicable.
 Keep it concise and natural."""
 
-        response: UserQuestion
-        if self.progress_reporter:
-            temp_response = None
-            async for chunk, result in self.llm.generate_async_stream(
-                prompt=prompt,
-                schema=UserQuestion,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            ):
-                if chunk:
-                    self.progress_reporter.emit_chunk(
-                        f"turn_{turn_idx}_user", chunk, turn=turn_idx + 1
-                    )
-                if result:
-                    temp_response = result
-            if temp_response is None:
-                msg = f"Failed to generate user question for turn {turn_idx + 1}"
-                raise DataSetGeneratorError(msg)
-            response = cast(UserQuestion, temp_response)
-        else:
-            response = await self.llm.generate_async(
-                prompt=prompt,
-                schema=UserQuestion,
-                max_tokens=self.config.max_tokens,
-                temperature=self.config.temperature,
-            )
+        # Always use non-streaming for reliable structured output
+        response = await self.llm.generate_async(
+            prompt=prompt,
+            schema=UserQuestion,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+        )
+
+        # Fire-and-forget: simulate streaming for TUI preview (non-blocking)
+        simulate_stream(
+            self.progress_reporter,
+            response.model_dump_json(),
+            source=f"turn_{turn_idx}_user",
+            turn=turn_idx + 1,
+        )
 
         return ChatMessage(role="user", content=response.content)
 

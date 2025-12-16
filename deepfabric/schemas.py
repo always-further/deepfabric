@@ -986,7 +986,8 @@ class GraphSubtopic(BaseModel):
 
     topic: str = Field(description="The subtopic name")
     connections: list[int] = Field(
-        description="List of existing node IDs to connect to, empty list if none"
+        default_factory=list,
+        description="List of existing node IDs to connect to, empty list if none",
     )
 
 

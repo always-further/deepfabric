@@ -10,6 +10,7 @@ import openai
 import outlines
 
 from google import genai
+from google.genai import types as genai_types
 from pydantic import BaseModel
 
 from ..exceptions import DataSetGeneratorError
@@ -206,6 +207,65 @@ def _is_incompatible_array(schema: dict) -> bool:
     return isinstance(items, dict) and _is_incompatible_object(items)
 
 
+def _inline_refs(schema_dict: dict, defs: dict | None = None) -> dict:
+    """
+    Recursively inline $ref references in a JSON schema.
+
+    Gemini's structured output can be unreliable with $ref. This function
+    resolves all references by inlining the definitions directly.
+
+    Args:
+        schema_dict: JSON schema dictionary
+        defs: The $defs dictionary from the root schema
+
+    Returns:
+        Modified schema dict with all $ref inlined
+    """
+    if not isinstance(schema_dict, dict):
+        return schema_dict
+
+    # Use provided defs or extract from schema (guaranteed to be dict after this)
+    resolved_defs: dict = defs if defs is not None else schema_dict.get("$defs", {})
+
+    # Handle $ref - inline the referenced definition
+    if "$ref" in schema_dict:
+        ref_path = schema_dict["$ref"]
+        # Parse reference like "#/$defs/GraphSubtopic"
+        if ref_path.startswith("#/$defs/"):
+            def_name = ref_path[len("#/$defs/") :]
+            if def_name in resolved_defs:
+                # Return a copy of the definition with refs inlined
+                inlined = _inline_refs(dict(resolved_defs[def_name]), resolved_defs)
+                # Preserve any other properties from the original (like description)
+                for key, value in schema_dict.items():
+                    if key != "$ref":
+                        inlined[key] = value
+                return inlined
+        # If we can't resolve, return as-is
+        return schema_dict
+
+    # Create a copy to modify
+    result = {}
+
+    for key, value in schema_dict.items():
+        if key == "$defs":
+            # Skip $defs since we're inlining them
+            continue
+        if key == "properties" and isinstance(value, dict):
+            result[key] = {
+                prop_name: _inline_refs(prop_schema, resolved_defs)
+                for prop_name, prop_schema in value.items()
+            }
+        elif key == "items" and isinstance(value, dict):
+            result[key] = _inline_refs(value, resolved_defs)
+        elif key in _UNION_KEYS and isinstance(value, list):
+            result[key] = [_inline_refs(variant, resolved_defs) for variant in value]
+        else:
+            result[key] = value
+
+    return result
+
+
 def _strip_additional_properties(schema_dict: dict) -> dict:
     """
     Recursively remove additionalProperties from JSON schema and handle dict[str, Any] fields.
@@ -290,38 +350,112 @@ def _strip_additional_properties(schema_dict: dict) -> dict:
     return schema_dict
 
 
-def _create_gemini_compatible_schema(schema: type[BaseModel]) -> type[BaseModel]:
-    """
-    Create a Gemini-compatible version of a Pydantic schema.
+class DirectGeminiModel:
+    """Direct Gemini API client bypassing Outlines for structured output.
 
-    Gemini doesn't support:
-    1. additionalProperties field in JSON schemas
-    2. Objects with no properties defined (e.g., dict[str, Any])
-
-    This function creates a wrapper that generates schemas meeting these requirements
-    by removing incompatible fields entirely.
-
-    Args:
-        schema: Original Pydantic model
-
-    Returns:
-        Wrapper model that generates Gemini-compatible schemas
+    Uses Gemini's native response_json_schema parameter which is more reliable
+    than Outlines' wrapper for structured output generation.
     """
 
-    # Create a new model class that overrides model_json_schema
-    class GeminiCompatModel(schema):  # type: ignore[misc,valid-type]
-        @classmethod
-        def model_json_schema(cls, **kwargs):
-            # Get the original schema
-            original_schema = super().model_json_schema(**kwargs)
-            # Strip additionalProperties
-            return _strip_additional_properties(original_schema)
+    def __init__(self, client: genai.Client, model_name: str):
+        self.client = client
+        self.model_name = model_name
 
-    # Set name and docstring
-    GeminiCompatModel.__name__ = f"{schema.__name__}GeminiCompat"
-    GeminiCompatModel.__doc__ = schema.__doc__
+    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
+        """Prepare JSON schema for Gemini by inlining refs and stripping incompatible fields."""
+        json_schema = schema.model_json_schema()
+        return _strip_additional_properties(_inline_refs(json_schema))
 
-    return GeminiCompatModel
+    def __call__(
+        self,
+        prompt: str,
+        schema: type[BaseModel],
+        **kwargs,
+    ) -> str:
+        """Generate structured output using Gemini's native JSON schema support.
+
+        Args:
+            prompt: The input prompt
+            schema: Pydantic model class for structured output
+            **kwargs: Additional generation parameters (temperature, max_output_tokens, etc.)
+
+        Returns:
+            JSON string matching the schema
+        """
+        json_schema = self._prepare_json_schema(schema)
+
+        # Build generation config
+        config = genai_types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_json_schema=json_schema,
+            **kwargs,
+        )
+
+        # Call Gemini API directly
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=config,
+        )
+
+        if response.text is None:
+            raise DataSetGeneratorError("Gemini returned empty response")
+
+        return response.text
+
+
+class AsyncDirectGeminiModel:
+    """Async direct Gemini API client bypassing Outlines for structured output.
+
+    Uses Gemini's native response_json_schema parameter which is more reliable
+    than Outlines' wrapper for structured output generation.
+    """
+
+    def __init__(self, client: genai.Client, model_name: str):
+        self.client = client
+        self.model_name = model_name
+
+    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
+        """Prepare JSON schema for Gemini by inlining refs and stripping incompatible fields."""
+        json_schema = schema.model_json_schema()
+        return _strip_additional_properties(_inline_refs(json_schema))
+
+    async def __call__(
+        self,
+        prompt: str,
+        schema: type[BaseModel],
+        **kwargs,
+    ) -> str:
+        """Asynchronously generate structured output using Gemini's native JSON schema support.
+
+        Args:
+            prompt: The input prompt
+            schema: Pydantic model class for structured output
+            **kwargs: Additional generation parameters (temperature, max_output_tokens, etc.)
+
+        Returns:
+            JSON string matching the schema
+        """
+        json_schema = self._prepare_json_schema(schema)
+
+        # Build generation config
+        config = genai_types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_json_schema=json_schema,
+            **kwargs,
+        )
+
+        # Call Gemini API directly using async method
+        response = await self.client.aio.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=config,
+        )
+
+        if response.text is None:
+            raise DataSetGeneratorError("Gemini returned empty response")
+
+        return response.text
 
 
 def _strip_ref_sibling_keywords(schema_dict: dict) -> dict:
@@ -548,8 +682,9 @@ def make_outlines_model(provider: str, model_name: str, **kwargs) -> Any:
             if not api_key:
                 _raise_api_key_error("GOOGLE_API_KEY or GEMINI_API_KEY")
 
+            # Use direct Gemini API instead of Outlines for better structured output reliability
             client = genai.Client(api_key=api_key)
-            return outlines.from_gemini(client, model_name, **kwargs)
+            return DirectGeminiModel(client, model_name)
 
         _raise_unsupported_provider_error(provider)
 
@@ -592,6 +727,20 @@ def make_async_outlines_model(provider: str, model_name: str, **kwargs) -> Any |
                 **kwargs,
             )
             return outlines.from_openai(client, model_name)
+
+        if provider == "gemini":
+            api_key = None
+            for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+                val = os.getenv(name)
+                if val:
+                    api_key = val
+                    break
+            if not api_key:
+                _raise_api_key_error("GOOGLE_API_KEY or GEMINI_API_KEY")
+
+            # Use direct async Gemini API for better structured output reliability
+            client = genai.Client(api_key=api_key)
+            return AsyncDirectGeminiModel(client, model_name)
 
     except DataSetGeneratorError:
         raise
@@ -676,11 +825,12 @@ class LLMClient:
         # Convert provider-specific parameters
         kwargs = self._convert_generation_params(**kwargs)
 
-        # For Gemini, use compatible schema without additionalProperties
+        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
         # For OpenAI and OpenRouter, ensure all properties are in required array
         generation_schema = schema
-        if self.provider == "gemini" and isinstance(schema, type) and issubclass(schema, BaseModel):
-            generation_schema = _create_gemini_compatible_schema(schema)
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
         elif (
             self.provider in ("openai", "openrouter")
             and isinstance(schema, type)
@@ -688,7 +838,7 @@ class LLMClient:
         ):
             generation_schema = _create_openai_compatible_schema(schema)
 
-        # Generate JSON string with Outlines using the schema as output type
+        # Generate JSON string using the model
         json_output = self.model(prompt, generation_schema, **kwargs)
 
         # Parse and validate the JSON response with the ORIGINAL schema
@@ -735,11 +885,12 @@ class LLMClient:
         """
         kwargs = self._convert_generation_params(**kwargs)
 
-        # For Gemini, use compatible schema without additionalProperties
+        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
         # For OpenAI and OpenRouter, ensure all properties are in required array
         generation_schema = schema
-        if self.provider == "gemini" and isinstance(schema, type) and issubclass(schema, BaseModel):
-            generation_schema = _create_gemini_compatible_schema(schema)
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
         elif (
             self.provider in ("openai", "openrouter")
             and isinstance(schema, type)
@@ -799,9 +950,11 @@ class LLMClient:
         kwargs = self._convert_generation_params(**kwargs)
 
         # Apply provider-specific schema transformations
+        # Note: Gemini uses DirectGeminiModel which handles schema transformation internally
         generation_schema = schema
-        if self.provider == "gemini" and isinstance(schema, type) and issubclass(schema, BaseModel):
-            generation_schema = _create_gemini_compatible_schema(schema)
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
         elif (
             self.provider in ("openai", "openrouter")
             and isinstance(schema, type)
