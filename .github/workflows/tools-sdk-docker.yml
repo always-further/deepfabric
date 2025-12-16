@@ -76,14 +76,10 @@ jobs:
           no-cache: ${{ github.event_name == 'pull_request' }}
   
       - name: Sign the images with GitHub OIDC Token
+        if: github.event_name != 'pull_request'
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
-          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          images=""
-          for tag in ${TAGS}; do
-              images+="${tag}@${DIGEST} "
-            done
-            cosign sign --yes ${images}
+          cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
 
 
