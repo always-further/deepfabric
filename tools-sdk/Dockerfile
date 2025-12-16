@@ -47,9 +47,15 @@ RUN apk add --no-cache \
 ARG SPIN_VERSION=3.0.0
 ARG TARGETARCH
 RUN mkdir -p /usr/local/bin && \
-    ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "amd64") && \
-    curl -fsSL "https://github.com/spinframework/spin/releases/download/v${SPIN_VERSION}/spin-v${SPIN_VERSION}-linux-${ARCH}.tar.gz" | \
-    tar -xzf - -C /usr/local/bin spin && \
+    case "${TARGETARCH}" in \
+        arm64) ARCH="aarch64" ;; \
+        amd64) ARCH="amd64" ;; \
+        *) ARCH="amd64" ;; \
+    esac && \
+    echo "Downloading Spin for architecture: ${ARCH}" && \
+    curl -fsSL "https://github.com/spinframework/spin/releases/download/v${SPIN_VERSION}/spin-v${SPIN_VERSION}-linux-${ARCH}.tar.gz" -o /tmp/spin.tar.gz && \
+    tar -xzf /tmp/spin.tar.gz -C /usr/local/bin spin && \
+    rm /tmp/spin.tar.gz && \
     chmod +x /usr/local/bin/spin && \
     spin --version
 
