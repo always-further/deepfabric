@@ -28,6 +28,23 @@ def _raise_api_key_error(env_var: str) -> None:
     raise DataSetGeneratorError(msg)
 
 
+def _get_gemini_api_key() -> str:
+    """Retrieve Gemini API key from environment variables.
+
+    Returns:
+        The API key string
+
+    Raises:
+        DataSetGeneratorError: If no API key is found
+    """
+    for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+        if api_key := os.getenv(name):
+            return api_key
+    _raise_api_key_error("GOOGLE_API_KEY or GEMINI_API_KEY")
+    # This return is never reached but satisfies type checker
+    raise AssertionError("unreachable")
+
+
 # Provider to environment variable mapping
 PROVIDER_API_KEY_MAP: dict[str, list[str]] = {
     "openai": ["OPENAI_API_KEY"],
@@ -673,15 +690,7 @@ def make_outlines_model(provider: str, model_name: str, **kwargs) -> Any:
             return outlines.from_anthropic(client, model_name)
 
         if provider == "gemini":
-            api_key = None
-            for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
-                val = os.getenv(name)
-                if val:
-                    api_key = val
-                    break
-            if not api_key:
-                _raise_api_key_error("GOOGLE_API_KEY or GEMINI_API_KEY")
-
+            api_key = _get_gemini_api_key()
             # Use direct Gemini API instead of Outlines for better structured output reliability
             client = genai.Client(api_key=api_key)
             return DirectGeminiModel(client, model_name)
@@ -729,15 +738,7 @@ def make_async_outlines_model(provider: str, model_name: str, **kwargs) -> Any |
             return outlines.from_openai(client, model_name)
 
         if provider == "gemini":
-            api_key = None
-            for name in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
-                val = os.getenv(name)
-                if val:
-                    api_key = val
-                    break
-            if not api_key:
-                _raise_api_key_error("GOOGLE_API_KEY or GEMINI_API_KEY")
-
+            api_key = _get_gemini_api_key()
             # Use direct async Gemini API for better structured output reliability
             client = genai.Client(api_key=api_key)
             return AsyncDirectGeminiModel(client, model_name)

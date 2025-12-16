@@ -25,64 +25,6 @@ class StreamSimulatorConfig(BaseModel):
     enabled: bool = Field(default=True)
 
 
-class StreamSimulator:
-    """Simulates streaming by buffering completed text and emitting chunks.
-
-    Uses fire-and-forget pattern for zero performance impact on generation.
-    The simulation runs in background while the caller continues immediately.
-    """
-
-    def __init__(
-        self,
-        progress_reporter: "ProgressReporter | None",
-        config: StreamSimulatorConfig | None = None,
-    ) -> None:
-        self._reporter = progress_reporter
-        self._config = config or StreamSimulatorConfig()
-        self._active_tasks: set[asyncio.Task] = set()
-
-    async def _simulate_impl(self, content: str, source: str, **metadata) -> None:
-        """Internal implementation of chunk emission.
-
-        Args:
-            content: Text to simulate streaming
-            source: Source identifier for TUI routing
-            **metadata: Additional metadata passed to emit_chunk
-        """
-        if not content:
-            return
-
-        delay = self._config.chunk_delay_ms / 1000.0
-        chunk_size = self._config.chunk_size
-
-        for i in range(0, len(content), chunk_size):
-            chunk = content[i : i + chunk_size]
-            self._reporter.emit_chunk(source, chunk, **metadata)
-            if delay > 0 and i + chunk_size < len(content):
-                await asyncio.sleep(delay)
-
-    def simulate(self, content: str, source: str, **metadata) -> asyncio.Task | None:
-        """Start stream simulation as background task (fire-and-forget).
-
-        Returns immediately. Simulation runs in background without blocking.
-
-        Args:
-            content: Text to simulate streaming
-            source: Source identifier for TUI routing
-            **metadata: Additional metadata passed to emit_chunk
-
-        Returns:
-            Task if started, None if no-op (no reporter or disabled)
-        """
-        if not self._reporter or not self._config.enabled:
-            return None
-
-        task = asyncio.create_task(self._simulate_impl(content, source, **metadata))
-        self._active_tasks.add(task)
-        task.add_done_callback(self._active_tasks.discard)
-        return task
-
-
 def simulate_stream(
     progress_reporter: "ProgressReporter | None",
     content: str,
@@ -105,5 +47,22 @@ def simulate_stream(
     Returns:
         Task if started, None if no-op (no reporter or disabled)
     """
-    simulator = StreamSimulator(progress_reporter, config)
-    return simulator.simulate(content, source, **metadata)
+    _config = config or StreamSimulatorConfig()
+    if not progress_reporter or not _config.enabled:
+        return None
+
+    async def _simulate_impl() -> None:
+        """Internal implementation of chunk emission."""
+        if not content:
+            return
+
+        delay = _config.chunk_delay_ms / 1000.0
+        chunk_size = _config.chunk_size
+
+        for i in range(0, len(content), chunk_size):
+            chunk = content[i : i + chunk_size]
+            progress_reporter.emit_chunk(source, chunk, **metadata)
+            if delay > 0 and i + chunk_size < len(content):
+                await asyncio.sleep(delay)
+
+    return asyncio.create_task(_simulate_impl())
