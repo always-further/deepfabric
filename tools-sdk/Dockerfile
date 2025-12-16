@@ -38,19 +38,19 @@ FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
 
 # Install minimal runtime dependencies
 # libstdc++ is required for Spin binary
-# git is required for Spin template installation
 RUN apk add --no-cache \
     ca-certificates \
     curl \
-    bash \
-    libstdc++ \
-    git
+    libstdc++
 
-# Install Spin CLI
+# Install Spin CLI - download binary directly for multi-arch support
 ARG SPIN_VERSION=3.0.0
+ARG TARGETARCH
 RUN mkdir -p /usr/local/bin && \
-    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash -s -- -v v${SPIN_VERSION} && \
-    mv ./spin /usr/local/bin/spin && \
+    ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "amd64") && \
+    curl -fsSL "https://github.com/spinframework/spin/releases/download/v${SPIN_VERSION}/spin-v${SPIN_VERSION}-linux-${ARCH}.tar.gz" | \
+    tar -xzf - -C /usr/local/bin spin && \
+    chmod +x /usr/local/bin/spin && \
     spin --version
 
 WORKDIR /app
