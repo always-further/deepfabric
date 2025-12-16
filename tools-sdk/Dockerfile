@@ -43,10 +43,12 @@ RUN apk add --no-cache \
     curl \
     libstdc++
 
+# Disable Spin telemetry
+ENV SPIN_TELEMETRY_DISABLED=1
+
 # Install Spin CLI - download binary directly for multi-arch support
 ARG SPIN_VERSION=3.0.0
 ARG TARGETARCH
-ENV SPIN_TELEMETRY_DISABLED=1
 RUN mkdir -p /usr/local/bin && \
     case "${TARGETARCH}" in \
         arm64) ARCH="aarch64" ;; \
