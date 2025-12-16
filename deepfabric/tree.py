@@ -257,21 +257,34 @@ class Tree(TopicModel):
         )
 
         try:
-            # Generate structured subtopics using TopicList schema with streaming if available
+            # Generate structured subtopics using TopicList schema
+            # Try streaming first for TUI preview, with fallback to non-streaming
             topic_response = None
             if self.progress_reporter:
-                async for chunk, result in self.llm_client.generate_async_stream(
-                    prompt=prompt,
-                    schema=TopicList,
-                    max_retries=MAX_RETRY_ATTEMPTS,
-                    max_tokens=DEFAULT_MAX_TOKENS,
-                    temperature=self.temperature,
-                ):
-                    if chunk:
-                        self.progress_reporter.emit_chunk("tree_generation", chunk)
-                    if result:
-                        topic_response = result
+                try:
+                    async for chunk, result in self.llm_client.generate_async_stream(
+                        prompt=prompt,
+                        schema=TopicList,
+                        max_retries=1,  # Don't retry inside streaming - caller handles retries
+                        max_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=self.temperature,
+                    ):
+                        if chunk:
+                            self.progress_reporter.emit_chunk("tree_generation", chunk)
+                        if result:
+                            topic_response = result
+                except Exception:
+                    # Fallback to non-streaming on any streaming error
+                    # This provides reliability while still attempting streaming preview
+                    topic_response = await self.llm_client.generate_async(
+                        prompt=prompt,
+                        schema=TopicList,
+                        max_retries=MAX_RETRY_ATTEMPTS,
+                        max_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=self.temperature,
+                    )
             else:
+                # No progress reporter - use non-streaming directly (more reliable)
                 topic_response = await self.llm_client.generate_async(
                     prompt=prompt,
                     schema=TopicList,

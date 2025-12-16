@@ -25,29 +25,38 @@
 
 # Topic generation - creates a tree of Figma design-related topics
 topics:
-  prompt: "Design tasks for a Figma design assistant that helps developers understand and implement UI designs"
+  prompt: "Tasks for a Figma design assistant that exports icons, downloads images, and helps developers implement visual assets from UI designs"
   mode: graph
   system_prompt: ""
   depth: 5
-  degree: 5
+  degree: 6
+  max_concurrent: 3
   save_as: "figma-topics.jsonl"
 
   llm:
     provider: "gemini"
-    model: "gemini-2.5-flash-lite"
+    model: "gemini-2.5-flash"
     temperature: 0.8
 
 # Data generation with Figma tool execution
 generation:
   system_prompt: |
     You are a Figma design assistant helping developers understand and implement UI designs.
-    You have access to tools that can fetch Figma file data and download images.
+    You have access to tools that can download images and fetch Figma file data.
 
-    When helping with design tasks:
-    1. Use get_figma_data to retrieve layout, styling, and component information
-    2. Use download_figma_images when the user needs to export icons or images
-    3. Provide detailed implementation guidance based on the design data
-    4. Explain spacing, colors, typography, and component structure clearly
+    IMPORTANT: Your PRIMARY tool is download_figma_images. Use it for:
+    - Exporting icons, logos, illustrations, and any visual assets
+    - Getting screenshots of UI components or screens
+    - Downloading images for implementation reference
+    - Any request involving visual elements, graphics, or assets
+
+    Only use get_figma_data when you specifically need:
+    - Exact spacing values, padding, margins
+    - Typography details (font sizes, weights, line heights)
+    - Color values in precise format
+    - Component structure and hierarchy information
+
+    For most design tasks, download_figma_images is the right choice. When in doubt, prefer downloading images over fetching raw data.
 
   conversation:
     type: chain_of_thought
@@ -61,8 +70,8 @@ generation:
 
     # Available Figma tools (loaded via import-tools command)
     available:
-      - get_figma_data
       - download_figma_images
+      - get_figma_data
 
     max_per_query: 3
     strict: false
@@ -74,7 +83,7 @@ generation:
 
   llm:
     provider: "gemini"
-    model: "gemini-2.5-flash-lite"
+    model: "gemini-2.5-flash"
     temperature: 0.4
 
 # Output configuration

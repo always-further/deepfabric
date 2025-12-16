@@ -545,7 +545,9 @@ class SpinLoadResult(BaseModel):
     """Result from loading tools into Spin."""
 
     loaded: int = Field(description="The number of tools loaded into Spin.")
-    tool_names: list[str] = Field(alias="tools", description="The names of the tools loaded into Spin.")
+    tool_names: list[str] = Field(
+        alias="tools", description="The names of the tools loaded into Spin."
+    )
 
 
 def push_tools_to_spin(

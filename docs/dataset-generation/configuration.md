@@ -80,6 +80,7 @@ Controls topic tree/graph generation.
 | `mode` | string | "tree" | Generation mode: tree or graph |
 | `depth` | int | 2 | Hierarchy depth (1-10) |
 | `degree` | int | 3 | Subtopics per node (1-50) |
+| `max_concurrent` | int | 4 | Max concurrent LLM calls (graph mode only, 1-20) |
 | `system_prompt` | string | "" | Custom instructions for topic LLM |
 | `save_as` | string | - | Path to save topics JSONL |
 | `llm` | object | - | Override shared LLM settings |

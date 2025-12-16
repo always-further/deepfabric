@@ -36,7 +36,7 @@ def _ensure_not_running_loop(func_name: str) -> None:
         raise RuntimeError(msg)
 
 
-async def _process_graph_events(graph: Graph) -> dict | None:
+async def _process_graph_events(graph: Graph, debug: bool = False) -> dict | None:
     from .progress import ProgressReporter  # noqa: PLC0415
 
     tui = get_graph_tui()
@@ -87,7 +87,18 @@ async def _process_graph_events(graph: Graph) -> dict | None:
                 )
                 tui.finish_building(failed_generations)
                 final_event = event
+
+                if debug and failed_generations > 0 and hasattr(graph, "failed_generations"):
+                    get_tui().error("\nDebug: Graph generation failures:")
+                    for idx, failure in enumerate(graph.failed_generations, 1):
+                        node_id = failure.get("node_id", "unknown")
+                        attempts = failure.get("attempts", 0)
+                        last_error = failure.get("last_error", "Unknown error")
+                        get_tui().error(f"  [{idx}] Node ID: {node_id}, Attempts: {attempts}")
+                        get_tui().error(f"      Error: {last_error}")
     except Exception as e:
+        if debug:
+            get_tui().error(f"Debug: Full traceback:\n{traceback.format_exc()}")
         get_tui().error(f"Graph build failed: {str(e)}")
         raise
     else:
@@ -144,12 +155,13 @@ async def _process_tree_events(tree: Tree, debug: bool = False) -> dict | None:
         return final_event
 
 
-def handle_graph_events(graph: Graph) -> dict | None:
+def handle_graph_events(graph: Graph, debug: bool = False) -> dict | None:
     """
     Build graph with TUI progress.
 
     Args:
         graph: Graph object to build
+        debug: Enable debug output
 
     Returns:
         Final build event dictionary or None
@@ -158,11 +170,11 @@ def handle_graph_events(graph: Graph) -> dict | None:
         Exception: If graph build fails
     """
     _ensure_not_running_loop("handle_graph_events")
-    return asyncio.run(_process_graph_events(graph))
+    return asyncio.run(_process_graph_events(graph, debug=debug))
 
 
-async def handle_graph_events_async(graph: Graph) -> dict | None:
-    return await _process_graph_events(graph)
+async def handle_graph_events_async(graph: Graph, debug: bool = False) -> dict | None:
+    return await _process_graph_events(graph, debug=debug)
 
 
 def handle_tree_events(tree: Tree, debug: bool = False) -> dict | None:
@@ -248,7 +260,7 @@ def load_or_build_topic_model(
 
     # Build with appropriate event handler
     if isinstance(topic_model, Graph):
-        handle_graph_events(topic_model)
+        handle_graph_events(topic_model, debug=debug)
     elif isinstance(topic_model, Tree):
         handle_tree_events(topic_model, debug=debug)
 

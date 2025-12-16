@@ -97,6 +97,9 @@ MIN_PREVIEW_LINES = 4  # Minimum preview lines to enforce
 # Vertical space occupied by other UI elements when calculating dynamic preview height.
 # Accounts for: footer (3) + status panel (8) + panel borders and margins (~9)
 PREVIEW_VERTICAL_OFFSET = 20
+# Truncation limits for event log display
+EVENT_TOPIC_MAX_LENGTH = 20  # Max chars for topic names in events
+EVENT_ERROR_MAX_LENGTH = 80  # Max chars for error summaries in events
 
 
 @dataclass
@@ -586,7 +589,9 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
 
     def start_depth_level(self, depth: int, leaf_count: int) -> None:
         """Update for new depth level."""
-        if self.progress and self.overall_task is not None:
+        if self.simple_mode:
+            self.console.print(f"  Depth {depth}: expanding {leaf_count} nodes...")
+        elif self.progress and self.overall_task is not None:
             self.progress.update(
                 self.overall_task,
                 description=f"  Building graph - depth {depth} ({leaf_count} nodes to expand)",
@@ -606,8 +611,9 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
 
     def complete_depth_level(self, depth: int) -> None:
         """Complete a depth level."""
-        _ = depth  # Mark as intentionally unused
-        if self.progress and self.overall_task is not None:
+        if self.simple_mode:
+            self.console.print(f"    Depth {depth} complete (nodes: {self.nodes_count}, edges: {self.edges_count})")
+        elif self.progress and self.overall_task is not None:
             self.progress.advance(self.overall_task, 1)
         self.events_log.append(f"✓ Depth {depth} complete")
         self._refresh_left()
@@ -618,10 +624,59 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
 
     def add_failure(self, node_topic: str) -> None:
         """Record a generation failure."""
-        _ = node_topic  # Mark as intentionally unused
         self.failed_attempts += 1
+        if self.simple_mode:
+            if len(node_topic) > EVENT_ERROR_MAX_LENGTH:
+                topic_display = node_topic[:EVENT_ERROR_MAX_LENGTH] + "..."
+            else:
+                topic_display = node_topic
+            self.console.print(f"    [red]✗ Node expansion failed: {topic_display}[/red]")
         self.events_log.append("✗ Node expansion failed")
         self._refresh_left()
+
+    def on_node_retry(
+        self,
+        node_topic: str,
+        attempt: int,
+        max_attempts: int,
+        error_summary: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Handle node expansion retry events from the progress reporter.
+
+        Args:
+            node_topic: Topic of the node being expanded
+            attempt: Current attempt number (1-based)
+            max_attempts: Total number of attempts allowed
+            error_summary: Brief description of the error
+            metadata: Additional context
+        """
+        _ = metadata  # Unused for now
+        try:
+            # Truncate node topic for display
+            if len(node_topic) > EVENT_TOPIC_MAX_LENGTH:
+                topic_display = node_topic[:EVENT_TOPIC_MAX_LENGTH] + "..."
+            else:
+                topic_display = node_topic
+            # Truncate error summary
+            if len(error_summary) > EVENT_ERROR_MAX_LENGTH:
+                error_display = error_summary[:EVENT_ERROR_MAX_LENGTH] + "..."
+            else:
+                error_display = error_summary
+
+            # In simple mode, print directly to console
+            if self.simple_mode:
+                self.console.print(
+                    f"    [yellow]↻ Retry {attempt}/{max_attempts} '{topic_display}': {error_display}[/yellow]"
+                )
+
+            self.events_log.append(
+                f"↻ Retry {attempt}/{max_attempts} '{topic_display}': {error_display}"
+            )
+            self._refresh_left()
+        except Exception:
+            # Best-effort, swallow errors to avoid breaking progress reporting
+            return
 
     def on_retry(
         self,

@@ -23,9 +23,10 @@ graph = Graph(
     topic_prompt="Artificial intelligence research areas",
     model_name="anthropic/claude-sonnet-4-5",
     topic_system_prompt="You are mapping interconnected research concepts.",
-    degree=4,        # Connections per node
-    depth=3,         # Maximum distance from root
-    temperature=0.8        # Higher creativity for connections
+    degree=4,           # Connections per node
+    depth=3,            # Maximum distance from root
+    temperature=0.8,    # Higher creativity for connections
+    max_concurrent=4    # Limit concurrent LLM calls to avoid rate limits
 )
 ```
 
@@ -44,6 +45,8 @@ graph = Graph(
 **depth** (int): Maximum shortest-path distance from root to any node.
 
 **temperature** (float): Controls creativity in connection generation. Higher values encourage more diverse relationships.
+
+**max_concurrent** (int): Maximum number of concurrent LLM calls during graph expansion. Lower values help avoid rate limits but increase build time. Default is 4. Range: 1-20.
 
 ## Graph Class
 

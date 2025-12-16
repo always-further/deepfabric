@@ -203,6 +203,29 @@ class ProgressReporter:
             if hasattr(observer, "on_tool_execution"):
                 observer.on_tool_execution(tool_name, success, metadata)
 
+    def emit_node_retry(
+        self,
+        node_topic: str,
+        attempt: int,
+        max_attempts: int,
+        error_summary: str,
+        **metadata,
+    ) -> None:
+        """Emit a node expansion retry event to all observers.
+
+        Used to track graph/tree node expansion retries in the TUI events panel.
+
+        Args:
+            node_topic: Topic of the node being expanded
+            attempt: Current attempt number (1-based)
+            max_attempts: Total number of attempts allowed
+            error_summary: Brief description of the error
+            **metadata: Additional context as keyword arguments
+        """
+        for observer in self._observers:
+            if hasattr(observer, "on_node_retry"):
+                observer.on_node_retry(node_topic, attempt, max_attempts, error_summary, metadata)
+
 
 # Convenience context manager for tracking steps
 class ProgressStep:

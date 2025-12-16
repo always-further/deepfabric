@@ -102,6 +102,12 @@ class TopicsConfig(BaseModel):
         le=50,
         description="Number of subtopics per node (branching factor)",
     )
+    max_concurrent: int = Field(
+        default=4,
+        ge=1,
+        le=20,
+        description="Maximum concurrent LLM calls during graph expansion (helps avoid rate limits)",
+    )
     save_as: str | None = Field(default=None, description="Where to save the generated topics")
 
     # Optional LLM overrides (inherits from top-level llm if not specified)
@@ -546,6 +552,7 @@ See documentation for full examples.
             "base_url": llm.base_url,
             "depth": self.topics.depth,
             "degree": self.topics.degree,
+            "max_concurrent": self.topics.max_concurrent,
         }
 
         # Handle overrides

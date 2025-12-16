@@ -61,6 +61,12 @@ class GraphConfig(BaseModel):
     )
     degree: int = Field(default=3, ge=1, le=10, description="The branching factor of the graph")
     depth: int = Field(default=2, ge=1, le=5, description="The depth of the graph")
+    max_concurrent: int = Field(
+        default=4,
+        ge=1,
+        le=20,
+        description="Maximum concurrent LLM calls during graph expansion (helps avoid rate limits)",
+    )
     base_url: str | None = Field(
         default=None,
         description="Base URL for API endpoint (e.g., custom OpenAI-compatible servers)",
@@ -122,6 +128,7 @@ class Graph(TopicModel):
         self.temperature = self.config.temperature
         self.degree = self.config.degree
         self.depth = self.config.depth
+        self.max_concurrent = self.config.max_concurrent
 
         # Initialize LLM client
         llm_kwargs = {}
@@ -254,9 +261,16 @@ class Graph(TopicModel):
                 yield {"event": "depth_start", "depth": depth + 1, "leaf_count": len(leaf_nodes)}
 
                 if leaf_nodes:
-                    tasks = [
-                        self.get_subtopics_and_connections(node, self.degree) for node in leaf_nodes
-                    ]
+                    # Use semaphore to limit concurrent LLM calls and avoid rate limits
+                    semaphore = asyncio.Semaphore(self.max_concurrent)
+
+                    async def bounded_expand(
+                        node: Node, sem: asyncio.Semaphore = semaphore
+                    ) -> tuple[int, int]:
+                        async with sem:
+                            return await self.get_subtopics_and_connections(node, self.degree)
+
+                    tasks = [bounded_expand(node) for node in leaf_nodes]
                     results = await asyncio.gather(*tasks)
 
                     for node, (subtopics_added, connections_added) in zip(
@@ -311,59 +325,90 @@ class Graph(TopicModel):
         graph_prompt = graph_prompt.replace("{{current_topic}}", parent_node.topic)
         graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
 
-        try:
-            # Generate with streaming if progress reporter available
-            response = None
-            if self.progress_reporter:
-                async for chunk, result in self.llm_client.generate_async_stream(
-                    prompt=graph_prompt,
-                    schema=GraphSubtopics,
-                    max_retries=MAX_RETRY_ATTEMPTS,
-                    max_tokens=DEFAULT_MAX_TOKENS,
-                    temperature=self.temperature,
+        last_error = None
+        for attempt in range(MAX_RETRY_ATTEMPTS):
+            try:
+                response = None
+
+                # Try streaming first for TUI preview, with fallback to non-streaming
+                if self.progress_reporter:
+                    try:
+                        async for chunk, result in self.llm_client.generate_async_stream(
+                            prompt=graph_prompt,
+                            schema=GraphSubtopics,
+                            max_retries=1,  # Don't retry inside streaming - we handle it here
+                            max_tokens=DEFAULT_MAX_TOKENS,
+                            temperature=self.temperature,
+                        ):
+                            if chunk:
+                                self.progress_reporter.emit_chunk("graph_generation", chunk)
+                            if result:
+                                response = result
+                    except Exception:
+                        # Fallback to non-streaming on any streaming error
+                        # This provides reliability while still attempting streaming preview
+                        response = await self.llm_client.generate_async(
+                            prompt=graph_prompt,
+                            schema=GraphSubtopics,
+                            max_retries=1,  # Don't retry inside - we handle it here
+                            max_tokens=DEFAULT_MAX_TOKENS,
+                            temperature=self.temperature,
+                        )
+                else:
+                    # No progress reporter - use non-streaming directly (more reliable)
+                    response = await self.llm_client.generate_async(
+                        prompt=graph_prompt,
+                        schema=GraphSubtopics,
+                        max_retries=1,  # Don't retry inside - we handle it here
+                        max_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=self.temperature,
+                    )
+
+                # Process structured response
+                for subtopic_data in response.subtopics:
+                    new_node = self.add_node(subtopic_data.topic)
+                    self.add_edge(parent_node.id, new_node.id)
+                    subtopics_added += 1
+                    for connection_id in subtopic_data.connections:
+                        if connection_id in self.nodes:
+                            self.add_edge(connection_id, new_node.id)
+                            connections_added += 1
+
+            except Exception as e:
+                last_error = str(e)
+                # Check if it's an API key related error - don't retry these
+                error_str = str(e).lower()
+                if any(
+                    keyword in error_str
+                    for keyword in ["api_key", "api key", "authentication", "unauthorized"]
                 ):
-                    if chunk:
-                        self.progress_reporter.emit_chunk("graph_generation", chunk)
-                    if result:
-                        response = result
+                    error_msg = f"Authentication failed for provider '{self.provider}'. Please set the required API key environment variable."
+                    raise RuntimeError(error_msg) from e
+
+                # Log retry attempt if not the last one
+                if attempt < MAX_RETRY_ATTEMPTS - 1:
+                    # Emit retry event to TUI if progress reporter available
+                    if self.progress_reporter:
+                        self.progress_reporter.emit_node_retry(
+                            node_topic=parent_node.topic,
+                            attempt=attempt + 1,
+                            max_attempts=MAX_RETRY_ATTEMPTS,
+                            error_summary=last_error or "Unknown error",
+                        )
+                    # Brief delay before retry with exponential backoff
+                    delay = (2**attempt) * 0.5  # 0.5s, 1s, 2s
+                    await asyncio.sleep(delay)
+                    continue
+
             else:
-                response = await self.llm_client.generate_async(
-                    prompt=graph_prompt,
-                    schema=GraphSubtopics,
-                    max_retries=MAX_RETRY_ATTEMPTS,
-                    max_tokens=DEFAULT_MAX_TOKENS,
-                    temperature=self.temperature,
-                )
+                # Success - return the results
+                return subtopics_added, connections_added
 
-            # Process structured response
-            for subtopic_data in response.subtopics:
-                new_node = self.add_node(subtopic_data.topic)
-                self.add_edge(parent_node.id, new_node.id)
-                subtopics_added += 1
-                for connection_id in subtopic_data.connections:
-                    if connection_id in self.nodes:
-                        self.add_edge(connection_id, new_node.id)
-                        connections_added += 1
-
-            return subtopics_added, connections_added
-
-        except Exception as e:
-            last_error = str(e)
-            # Check if it's an API key related error
-            error_str = str(e).lower()
-            if any(
-                keyword in error_str
-                for keyword in ["api_key", "api key", "authentication", "unauthorized"]
-            ):
-                error_msg = f"Authentication failed for provider '{self.provider}'. Please set the required API key environment variable."
-                raise RuntimeError(error_msg) from e
-
-            self.failed_generations.append(
-                {"node_id": parent_node.id, "attempts": 1, "last_error": last_error}
-            )
-            return 0, 0  # No subtopics or connections added on failure
-        else:
-            return subtopics_added, connections_added
+        # All retries exhausted - record failure
+        self.failed_generations.append(
+            {"node_id": parent_node.id, "attempts": MAX_RETRY_ATTEMPTS, "last_error": last_error}
+        )
+        return 0, 0  # No subtopics or connections added on failure
 
     def get_all_paths(self) -> list[list[str]]:
         """Returns all paths from the root to leaf nodes."""
