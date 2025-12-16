@@ -15,6 +15,7 @@ on:
       - '.github/workflows/tools-sdk-docker.yml'
   release:
     types: [published]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -71,6 +72,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+          no-cache: ${{ github.event_name == 'pull_request' }}
 
       - name: Sign the container image
         if: github.event_name != 'pull_request'
