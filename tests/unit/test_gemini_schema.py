@@ -1,10 +1,14 @@
 """Tests for Gemini schema transformation functions and DirectGeminiModel."""
 
+import asyncio
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from pydantic import BaseModel, Field
 
+from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.llm.client import (
     AsyncDirectGeminiModel,
     DirectGeminiModel,
@@ -186,9 +190,9 @@ class TestInlineRefs:
 
     def test_handles_non_dict_input(self):
         """Non-dict input should be returned as-is."""
-        assert _inline_refs("string") == "string"
-        assert _inline_refs(123) == 123
-        assert _inline_refs(None) is None
+        assert _inline_refs("string") == "string"  # type: ignore
+        assert _inline_refs(123) == 123  # type: ignore # noqa: PLR2004
+        assert _inline_refs(None) is None  # type: ignore
 
 
 class TestStripAdditionalProperties:
@@ -365,8 +369,6 @@ class TestDirectGeminiModel:
 
         model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
 
-        from deepfabric.exceptions import DataSetGeneratorError
-
         with pytest.raises(DataSetGeneratorError, match="empty response"):
             model("Generate something", ParentItem)
 
@@ -386,9 +388,8 @@ class TestAsyncDirectGeminiModel:
         assert sync_schema == async_schema
 
     @patch("deepfabric.llm.client.genai_types.GenerateContentConfig")
-    def test_call_uses_async_api(self, mock_config_class):
+    def test_call_uses_async_api(self, mock_config_class):  # noqa: ARG002
         """__call__ should use async API (client.aio.models.generate_content)."""
-        import asyncio
 
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -408,7 +409,6 @@ class TestAsyncDirectGeminiModel:
 
     def test_call_raises_on_empty_response(self):
         """__call__ should raise DataSetGeneratorError on empty response."""
-        import asyncio
 
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -416,8 +416,6 @@ class TestAsyncDirectGeminiModel:
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
         model = AsyncDirectGeminiModel(mock_client, "gemini-1.5-flash")
-
-        from deepfabric.exceptions import DataSetGeneratorError
 
         with pytest.raises(DataSetGeneratorError, match="empty response"):
             asyncio.run(model("Generate something", ParentItem))
