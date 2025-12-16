@@ -60,7 +60,7 @@ RUN mkdir -p /usr/local/bin && \
     tar -xzf /tmp/spin.tar.gz -C /usr/local/bin spin && \
     rm /tmp/spin.tar.gz && \
     chmod +x /usr/local/bin/spin && \
-    spin --version
+    ls -la /usr/local/bin/spin
 
 WORKDIR /app
 
