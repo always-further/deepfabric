@@ -1,12 +1,16 @@
 # =============================================================================
 # DeepFabric Tools-SDK Spin Server
 # Multi-stage Dockerfile for building and running the Spin WASM components
+# Uses Chainguard images for runtime security
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # Stage 1: Build Rust WASM components
+# Note: Using official Rust image for build stage as it includes rustup
+# needed for adding wasm32-wasip1 target. Build artifacts are copied to
+# Chainguard runtime image.
 # -----------------------------------------------------------------------------
-FROM rust:1.83-bookworm AS rust-builder
+FROM rust:1.87-bookworm AS rust-builder
 
 # Install wasm32-wasip1 target
 RUN rustup target add wasm32-wasip1
@@ -28,40 +32,26 @@ WORKDIR /build/components/mock
 RUN cargo build --target wasm32-wasip1 --release
 
 # -----------------------------------------------------------------------------
-# Stage 2: Build Python WASM components (optional - currently disabled)
+# Stage 2: Runtime - Spin server
 # -----------------------------------------------------------------------------
-FROM python:3.12-bookworm AS python-builder
-
-# Install uv for fast dependency management
-RUN pip install uv
-
-WORKDIR /build
-
-# Copy Python component sources
-COPY components/github/pyproject.toml components/github/pyproject.toml
-COPY components/github/app.py components/github/app.py
-
-# Install dependencies and build
-WORKDIR /build/components/github
-RUN uv venv && \
-    uv pip install -r pyproject.toml && \
-    uv run componentize-py -w spin-http componentize app -o github.wasm || true
-
-# -----------------------------------------------------------------------------
-# Stage 3: Runtime - Spin server
-# -----------------------------------------------------------------------------
-FROM debian:bookworm-slim AS runtime
+FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
 
 # Install minimal runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# libstdc++ is required for Spin binary
+# git is required for Spin template installation
+RUN apk add --no-cache \
     ca-certificates \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    bash \
+    libstdc++ \
+    git
 
 # Install Spin CLI
 ARG SPIN_VERSION=3.0.0
-RUN curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash -s -- -v v${SPIN_VERSION} && \
-    mv spin /usr/local/bin/
+RUN mkdir -p /usr/local/bin && \
+    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash -s -- -v v${SPIN_VERSION} && \
+    cp ./spin /usr/local/bin/spin && \
+    spin --version
 
 WORKDIR /app
 
@@ -72,7 +62,6 @@ COPY runtime-config.toml .
 # Create directory structure for components
 RUN mkdir -p components/vfs/target/wasm32-wasip1/release \
              components/mock/target/wasm32-wasip1/release \
-             components/github \
              .spin/logs
 
 # Copy built WASM components from builder stages
@@ -80,16 +69,6 @@ COPY --from=rust-builder /build/components/vfs/target/wasm32-wasip1/release/vfs.
      components/vfs/target/wasm32-wasip1/release/
 COPY --from=rust-builder /build/components/mock/target/wasm32-wasip1/release/mock.wasm \
      components/mock/target/wasm32-wasip1/release/
-
-# Optionally copy Python component if built successfully
-COPY --from=python-builder /build/components/github/github.wasm \
-     components/github/ 2>/dev/null || true
-
-# Environment variables for configuration
-# Override these at runtime as needed
-ENV SPIN_VARIABLE_GITHUB_TOKEN=""
-ENV SPIN_VARIABLE_ALLOWED_REPOS=""
-ENV SPIN_VARIABLE_ALLOW_WRITES="false"
 
 # Expose the default Spin port
 EXPOSE 3000
