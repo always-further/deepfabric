@@ -50,7 +50,7 @@ RUN apk add --no-cache \
 ARG SPIN_VERSION=3.0.0
 RUN mkdir -p /usr/local/bin && \
     curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash -s -- -v v${SPIN_VERSION} && \
-    cp ./spin /usr/local/bin/spin && \
+    mv ./spin /usr/local/bin/spin && \
     spin --version
 
 WORKDIR /app
