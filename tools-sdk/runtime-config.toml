@@ -1,7 +1,5 @@
-# Default runtime configuration for DeepFabric Spin SDK
-# Override these with environment variables: SPIN_VARIABLE_<NAME>
+# Runtime configuration for DeepFabric Spin SDK
+# Key-value store configuration
 
-[variable_defaults]
-github_token = ""
-allowed_repos = ""
-allow_writes = "false"
+[key_value_store.default]
+type = "spin"
