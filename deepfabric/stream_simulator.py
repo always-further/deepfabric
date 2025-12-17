@@ -72,10 +72,12 @@ def simulate_stream(
 
         try:
             for i in range(0, len(content), chunk_size):
+                # Await before emitting to ensure cancellation is processed
+                # and event loop is not blocked when delay is 0
+                if i > 0:
+                    await asyncio.sleep(delay)
                 chunk = content[i : i + chunk_size]
                 progress_reporter.emit_chunk(source, chunk, **metadata)
-                if delay > 0 and i + chunk_size < len(content):
-                    await asyncio.sleep(delay)
         except asyncio.CancelledError:
             # Gracefully handle cancellation
             pass
