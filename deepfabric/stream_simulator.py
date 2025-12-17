@@ -16,6 +16,9 @@ from .constants import STREAM_SIM_CHUNK_DELAY_MS, STREAM_SIM_CHUNK_SIZE
 if TYPE_CHECKING:
     from .progress import ProgressReporter
 
+# Track current stream task to prevent interleaving (mutable container to avoid global statement)
+_stream_state: dict[str, asyncio.Task | None] = {"current_task": None}
+
 
 class StreamSimulatorConfig(BaseModel):
     """Configuration for buffered stream simulation."""
@@ -37,6 +40,9 @@ def simulate_stream(
     Starts simulation in background and returns immediately. This is the
     primary interface for stream simulation throughout the codebase.
 
+    Cancels any in-flight stream task before starting a new one to prevent
+    interleaved chunks from multiple generations appearing scrambled in the TUI.
+
     Args:
         progress_reporter: ProgressReporter instance or None
         content: Text to simulate streaming
@@ -51,6 +57,11 @@ def simulate_stream(
     if not progress_reporter or not _config.enabled:
         return None
 
+    # Cancel any in-flight stream to prevent interleaving
+    current_task = _stream_state["current_task"]
+    if current_task is not None and not current_task.done():
+        current_task.cancel()
+
     async def _simulate_impl() -> None:
         """Internal implementation of chunk emission."""
         if not content:
@@ -59,10 +70,15 @@ def simulate_stream(
         delay = _config.chunk_delay_ms / 1000.0
         chunk_size = _config.chunk_size
 
-        for i in range(0, len(content), chunk_size):
-            chunk = content[i : i + chunk_size]
-            progress_reporter.emit_chunk(source, chunk, **metadata)
-            if delay > 0 and i + chunk_size < len(content):
-                await asyncio.sleep(delay)
+        try:
+            for i in range(0, len(content), chunk_size):
+                chunk = content[i : i + chunk_size]
+                progress_reporter.emit_chunk(source, chunk, **metadata)
+                if delay > 0 and i + chunk_size < len(content):
+                    await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            # Gracefully handle cancellation
+            pass
 
-    return asyncio.create_task(_simulate_impl())
+    _stream_state["current_task"] = asyncio.create_task(_simulate_impl())
+    return _stream_state["current_task"]
