@@ -321,7 +321,7 @@ class ToolDefinition(BaseModel):
             parameters.append(
                 ToolParameter(
                     name=param_name,
-                    type=df_type,
+                    type=df_type,  # type: ignore[arg-type]
                     description=param_props.get("description", ""),
                     required=param_name in required_params,
                     default=default_str,
@@ -372,7 +372,7 @@ class ToolDefinition(BaseModel):
             parameters.append(
                 ToolParameter(
                     name=param_name,
-                    type=df_type,
+                    type=df_type,  # type: ignore[arg-type]
                     description=param_props.description,
                     required=param_name in required_params,
                     default=default_str,

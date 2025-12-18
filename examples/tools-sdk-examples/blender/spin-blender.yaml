@@ -1,0 +1,183 @@
+#####################################################################
+# Spin Blender Tools Dataset Configuration
+#####################################################################
+# This configuration demonstrates using Blender MCP tools via Spin
+# for generating synthetic 3D design assistant training data.
+#
+# Prerequisites:
+#   1. Start the Spin service:
+#      cd tools-sdk
+#      spin build && spin up
+#
+#   2. Import tools from Blender MCP server:
+#      deepfabric import-tools --transport stdio \
+#        --command "uvx blender-mcp" \
+#        --spin http://localhost:3000
+#
+#   3. Load mock data for realistic responses:
+#      cd examples/tools-sdk-examples/blender
+#      ./load-blender-mock-data.sh
+#
+#   4. Run deepfabric:
+#      deepfabric start examples/tools-sdk-examples/blender/spin-blender.yaml
+#####################################################################
+
+# Topic generation - creates a tree of Blender 3D design-related topics
+topics:
+  prompt: "Tasks for a Blender 3D assistant that helps with scene management, object manipulation, texture application, asset searching (PolyHaven, Sketchfab), and AI-powered 3D model generation (Hyper3D, Hunyuan3D)"
+  mode: tree
+  system_prompt: ""
+  depth: 5
+  degree: 5
+  max_concurrent: 3
+  save_as: "blender-topics.jsonl"
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash"
+    temperature: 0.8
+
+  rate_limit:
+    max_retries: 7
+    base_delay: 3.0
+    max_delay: 180.0
+    backoff_strategy: "exponential_jitter"
+    exponential_base: 2.0
+    jitter: true
+    respect_retry_after: true
+
+# Data generation with Blender tool execution
+generation:
+  system_prompt: |
+    You are a Blender 3D assistant helping artists and developers with 3D modeling, texturing, and scene setup.
+    You have access to tools that can interact with Blender and external asset libraries.
+
+    CORE SCENE TOOLS:
+    - get_scene_info: Get overview of current Blender scene (objects, render settings, etc.)
+    - get_object_info: Get detailed information about a specific object
+    - get_viewport_screenshot: Capture the current 3D viewport as an image
+    - execute_blender_code: Run Python code in Blender (use carefully)
+
+    ASSET LIBRARY TOOLS (PolyHaven - free CC0 assets):
+    - get_polyhaven_status: Check if PolyHaven integration is enabled
+    - get_polyhaven_categories: List available categories for textures, HDRIs, or models
+    - search_polyhaven_assets: Search for textures, HDRIs, or 3D models
+    - download_polyhaven_asset: Download and import a PolyHaven asset
+    - set_texture: Apply a downloaded texture to an object
+
+    ASSET LIBRARY TOOLS (Sketchfab - community models):
+    - get_sketchfab_status: Check if Sketchfab integration is enabled
+    - search_sketchfab_models: Search for 3D models on Sketchfab
+    - download_sketchfab_model: Download and import a Sketchfab model
+
+    AI 3D GENERATION TOOLS (Hyper3D Rodin):
+    - get_hyper3d_status: Check if Hyper3D integration is enabled
+    - generate_hyper3d_model_via_text: Generate 3D model from text description
+    - generate_hyper3d_model_via_images: Generate 3D model from reference images
+    - poll_rodin_job_status: Check generation progress
+    - import_generated_asset: Import completed Hyper3D model
+
+    AI 3D GENERATION TOOLS (Hunyuan3D):
+    - get_hunyuan3d_status: Check if Hunyuan3D integration is enabled
+    - generate_hunyuan3d_model: Generate 3D model from text or image
+    - poll_hunyuan_job_status: Check generation progress
+    - import_generated_asset_hunyuan: Import completed Hunyuan3D model
+
+    WORKFLOW GUIDELINES:
+    1. For texture/material requests, prefer PolyHaven (free, high quality)
+    2. For pre-made 3D models, search Sketchfab first
+    3. For custom/unique objects, use AI generation (Hyper3D or Hunyuan3D)
+    4. Always check service status before using external integrations
+    5. For AI generation, explain that it takes time and offer to check status
+
+  conversation:
+    type: chain_of_thought
+    reasoning_style: agent
+    agent_mode: single_turn
+
+  tools:
+    # Spin service endpoint for mock tool execution
+    spin_endpoint: "http://localhost:3000"
+    tool_execute_path: "/mock/execute"
+
+    # Available Blender tools (loaded via import-tools command)
+    available:
+      # Scene tools
+      - get_scene_info
+      - get_object_info
+      - get_viewport_screenshot
+      - execute_blender_code
+      # PolyHaven tools
+      - get_polyhaven_status
+      - get_polyhaven_categories
+      - search_polyhaven_assets
+      - download_polyhaven_asset
+      - set_texture
+      # Sketchfab tools
+      - get_sketchfab_status
+      - search_sketchfab_models
+      - download_sketchfab_model
+      # Hyper3D tools
+      - get_hyper3d_status
+      - generate_hyper3d_model_via_text
+      - generate_hyper3d_model_via_images
+      - poll_rodin_job_status
+      - import_generated_asset
+      # Hunyuan3D tools
+      - get_hunyuan3d_status
+      - generate_hunyuan3d_model
+      - poll_hunyuan_job_status
+      - import_generated_asset_hunyuan
+
+    max_per_query: 5
+    strict: false
+
+    # ReAct loop configuration
+    max_agent_steps: 8
+
+  max_retries: 3
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash"
+    temperature: 0.4
+
+  rate_limit:
+    max_retries: 7
+    base_delay: 3.0
+    max_delay: 180.0
+    backoff_strategy: "exponential_jitter"
+    exponential_base: 2.0
+    jitter: true
+    respect_retry_after: true
+
+# Output configuration
+output:
+  system_prompt: |
+    You are a Blender 3D assistant that helps artists and developers with 3D modeling, texturing, scene setup, and asset management.
+    You have access to the following tool categories:
+
+    Scene Management:
+    - get_scene_info: Get current scene overview
+    - get_object_info: Get details about specific objects
+    - get_viewport_screenshot: Capture viewport images
+    - execute_blender_code: Run Python scripts in Blender
+
+    Asset Libraries:
+    - PolyHaven: Free CC0 textures, HDRIs, and models
+    - Sketchfab: Community 3D models with various licenses
+
+    AI 3D Generation:
+    - Hyper3D Rodin: Generate 3D models from text or images
+    - Hunyuan3D: Alternative AI model generation service
+
+    When given a task:
+    1. Analyze the request and determine which tools are most appropriate
+    2. Execute the necessary tool calls to complete the task
+    3. Provide clear explanations of what was done and any results
+    4. Suggest follow-up actions if relevant
+
+  include_system_message: false
+  num_samples: 300
+  batch_size: 4
+  save_as: "blender-dataset.jsonl"

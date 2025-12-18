@@ -1,0 +1,183 @@
+#####################################################################
+# Spin Kubernetes Tools Dataset Configuration
+#####################################################################
+# This configuration demonstrates using Kubernetes management tools
+# via Spin for generating synthetic cluster administration and
+# troubleshooting training data.
+#
+# Prerequisites:
+#   1. Start the Spin service:
+#      cd tools-sdk
+#      spin build && spin up
+#
+#   2. Import tools from tools.json:
+#      deepfabric import-tools --file examples/tools-sdk-examples/kubernetes/tools.json \
+#        --spin http://localhost:3000
+#
+#   3. Load mock data for realistic responses:
+#      cd examples/tools-sdk-examples/kubernetes
+#      ./load-kubernetes-mock-data.sh
+#
+#   4. Run deepfabric:
+#      deepfabric start examples/tools-sdk-examples/kubernetes/spin-kubernetes.yaml
+#####################################################################
+
+# Topic generation - creates a graph of Kubernetes-related topics
+topics:
+  prompt: "Tasks for a Kubernetes cluster administrator including pod management, deployment troubleshooting, resource monitoring, Helm chart management, and cluster diagnostics"
+  mode: graph
+  system_prompt: ""
+  depth: 5
+  degree: 5
+  max_concurrent: 3
+  save_as: "kubernetes-topics.jsonl"
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash"
+    temperature: 0.8
+
+# Data generation with Kubernetes tool execution
+generation:
+  system_prompt: |
+    You are a Kubernetes cluster administrator assistant helping DevOps engineers manage and troubleshoot their clusters.
+    You have access to tools that can query cluster state, manage pods, view logs, and execute Helm operations.
+
+    IMPORTANT TOOL SELECTION GUIDELINES:
+
+    For TROUBLESHOOTING (your most common task):
+    - Use pods_log to check application logs for errors
+    - Use pods_get to inspect pod status, conditions, and container states
+    - Use events_list to see recent cluster events and warnings
+    - Use pods_exec to run diagnostic commands inside containers
+
+    For MONITORING & OBSERVABILITY:
+    - Use pods_top and nodes_top to check resource consumption (CPU/memory)
+    - Use nodes_stats_summary for detailed node metrics
+    - Use nodes_log to check kubelet and system logs
+
+    For RESOURCE MANAGEMENT:
+    - Use pods_list or pods_list_in_namespace to find pods
+    - Use resources_list to query deployments, services, ingresses, secrets, configmaps
+    - Use resources_get for detailed resource specifications
+    - Use resources_scale to adjust deployment replicas
+
+    For HELM OPERATIONS:
+    - Use helm_list to see installed releases
+    - Use helm_install to deploy charts
+    - Use helm_uninstall to remove releases
+
+    Always start by understanding the current state before making changes.
+    When troubleshooting, follow a systematic approach: check pod status, then logs, then events.
+
+  instructions: |
+    Create realistic Kubernetes administration scenarios including:
+    - Debugging pods in CrashLoopBackOff or ImagePullBackOff states
+    - Investigating high resource usage
+    - Scaling deployments based on load
+    - Reviewing logs for application errors
+    - Managing Helm releases
+    - Checking cluster health and node status
+
+  conversation:
+    type: chain_of_thought
+    reasoning_style: agent
+    agent_mode: single_turn
+
+  tools:
+    # Spin service endpoint for mock tool execution
+    spin_endpoint: "http://localhost:3000"
+    tool_execute_path: "/mock/execute"
+
+    # Available Kubernetes tools
+    available:
+      # Configuration
+      - configuration_view
+      # Namespace operations
+      - namespaces_list
+      # Events
+      - events_list
+      # Pod operations
+      - pods_list
+      - pods_list_in_namespace
+      - pods_get
+      - pods_log
+      - pods_exec
+      - pods_delete
+      - pods_run
+      - pods_top
+      # Node operations
+      - nodes_top
+      - nodes_log
+      - nodes_stats_summary
+      # Helm operations
+      - helm_list
+      - helm_install
+      - helm_uninstall
+      # Generic resource operations
+      - resources_list
+      - resources_get
+      - resources_create_or_update
+      - resources_delete
+      - resources_scale
+
+    max_per_query: 5
+    strict: false
+
+    # ReAct loop configuration - Kubernetes troubleshooting may need multiple steps
+    max_agent_steps: 8
+
+  max_retries: 3
+
+  llm:
+    provider: "gemini"
+    model: "gemini-2.5-flash"
+    temperature: 0.4
+
+# Output configuration
+output:
+  system_prompt: |
+    You are a Kubernetes cluster administrator assistant with access to the following tools:
+
+    **Pod Management:**
+    - pods_list: List all pods across namespaces
+    - pods_list_in_namespace: List pods in a specific namespace
+    - pods_get: Get detailed pod information
+    - pods_log: Retrieve container logs
+    - pods_exec: Execute commands in containers
+    - pods_delete: Delete a pod
+    - pods_run: Create a new pod
+    - pods_top: Show pod resource usage
+
+    **Node Operations:**
+    - nodes_top: Show node resource usage
+    - nodes_log: Get node system logs
+    - nodes_stats_summary: Detailed node statistics
+
+    **Helm Management:**
+    - helm_list: List Helm releases
+    - helm_install: Install a Helm chart
+    - helm_uninstall: Remove a Helm release
+
+    **Resource Operations:**
+    - resources_list: List any Kubernetes resource type
+    - resources_get: Get a specific resource
+    - resources_create_or_update: Apply resource manifests
+    - resources_delete: Delete resources
+    - resources_scale: Scale deployments/statefulsets
+
+    **Cluster Info:**
+    - configuration_view: View kubeconfig
+    - namespaces_list: List namespaces
+    - events_list: List cluster events
+
+    When troubleshooting:
+    1. First understand the current state (list pods, check status)
+    2. Examine logs and events for error details
+    3. Check resource usage if performance-related
+    4. Provide clear explanations and recommended actions
+
+  include_system_message: false
+  num_samples: 20
+  batch_size: 4
+  save_as: "kubernetes-dataset.jsonl"

@@ -1,0 +1,915 @@
+{
+  "description": "Comprehensive Blender MCP mock data for testing tool execution with 3D design assistant scenarios",
+  "version": "1.0.0",
+  "mockResponses": {
+    "get_scene_info": {
+      "defaultResponse": {
+        "name": "Untitled",
+        "objects": [],
+        "activeObject": null,
+        "renderEngine": "CYCLES",
+        "renderSettings": {
+          "resolution": {"x": 1920, "y": 1080},
+          "samples": 128,
+          "denoising": true
+        },
+        "worldSettings": {
+          "backgroundColor": {"r": 0.05, "g": 0.05, "b": 0.05}
+        },
+        "frameRange": {"start": 1, "end": 250, "current": 1},
+        "units": "METRIC"
+      }
+    },
+    "get_object_info": {
+      "defaultResponse": {
+        "name": "{{objectName}}",
+        "type": "MESH",
+        "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+        "dimensions": {"x": 2.0, "y": 2.0, "z": 2.0},
+        "vertices": 8,
+        "edges": 12,
+        "faces": 6,
+        "materials": [],
+        "modifiers": [],
+        "visible": true,
+        "selected": false
+      }
+    },
+    "get_viewport_screenshot": {
+      "defaultResponse": {
+        "success": true,
+        "filePath": "{{filePath}}",
+        "resolution": {"width": 1920, "height": 1080},
+        "format": "PNG",
+        "size": 2457600
+      }
+    },
+    "execute_blender_code": {
+      "defaultResponse": {
+        "success": true,
+        "output": "",
+        "executionTime": 0.05
+      }
+    },
+    "get_polyhaven_categories": {
+      "defaultResponse": {
+        "assetType": "{{assetType}}",
+        "categories": [
+          {"name": "architectural", "count": 245},
+          {"name": "fabric", "count": 89},
+          {"name": "floor", "count": 156},
+          {"name": "ground", "count": 178},
+          {"name": "metal", "count": 134},
+          {"name": "nature", "count": 267},
+          {"name": "rock", "count": 98},
+          {"name": "wood", "count": 201}
+        ]
+      }
+    },
+    "search_polyhaven_assets": {
+      "defaultResponse": {
+        "query": "{{query}}",
+        "assetType": "{{assetType}}",
+        "results": [],
+        "totalCount": 0
+      }
+    },
+    "download_polyhaven_asset": {
+      "defaultResponse": {
+        "success": true,
+        "assetId": "{{assetId}}",
+        "assetType": "{{assetType}}",
+        "downloadPath": "/tmp/polyhaven/{{assetId}}",
+        "imported": true
+      }
+    },
+    "set_texture": {
+      "defaultResponse": {
+        "success": true,
+        "objectName": "{{objectName}}",
+        "texturePath": "{{texturePath}}",
+        "materialName": "{{objectName}}_Material"
+      }
+    },
+    "get_polyhaven_status": {
+      "defaultResponse": {
+        "enabled": true,
+        "apiConnected": true,
+        "cacheDirectory": "/tmp/polyhaven_cache",
+        "cachedAssets": 15
+      }
+    },
+    "get_hyper3d_status": {
+      "defaultResponse": {
+        "enabled": true,
+        "apiKeyConfigured": true,
+        "apiVersion": "2.0",
+        "remainingCredits": 500
+      }
+    },
+    "get_sketchfab_status": {
+      "defaultResponse": {
+        "enabled": true,
+        "apiKeyConfigured": true,
+        "apiVersion": "3.0",
+        "authenticated": true,
+        "username": "blender_user"
+      }
+    },
+    "search_sketchfab_models": {
+      "defaultResponse": {
+        "query": "{{query}}",
+        "results": [],
+        "totalCount": 0,
+        "nextCursor": null
+      }
+    },
+    "download_sketchfab_model": {
+      "defaultResponse": {
+        "success": true,
+        "modelUid": "{{modelUid}}",
+        "modelName": "Downloaded Model",
+        "importPath": "/tmp/sketchfab/{{modelUid}}.glb",
+        "imported": true,
+        "objectCount": 1
+      }
+    },
+    "generate_hyper3d_model_via_text": {
+      "defaultResponse": {
+        "success": true,
+        "jobId": "rodin_{{timestamp}}",
+        "prompt": "{{prompt}}",
+        "status": "queued",
+        "estimatedTime": 120
+      }
+    },
+    "generate_hyper3d_model_via_images": {
+      "defaultResponse": {
+        "success": true,
+        "jobId": "rodin_img_{{timestamp}}",
+        "imageCount": "{{imageCount}}",
+        "status": "queued",
+        "estimatedTime": 180
+      }
+    },
+    "poll_rodin_job_status": {
+      "defaultResponse": {
+        "jobId": "{{jobId}}",
+        "status": "completed",
+        "progress": 100,
+        "modelReady": true,
+        "downloadUrl": "https://api.hyper3d.ai/models/{{jobId}}/download"
+      }
+    },
+    "import_generated_asset": {
+      "defaultResponse": {
+        "success": true,
+        "jobId": "{{jobId}}",
+        "objectName": "Generated_Asset",
+        "vertices": 15000,
+        "faces": 12000,
+        "imported": true
+      }
+    },
+    "get_hunyuan3d_status": {
+      "defaultResponse": {
+        "enabled": true,
+        "apiConfigured": true,
+        "apiVersion": "1.0",
+        "modelVersion": "hunyuan3d-2.0"
+      }
+    },
+    "generate_hunyuan3d_model": {
+      "defaultResponse": {
+        "success": true,
+        "jobId": "hunyuan_{{timestamp}}",
+        "inputType": "text",
+        "status": "processing",
+        "estimatedTime": 90
+      }
+    },
+    "poll_hunyuan_job_status": {
+      "defaultResponse": {
+        "jobId": "{{jobId}}",
+        "status": "completed",
+        "progress": 100,
+        "modelReady": true
+      }
+    },
+    "import_generated_asset_hunyuan": {
+      "defaultResponse": {
+        "success": true,
+        "jobId": "{{jobId}}",
+        "objectName": "Hunyuan_Asset",
+        "vertices": 8000,
+        "faces": 6500,
+        "imported": true
+      }
+    }
+  },
+  "fixtures": {
+    "get_scene_info": [
+      {
+        "match": {},
+        "response": {
+          "name": "ArchViz_Interior",
+          "objects": [
+            {"name": "Room", "type": "MESH"},
+            {"name": "Sofa", "type": "MESH"},
+            {"name": "Coffee_Table", "type": "MESH"},
+            {"name": "Floor_Lamp", "type": "MESH"},
+            {"name": "Rug", "type": "MESH"},
+            {"name": "Window", "type": "MESH"},
+            {"name": "Sun", "type": "LIGHT"},
+            {"name": "Camera", "type": "CAMERA"}
+          ],
+          "activeObject": "Sofa",
+          "renderEngine": "CYCLES",
+          "renderSettings": {
+            "resolution": {"x": 3840, "y": 2160},
+            "samples": 512,
+            "denoising": true,
+            "denoisingAlgorithm": "OPENIMAGEDENOISE"
+          },
+          "worldSettings": {
+            "backgroundColor": {"r": 0.8, "g": 0.85, "b": 0.9},
+            "hdriEnabled": true,
+            "hdriPath": "/textures/interior_hdri.exr"
+          },
+          "frameRange": {"start": 1, "end": 1, "current": 1},
+          "units": "METRIC",
+          "unitScale": 1.0
+        }
+      }
+    ],
+    "get_object_info": [
+      {
+        "match": {"objectName": "Sofa"},
+        "response": {
+          "name": "Sofa",
+          "type": "MESH",
+          "location": {"x": 2.5, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 1.5708},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.2, "y": 0.9, "z": 0.85},
+          "vertices": 45678,
+          "edges": 91234,
+          "faces": 45000,
+          "materials": [
+            {"name": "Sofa_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.25, "b": 0.35}}
+          ],
+          "modifiers": [
+            {"name": "Subdivision", "type": "SUBSURF", "levels": 2}
+          ],
+          "visible": true,
+          "selected": true,
+          "parentObject": null,
+          "boundingBox": {
+            "min": {"x": 1.4, "y": -0.45, "z": 0.0},
+            "max": {"x": 3.6, "y": 0.45, "z": 0.85}
+          }
+        }
+      },
+      {
+        "match": {"objectName": "Coffee_Table"},
+        "response": {
+          "name": "Coffee_Table",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.2, "y": 0.6, "z": 0.45},
+          "vertices": 12456,
+          "edges": 24800,
+          "faces": 12300,
+          "materials": [
+            {"name": "Wood_Walnut", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.15, "b": 0.1}},
+            {"name": "Metal_Black", "type": "PRINCIPLED", "baseColor": {"r": 0.02, "g": 0.02, "b": 0.02}, "metallic": 1.0}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"objectName": "Floor_Lamp"},
+        "response": {
+          "name": "Floor_Lamp",
+          "type": "MESH",
+          "location": {"x": 3.5, "y": 1.5, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.4, "y": 0.4, "z": 1.8},
+          "vertices": 8234,
+          "edges": 16400,
+          "faces": 8100,
+          "materials": [
+            {"name": "Lamp_Base_Metal", "type": "PRINCIPLED", "baseColor": {"r": 0.8, "g": 0.7, "b": 0.5}, "metallic": 1.0},
+            {"name": "Lamp_Shade_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.92, "b": 0.85}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false,
+          "children": [
+            {"name": "Lamp_Light", "type": "LIGHT"}
+          ]
+        }
+      },
+      {
+        "match": {"objectName": "Character"},
+        "response": {
+          "name": "Character",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.5, "y": 0.3, "z": 1.75},
+          "vertices": 125000,
+          "edges": 250000,
+          "faces": 124000,
+          "materials": [
+            {"name": "Skin", "type": "PRINCIPLED", "subsurface": 0.3},
+            {"name": "Eyes", "type": "PRINCIPLED"},
+            {"name": "Hair", "type": "PRINCIPLED"},
+            {"name": "Clothing", "type": "PRINCIPLED"}
+          ],
+          "modifiers": [
+            {"name": "Armature", "type": "ARMATURE"},
+            {"name": "Subdivision", "type": "SUBSURF", "levels": 1}
+          ],
+          "visible": true,
+          "selected": false,
+          "armature": {
+            "name": "Character_Rig",
+            "boneCount": 156,
+            "ikChains": ["IK_Leg.L", "IK_Leg.R", "IK_Arm.L", "IK_Arm.R"]
+          }
+        }
+      }
+    ],
+    "get_viewport_screenshot": [
+      {
+        "match": {"filePath": "/tmp/viewport.png"},
+        "response": {
+          "success": true,
+          "filePath": "/tmp/viewport.png",
+          "resolution": {"width": 1920, "height": 1080},
+          "format": "PNG",
+          "size": 3145728,
+          "viewportShading": "MATERIAL",
+          "cameraView": false
+        }
+      },
+      {
+        "match": {"filePath": "/renders/final_render.png"},
+        "response": {
+          "success": true,
+          "filePath": "/renders/final_render.png",
+          "resolution": {"width": 3840, "height": 2160},
+          "format": "PNG",
+          "size": 12582912,
+          "viewportShading": "RENDERED",
+          "cameraView": true
+        }
+      }
+    ],
+    "execute_blender_code": [
+      {
+        "match": {"code": "bpy.ops.mesh.primitive_cube_add()"},
+        "response": {
+          "success": true,
+          "output": "Created cube at origin",
+          "executionTime": 0.02,
+          "createdObjects": ["Cube"]
+        }
+      },
+      {
+        "match": {"code": "bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(0, 0, 2))"},
+        "response": {
+          "success": true,
+          "output": "Created UV sphere at (0, 0, 2)",
+          "executionTime": 0.03,
+          "createdObjects": ["Sphere"]
+        }
+      }
+    ],
+    "get_polyhaven_categories": [
+      {
+        "match": {"assetType": "textures"},
+        "response": {
+          "assetType": "textures",
+          "categories": [
+            {"name": "architectural", "count": 245, "subcategories": ["brick", "concrete", "plaster", "tiles"]},
+            {"name": "fabric", "count": 89, "subcategories": ["carpet", "cloth", "leather", "upholstery"]},
+            {"name": "floor", "count": 156, "subcategories": ["parquet", "tiles", "marble", "concrete"]},
+            {"name": "ground", "count": 178, "subcategories": ["dirt", "grass", "gravel", "sand"]},
+            {"name": "metal", "count": 134, "subcategories": ["bare", "painted", "rusted", "brushed"]},
+            {"name": "nature", "count": 267, "subcategories": ["bark", "leaves", "moss", "snow"]},
+            {"name": "rock", "count": 98, "subcategories": ["cliff", "cobblestone", "granite", "slate"]},
+            {"name": "wood", "count": 201, "subcategories": ["plywood", "planks", "veneer", "weathered"]}
+          ]
+        }
+      },
+      {
+        "match": {"assetType": "hdris"},
+        "response": {
+          "assetType": "hdris",
+          "categories": [
+            {"name": "indoor", "count": 87, "subcategories": ["studio", "room", "warehouse", "museum"]},
+            {"name": "outdoor", "count": 312, "subcategories": ["urban", "nature", "sky", "sunset"]},
+            {"name": "night", "count": 45, "subcategories": ["city", "stars", "dusk"]}
+          ]
+        }
+      },
+      {
+        "match": {"assetType": "models"},
+        "response": {
+          "assetType": "models",
+          "categories": [
+            {"name": "furniture", "count": 156},
+            {"name": "electronics", "count": 78},
+            {"name": "vegetation", "count": 234},
+            {"name": "architecture", "count": 89},
+            {"name": "vehicles", "count": 45}
+          ]
+        }
+      }
+    ],
+    "search_polyhaven_assets": [
+      {
+        "match": {"assetType": "textures", "query": "wood"},
+        "response": {
+          "query": "wood",
+          "assetType": "textures",
+          "results": [
+            {
+              "id": "wood_floor_deck",
+              "name": "Wood Floor Deck",
+              "category": "wood",
+              "tags": ["floor", "deck", "planks", "outdoor"],
+              "downloads": 125000,
+              "resolution": "8K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/wood_floor_deck.jpg"
+            },
+            {
+              "id": "wooden_planks",
+              "name": "Wooden Planks",
+              "category": "wood",
+              "tags": ["planks", "aged", "rustic"],
+              "downloads": 98000,
+              "resolution": "8K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/wooden_planks.jpg"
+            },
+            {
+              "id": "oak_veneer",
+              "name": "Oak Veneer",
+              "category": "wood",
+              "tags": ["veneer", "oak", "furniture", "smooth"],
+              "downloads": 87000,
+              "resolution": "4K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/oak_veneer.jpg"
+            },
+            {
+              "id": "weathered_wood",
+              "name": "Weathered Wood",
+              "category": "wood",
+              "tags": ["weathered", "aged", "barn", "rustic"],
+              "downloads": 76000,
+              "resolution": "8K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/weathered_wood.jpg"
+            }
+          ],
+          "totalCount": 201
+        }
+      },
+      {
+        "match": {"assetType": "hdris", "query": "studio"},
+        "response": {
+          "query": "studio",
+          "assetType": "hdris",
+          "results": [
+            {
+              "id": "studio_small_09",
+              "name": "Studio Small 09",
+              "category": "indoor",
+              "tags": ["studio", "softbox", "product", "clean"],
+              "downloads": 234000,
+              "resolution": "16K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/studio_small_09.jpg"
+            },
+            {
+              "id": "photo_studio_loft_hall",
+              "name": "Photo Studio Loft Hall",
+              "category": "indoor",
+              "tags": ["studio", "loft", "windows", "natural"],
+              "downloads": 189000,
+              "resolution": "16K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/photo_studio_loft_hall.jpg"
+            },
+            {
+              "id": "studio_small_03",
+              "name": "Studio Small 03",
+              "category": "indoor",
+              "tags": ["studio", "gradient", "minimal"],
+              "downloads": 156000,
+              "resolution": "8K",
+              "thumbnailUrl": "https://polyhaven.com/thumbs/studio_small_03.jpg"
+            }
+          ],
+          "totalCount": 87
+        }
+      },
+      {
+        "match": {"assetType": "models", "query": "chair"},
+        "response": {
+          "query": "chair",
+          "assetType": "models",
+          "results": [
+            {
+              "id": "modern_office_chair",
+              "name": "Modern Office Chair",
+              "category": "furniture",
+              "tags": ["office", "ergonomic", "modern"],
+              "downloads": 45000,
+              "format": "GLTF",
+              "polyCount": 15000,
+              "thumbnailUrl": "https://polyhaven.com/thumbs/modern_office_chair.jpg"
+            },
+            {
+              "id": "wooden_dining_chair",
+              "name": "Wooden Dining Chair",
+              "category": "furniture",
+              "tags": ["dining", "wood", "classic"],
+              "downloads": 38000,
+              "format": "GLTF",
+              "polyCount": 8500,
+              "thumbnailUrl": "https://polyhaven.com/thumbs/wooden_dining_chair.jpg"
+            }
+          ],
+          "totalCount": 23
+        }
+      }
+    ],
+    "download_polyhaven_asset": [
+      {
+        "match": {"assetId": "wood_floor_deck"},
+        "response": {
+          "success": true,
+          "assetId": "wood_floor_deck",
+          "assetType": "texture",
+          "downloadPath": "/tmp/polyhaven/wood_floor_deck",
+          "imported": true,
+          "files": [
+            {"name": "wood_floor_deck_diff_8k.jpg", "type": "diffuse", "size": 15728640},
+            {"name": "wood_floor_deck_nor_gl_8k.jpg", "type": "normal", "size": 12582912},
+            {"name": "wood_floor_deck_rough_8k.jpg", "type": "roughness", "size": 8388608},
+            {"name": "wood_floor_deck_ao_8k.jpg", "type": "ambient_occlusion", "size": 6291456}
+          ],
+          "materialCreated": "Wood_Floor_Deck_Material"
+        }
+      },
+      {
+        "match": {"assetId": "studio_small_09"},
+        "response": {
+          "success": true,
+          "assetId": "studio_small_09",
+          "assetType": "hdri",
+          "downloadPath": "/tmp/polyhaven/studio_small_09.exr",
+          "imported": true,
+          "files": [
+            {"name": "studio_small_09_16k.exr", "type": "hdri", "size": 268435456}
+          ],
+          "worldNodeCreated": true,
+          "worldBackgroundSet": true
+        }
+      }
+    ],
+    "set_texture": [
+      {
+        "match": {"objectName": "Floor", "texturePath": "/tmp/polyhaven/wood_floor_deck"},
+        "response": {
+          "success": true,
+          "objectName": "Floor",
+          "texturePath": "/tmp/polyhaven/wood_floor_deck",
+          "materialName": "Floor_Wood_Material",
+          "mappingType": "UV",
+          "textureScale": {"x": 1.0, "y": 1.0},
+          "nodesCreated": ["Image Texture", "Normal Map", "Principled BSDF", "Material Output"]
+        }
+      }
+    ],
+    "search_sketchfab_models": [
+      {
+        "match": {"query": "robot"},
+        "response": {
+          "query": "robot",
+          "results": [
+            {
+              "uid": "abc123def456",
+              "name": "Sci-Fi Robot Character",
+              "author": "3d_artist_pro",
+              "license": "CC-BY-4.0",
+              "polyCount": 45000,
+              "animated": true,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/abc123def456/thumb.jpg",
+              "viewCount": 125000,
+              "likeCount": 3400
+            },
+            {
+              "uid": "ghi789jkl012",
+              "name": "Industrial Robot Arm",
+              "author": "mech_designs",
+              "license": "CC-BY-4.0",
+              "polyCount": 28000,
+              "animated": true,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/ghi789jkl012/thumb.jpg",
+              "viewCount": 89000,
+              "likeCount": 2100
+            },
+            {
+              "uid": "mno345pqr678",
+              "name": "Cute Robot Companion",
+              "author": "cartoon_3d",
+              "license": "CC-BY-NC-4.0",
+              "polyCount": 12000,
+              "animated": false,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/mno345pqr678/thumb.jpg",
+              "viewCount": 67000,
+              "likeCount": 1800
+            }
+          ],
+          "totalCount": 15420,
+          "nextCursor": "eyJwYWdlIjogMn0="
+        }
+      },
+      {
+        "match": {"query": "car"},
+        "response": {
+          "query": "car",
+          "results": [
+            {
+              "uid": "car001abc",
+              "name": "Sports Car - Concept",
+              "author": "auto_designer",
+              "license": "CC-BY-4.0",
+              "polyCount": 125000,
+              "animated": false,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/car001abc/thumb.jpg",
+              "viewCount": 456000,
+              "likeCount": 12000
+            },
+            {
+              "uid": "car002def",
+              "name": "Vintage Classic Car",
+              "author": "retro_models",
+              "license": "CC-BY-4.0",
+              "polyCount": 89000,
+              "animated": false,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/car002def/thumb.jpg",
+              "viewCount": 234000,
+              "likeCount": 8500
+            }
+          ],
+          "totalCount": 45678,
+          "nextCursor": "eyJwYWdlIjogMn0="
+        }
+      },
+      {
+        "match": {"query": "tree"},
+        "response": {
+          "query": "tree",
+          "results": [
+            {
+              "uid": "tree001oak",
+              "name": "Realistic Oak Tree",
+              "author": "nature_3d",
+              "license": "CC-BY-4.0",
+              "polyCount": 234000,
+              "animated": false,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/tree001oak/thumb.jpg",
+              "viewCount": 178000,
+              "likeCount": 5600
+            },
+            {
+              "uid": "tree002pine",
+              "name": "Pine Tree Collection",
+              "author": "environment_artist",
+              "license": "CC-BY-4.0",
+              "polyCount": 156000,
+              "animated": false,
+              "downloadable": true,
+              "thumbnailUrl": "https://media.sketchfab.com/models/tree002pine/thumb.jpg",
+              "viewCount": 145000,
+              "likeCount": 4200
+            }
+          ],
+          "totalCount": 23456,
+          "nextCursor": "eyJwYWdlIjogMn0="
+        }
+      }
+    ],
+    "download_sketchfab_model": [
+      {
+        "match": {"modelUid": "abc123def456"},
+        "response": {
+          "success": true,
+          "modelUid": "abc123def456",
+          "modelName": "Sci-Fi Robot Character",
+          "importPath": "/tmp/sketchfab/abc123def456.glb",
+          "imported": true,
+          "objectCount": 45,
+          "totalVertices": 45000,
+          "totalFaces": 42000,
+          "materials": ["Robot_Body", "Robot_Metal", "Robot_Emissive", "Robot_Glass"],
+          "hasAnimations": true,
+          "animations": ["Idle", "Walk", "Run", "Attack"]
+        }
+      },
+      {
+        "match": {"modelUid": "car001abc"},
+        "response": {
+          "success": true,
+          "modelUid": "car001abc",
+          "modelName": "Sports Car - Concept",
+          "importPath": "/tmp/sketchfab/car001abc.glb",
+          "imported": true,
+          "objectCount": 156,
+          "totalVertices": 125000,
+          "totalFaces": 118000,
+          "materials": ["Car_Body", "Car_Glass", "Car_Chrome", "Car_Interior", "Car_Tires", "Car_Lights"],
+          "hasAnimations": false
+        }
+      }
+    ],
+    "generate_hyper3d_model_via_text": [
+      {
+        "match": {"prompt": "a medieval sword"},
+        "response": {
+          "success": true,
+          "jobId": "rodin_sword_12345",
+          "prompt": "a medieval sword",
+          "status": "processing",
+          "estimatedTime": 90,
+          "queuePosition": 3
+        }
+      },
+      {
+        "match": {"prompt": "a futuristic spaceship"},
+        "response": {
+          "success": true,
+          "jobId": "rodin_spaceship_67890",
+          "prompt": "a futuristic spaceship",
+          "status": "processing",
+          "estimatedTime": 150,
+          "queuePosition": 5
+        }
+      },
+      {
+        "match": {"prompt": "cute cartoon cat"},
+        "response": {
+          "success": true,
+          "jobId": "rodin_cat_11111",
+          "prompt": "cute cartoon cat",
+          "status": "processing",
+          "estimatedTime": 120,
+          "queuePosition": 2
+        }
+      }
+    ],
+    "generate_hyper3d_model_via_images": [
+      {
+        "match": {"imageCount": 4},
+        "response": {
+          "success": true,
+          "jobId": "rodin_img_multi_22222",
+          "imageCount": 4,
+          "status": "processing",
+          "estimatedTime": 180,
+          "queuePosition": 4,
+          "imageAngles": ["front", "back", "left", "right"]
+        }
+      }
+    ],
+    "poll_rodin_job_status": [
+      {
+        "match": {"jobId": "rodin_sword_12345"},
+        "response": {
+          "jobId": "rodin_sword_12345",
+          "status": "completed",
+          "progress": 100,
+          "modelReady": true,
+          "downloadUrl": "https://api.hyper3d.ai/models/rodin_sword_12345/download",
+          "modelStats": {
+            "vertices": 12500,
+            "faces": 11800,
+            "textured": true
+          }
+        }
+      },
+      {
+        "match": {"jobId": "rodin_spaceship_67890"},
+        "response": {
+          "jobId": "rodin_spaceship_67890",
+          "status": "processing",
+          "progress": 65,
+          "modelReady": false,
+          "currentStage": "geometry_refinement",
+          "remainingTime": 52
+        }
+      }
+    ],
+    "import_generated_asset": [
+      {
+        "match": {"jobId": "rodin_sword_12345"},
+        "response": {
+          "success": true,
+          "jobId": "rodin_sword_12345",
+          "objectName": "Medieval_Sword",
+          "vertices": 12500,
+          "faces": 11800,
+          "imported": true,
+          "materials": ["Sword_Blade", "Sword_Handle", "Sword_Guard"],
+          "location": {"x": 0, "y": 0, "z": 0},
+          "dimensions": {"x": 0.15, "y": 0.1, "z": 1.2}
+        }
+      }
+    ],
+    "generate_hunyuan3d_model": [
+      {
+        "match": {"prompt": "a wooden treasure chest"},
+        "response": {
+          "success": true,
+          "jobId": "hunyuan_chest_33333",
+          "inputType": "text",
+          "prompt": "a wooden treasure chest",
+          "status": "processing",
+          "estimatedTime": 75,
+          "modelVersion": "hunyuan3d-2.0"
+        }
+      },
+      {
+        "match": {"prompt": "crystal potion bottle"},
+        "response": {
+          "success": true,
+          "jobId": "hunyuan_potion_44444",
+          "inputType": "text",
+          "prompt": "crystal potion bottle",
+          "status": "processing",
+          "estimatedTime": 60,
+          "modelVersion": "hunyuan3d-2.0"
+        }
+      }
+    ],
+    "poll_hunyuan_job_status": [
+      {
+        "match": {"jobId": "hunyuan_chest_33333"},
+        "response": {
+          "jobId": "hunyuan_chest_33333",
+          "status": "completed",
+          "progress": 100,
+          "modelReady": true,
+          "modelStats": {
+            "vertices": 8500,
+            "faces": 7200,
+            "textured": true
+          }
+        }
+      },
+      {
+        "match": {"jobId": "hunyuan_potion_44444"},
+        "response": {
+          "jobId": "hunyuan_potion_44444",
+          "status": "processing",
+          "progress": 45,
+          "modelReady": false,
+          "currentStage": "texture_generation",
+          "remainingTime": 33
+        }
+      }
+    ],
+    "import_generated_asset_hunyuan": [
+      {
+        "match": {"jobId": "hunyuan_chest_33333"},
+        "response": {
+          "success": true,
+          "jobId": "hunyuan_chest_33333",
+          "objectName": "Treasure_Chest",
+          "vertices": 8500,
+          "faces": 7200,
+          "imported": true,
+          "materials": ["Chest_Wood", "Chest_Metal"],
+          "location": {"x": 0, "y": 0, "z": 0},
+          "dimensions": {"x": 0.8, "y": 0.5, "z": 0.5}
+        }
+      }
+    ]
+  }
+}

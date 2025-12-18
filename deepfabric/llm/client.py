@@ -1,8 +1,7 @@
-"""LLM client implementation using Outlines for structured generation."""
-
 import asyncio
 import os
 
+from functools import lru_cache
 from typing import Any
 
 import anthropic
@@ -15,11 +14,505 @@ from pydantic import BaseModel
 
 from ..exceptions import DataSetGeneratorError
 from .errors import handle_provider_error
-from .rate_limit_config import RateLimitConfig, create_rate_limit_config
+from .rate_limit_config import (
+    RateLimitConfig,
+    create_rate_limit_config,
+    get_default_rate_limit_config,
+)
 from .retry_handler import RetryHandler, retry_with_backoff, retry_with_backoff_async
 
 # JSON Schema union type keys that need recursive processing
 _UNION_KEYS = ("anyOf", "oneOf", "allOf")
+
+# Provider-specific parameter mappings
+# Maps generic parameter names to provider-specific equivalents
+# Format: {provider: {generic_name: provider_specific_name}}
+_PROVIDER_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
+    "gemini": {
+        "max_tokens": "max_output_tokens",
+    },
+    # Add other provider mappings as needed
+    # "anthropic": {"some_param": "anthropic_param"},
+}
+
+
+class LLMClient:
+    """Wrapper for Outlines models with retry logic and error handling."""
+
+    def __init__(
+        self,
+        provider: str,
+        model_name: str,
+        rate_limit_config: RateLimitConfig | dict | None = None,
+        **kwargs,
+    ):
+        """Initialize LLM client.
+
+        Args:
+            provider: Provider name
+            model_name: Model identifier
+            rate_limit_config: Rate limiting configuration (None uses provider defaults)
+            **kwargs: Additional client configuration
+        """
+        self.provider = provider
+        self.model_name = model_name
+        self._client_kwargs = kwargs  # Store for lazy async model initialization
+
+        # Initialize rate limiting
+        if isinstance(rate_limit_config, dict):
+            self.rate_limit_config = create_rate_limit_config(provider, rate_limit_config)
+        elif rate_limit_config is None:
+            self.rate_limit_config = get_default_rate_limit_config(provider)
+        else:
+            self.rate_limit_config = rate_limit_config
+
+        self.retry_handler = RetryHandler(self.rate_limit_config, provider)
+
+        self.model: Any = make_outlines_model(provider, model_name, **kwargs)
+        # Lazy-initialize async_model only when needed
+        self._async_model: Any | None = None
+        self._async_model_initialized: bool = False
+        if self.model is None:
+            msg = f"Failed to create model for {provider}/{model_name}"
+            raise DataSetGeneratorError(msg)
+
+    @property
+    def async_model(self) -> Any | None:
+        """Lazily initialize and return the async model.
+
+        The async model is only created when first accessed, reducing memory
+        and connection overhead when only sync operations are used.
+        """
+        if not self._async_model_initialized:
+            self._async_model = make_async_outlines_model(
+                self.provider, self.model_name, **self._client_kwargs
+            )
+            self._async_model_initialized = True
+        return self._async_model
+
+    def generate(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs) -> Any:  # noqa: ARG002
+        """Generate structured output using the provided schema.
+
+        Args:
+            prompt: Input prompt
+            schema: Pydantic model or other schema type
+            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
+            **kwargs: Additional generation parameters
+
+        Returns:
+            Generated output matching the schema
+
+        Raises:
+            DataSetGeneratorError: If generation fails after all retries
+
+        Note:
+            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
+            If provided, it will be ignored in favor of the configured retry handler.
+        """
+        return self._generate_with_retry(prompt, schema, **kwargs)
+
+    @retry_with_backoff
+    def _generate_with_retry(self, prompt: str, schema: Any, **kwargs) -> Any:
+        """Internal method that performs actual generation with retry wrapper.
+
+        This method is decorated with retry_with_backoff to handle rate limits
+        and transient errors automatically.
+        """
+        # Convert provider-specific parameters
+        kwargs = self._convert_generation_params(**kwargs)
+
+        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
+        # For OpenAI and OpenRouter, ensure all properties are in required array
+        generation_schema = schema
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
+        elif (
+            self.provider in ("openai", "openrouter")
+            and isinstance(schema, type)
+            and issubclass(schema, BaseModel)
+        ):
+            generation_schema = _create_openai_compatible_schema(schema)
+
+        # Generate JSON string using the model
+        json_output = self.model(prompt, generation_schema, **kwargs)
+
+        # Parse and validate the JSON response with the ORIGINAL schema
+        # This ensures we still get proper validation
+        try:
+            return schema.model_validate_json(json_output)
+        except Exception as e:
+            raise DataSetGeneratorError(
+                f"Generation validation failed: {e}",
+                context={"raw_content": json_output},
+            ) from e
+
+    async def generate_async(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs) -> Any:  # noqa: ARG002
+        """Asynchronously generate structured output using provider async clients.
+
+        Args:
+            prompt: Input prompt
+            schema: Pydantic model or other schema type
+            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
+            **kwargs: Additional generation parameters
+
+        Returns:
+            Generated output matching the schema
+
+        Raises:
+            DataSetGeneratorError: If generation fails after all retries
+
+        Note:
+            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
+            If provided, it will be ignored in favor of the configured retry handler.
+        """
+        if self.async_model is None:
+            # Fallback to running the synchronous path in a worker thread
+            return await asyncio.to_thread(self.generate, prompt, schema, **kwargs)
+
+        return await self._generate_async_with_retry(prompt, schema, **kwargs)
+
+    @retry_with_backoff_async
+    async def _generate_async_with_retry(self, prompt: str, schema: Any, **kwargs) -> Any:
+        """Internal async method that performs actual generation with retry wrapper.
+
+        This method is decorated with retry_with_backoff_async to handle rate limits
+        and transient errors automatically.
+        """
+        kwargs = self._convert_generation_params(**kwargs)
+
+        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
+        # For OpenAI and OpenRouter, ensure all properties are in required array
+        generation_schema = schema
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
+        elif (
+            self.provider in ("openai", "openrouter")
+            and isinstance(schema, type)
+            and issubclass(schema, BaseModel)
+        ):
+            generation_schema = _create_openai_compatible_schema(schema)
+
+        # Ensure we have an async model; if not, fall back to running the sync path
+        async_model = self.async_model
+        if async_model is None:
+            return await asyncio.to_thread(self.generate, prompt, schema, **kwargs)
+
+        # Call the async model (guaranteed non-None by check above)
+        json_output = await async_model(prompt, generation_schema, **kwargs)
+
+        # Validate with original schema to ensure proper validation
+        try:
+            return schema.model_validate_json(json_output)
+        except Exception as e:
+            print(f"Validation error: {e}")
+            raise DataSetGeneratorError(
+                f"Async generation validation failed: {e}",
+                context={"raw_content": json_output},
+            ) from e
+
+    async def generate_async_stream(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs):  # noqa: ARG002
+        """Asynchronously generate structured output with streaming text chunks.
+
+        This method streams the LLM's output text as it's generated, then returns
+        the final parsed Pydantic model. It yields tuples of (chunk, result) where:
+        - During streaming: (text_chunk, None)
+        - When complete: (None, final_pydantic_model)
+
+        Args:
+            prompt: Input prompt
+            schema: Pydantic model or other schema type
+            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
+            **kwargs: Additional generation parameters
+
+        Yields:
+            tuple[str | None, Any | None]:
+                - (chunk, None) during streaming
+                - (None, model) when generation is complete
+
+        Raises:
+            DataSetGeneratorError: If generation fails after all retries
+
+        Note:
+            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
+
+        Example:
+            >>> async for chunk, result in client.generate_async_stream(prompt, MyModel):
+            ...     if chunk:
+            ...         print(chunk, end='', flush=True)  # Display streaming text
+            ...     if result:
+            ...         return result  # Final parsed model
+        """
+        # Call streaming generation directly (retry decorator doesn't work with generators)
+        kwargs = self._convert_generation_params(**kwargs)
+
+        # Apply provider-specific schema transformations
+        # Note: Gemini uses DirectGeminiModel which handles schema transformation internally
+        generation_schema = schema
+        if self.provider == "gemini":
+            # DirectGeminiModel handles schema transformation internally
+            pass
+        elif (
+            self.provider in ("openai", "openrouter")
+            and isinstance(schema, type)
+            and issubclass(schema, BaseModel)
+        ):
+            generation_schema = _create_openai_compatible_schema(schema)
+
+        # Check if model supports streaming
+        async_model = self.async_model or self.model
+        if not hasattr(async_model, "generate_stream"):
+            # Fallback: no streaming support, yield entire result at once
+            result = await self.generate_async(prompt, schema, **kwargs)
+            yield (None, result)
+            return
+
+        # Stream generation
+        accumulated_text: list[str] = []
+        try:
+            # For sync models used in async context
+            if self.async_model is None:
+                # Use asyncio.Queue for true streaming from sync generator
+                # This yields chunks as they arrive instead of waiting for all
+                queue: asyncio.Queue[str | None] = asyncio.Queue()
+                stream_error: list[Exception] = []
+
+                def _produce_chunks():
+                    """Run sync generator and put chunks in queue."""
+                    try:
+                        for chunk in self.model.generate_stream(
+                            prompt, generation_schema, **kwargs
+                        ):
+                            asyncio.run_coroutine_threadsafe(
+                                queue.put(chunk), asyncio.get_event_loop()
+                            )
+                    except Exception as e:
+                        stream_error.append(e)
+                    finally:
+                        # Signal completion
+                        asyncio.run_coroutine_threadsafe(
+                            queue.put(None), asyncio.get_event_loop()
+                        )
+
+                # Start producer in background thread
+                loop = asyncio.get_event_loop()
+                loop.run_in_executor(None, _produce_chunks)
+
+                # Consume chunks as they arrive
+                while True:
+                    chunk = await queue.get()
+                    if chunk is None:
+                        break
+                    accumulated_text.append(chunk)
+                    yield (chunk, None)
+
+                # Re-raise any error from the producer thread
+                if stream_error:
+                    raise DataSetGeneratorError(
+                        f"Streaming generation failed in producer: {stream_error[0]}",
+                        context={"raw_content": "".join(accumulated_text) if accumulated_text else None},
+                    ) from stream_error[0]
+            else:
+                # True async streaming
+                stream = self.async_model.generate_stream(prompt, generation_schema, **kwargs)
+                async for chunk in stream:
+                    accumulated_text.append(chunk)
+                    yield (chunk, None)
+
+            # Parse accumulated JSON with original schema
+            full_text = "".join(accumulated_text)
+            result = schema.model_validate_json(full_text)
+            yield (None, result)
+
+        except Exception as e:
+            # Wrap and raise error with raw content for debugging
+            raw_content = "".join(accumulated_text) if accumulated_text else None
+            raise DataSetGeneratorError(
+                f"Streaming generation failed: {e}",
+                context={"raw_content": raw_content},
+            ) from e
+
+    def _convert_generation_params(self, **kwargs) -> dict:
+        """Convert generic parameters to provider-specific ones.
+
+        Uses the _PROVIDER_PARAM_MAPPINGS static dictionary for extensible
+        parameter conversion across different providers.
+        """
+        mappings = _PROVIDER_PARAM_MAPPINGS.get(self.provider, {})
+        for generic_name, provider_name in mappings.items():
+            if generic_name in kwargs:
+                kwargs[provider_name] = kwargs.pop(generic_name)
+
+        return kwargs
+
+    def __repr__(self) -> str:
+        return f"LLMClient(provider={self.provider}, model={self.model_name})"
+
+
+class GeminiModel:
+    """Gemini API client using native structured outputs.
+
+    Uses Gemini's native response_json_schema parameter which is more reliable
+    than Outlines' wrapper for structured output generation.
+    """
+
+    def __init__(self, client: genai.Client, model_name: str):
+        self.client = client
+        self.model_name = model_name
+
+    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
+        """Prepare JSON schema for Gemini by stripping incompatible fields.
+
+        Note: We only strip additionalProperties and incompatible fields here.
+        Ref inlining is intentionally NOT done to avoid excessive nesting depth
+        that can exceed Gemini's schema limits for deeply nested models.
+        """
+        json_schema = schema.model_json_schema()
+        return _strip_additional_properties(json_schema)
+
+    async def __call__(
+        self,
+        prompt: str,
+        schema: type[BaseModel],
+        **kwargs,
+    ) -> str:
+        """Asynchronously generate structured output using Gemini's native JSON schema support.
+
+        Args:
+            prompt: The input prompt
+            schema: Pydantic model class for structured output
+            **kwargs: Additional generation parameters (temperature, max_output_tokens, etc.)
+
+        Returns:
+            JSON string matching the schema
+        """
+        # Use prepared schema with Gemini-compatible transformations
+        prepared_schema = self._prepare_json_schema(schema)
+
+        try:
+            config = genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=prepared_schema,
+                **kwargs,
+            )
+        except Exception as e:
+            raise DataSetGeneratorError(f"Failed to create Gemini config: {e}") from e
+
+        # Call Gemini API directly using async method
+        response = await self.client.aio.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=config,
+        )
+
+        # Safely check for empty or blocked responses
+        # Some SDK versions may return None or have blocked candidates
+        if not response.candidates:
+            raise DataSetGeneratorError(
+                "Gemini returned empty response",
+                context={"finish_reason": None},
+            )
+
+        first_candidate = response.candidates[0]
+        if first_candidate.content is None or not first_candidate.content.parts:
+            raise DataSetGeneratorError(
+                "Gemini returned empty response",
+                context={"finish_reason": getattr(first_candidate, "finish_reason", None)},
+            )
+
+        if response.text is None:
+            raise DataSetGeneratorError("Gemini returned empty response")
+
+        return response.text
+
+
+class AnthropicModel:
+    """Anthropic API client using native structured outputs.
+
+    Uses Anthropic's beta structured outputs feature (structured-outputs-2025-11-13)
+    which provides guaranteed JSON schema compliance through constrained decoding.
+    """
+
+    # Beta header for structured outputs feature
+    STRUCTURED_OUTPUTS_BETA = "structured-outputs-2025-11-13"
+
+    def __init__(self, client: anthropic.AsyncAnthropic, model_name: str):
+        self.client = client
+        self.model_name = model_name
+
+    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
+        """Prepare JSON schema for Anthropic structured outputs.
+
+        Anthropic's structured outputs require:
+        - additionalProperties: false on all objects
+        - All properties in required array
+        """
+        json_schema = schema.model_json_schema()
+        return _ensure_anthropic_strict_mode_compliance(json_schema)
+
+    async def __call__(
+        self,
+        prompt: str,
+        schema: type[BaseModel],
+        **kwargs,
+    ) -> str:
+        """Asynchronously generate structured output using Anthropic's native JSON schema support.
+
+        Args:
+            prompt: The input prompt
+            schema: Pydantic model class for structured output
+            **kwargs: Additional generation parameters (temperature, max_tokens, etc.)
+
+        Returns:
+            JSON string matching the schema
+        """
+        prepared_schema = self._prepare_json_schema(schema)
+
+        # Extract max_tokens with a sensible default (16384 for structured outputs)
+        max_tokens = kwargs.pop("max_tokens", 16384)
+
+        try:
+            response = await self.client.beta.messages.create(
+                model=self.model_name,
+                max_tokens=max_tokens,
+                betas=[self.STRUCTURED_OUTPUTS_BETA],
+                messages=[{"role": "user", "content": prompt}],
+                output_format={
+                    "type": "json_schema",
+                    "schema": prepared_schema,
+                },
+                **kwargs,
+            )
+        except anthropic.BadRequestError as e:
+            raise DataSetGeneratorError(
+                f"Anthropic structured output request failed: {e}",
+                context={"schema": prepared_schema},
+            ) from e
+
+        # Check for refusals
+        if response.stop_reason == "refusal":
+            raise DataSetGeneratorError(
+                "Anthropic refused the request for safety reasons",
+                context={"stop_reason": response.stop_reason},
+            )
+
+        # Check for max_tokens truncation
+        if response.stop_reason == "max_tokens":
+            raise DataSetGeneratorError(
+                "Anthropic response truncated due to max_tokens limit",
+                context={"stop_reason": response.stop_reason},
+            )
+
+        # Extract text from response
+        if not response.content:
+            raise DataSetGeneratorError("Anthropic returned empty response")
+
+        text_block = response.content[0]
+        if not hasattr(text_block, "text") or not text_block.text:
+            raise DataSetGeneratorError("Anthropic returned empty text response")
+
+        return text_block.text
 
 
 def _raise_api_key_error(env_var: str) -> None:
@@ -111,10 +604,40 @@ def _raise_unsupported_provider_error(provider: str) -> None:
     raise DataSetGeneratorError(msg)
 
 
-def _raise_generation_error(max_retries: int, error: Exception) -> None:
-    """Raise an error for generation failure."""
-    msg = f"Failed to generate output after {max_retries} attempts: {error!s}"
-    raise DataSetGeneratorError(msg) from error
+def _get_openai_client_config(
+    api_key_env_var: str | None,
+    default_base_url: str | None,
+    dummy_key: str | None = None,
+    **kwargs,
+) -> tuple[str | None, dict[str, Any]]:
+    """Extract common configuration for OpenAI-compatible clients.
+
+    Args:
+        api_key_env_var: Environment variable name for API key (None to skip check)
+        default_base_url: Default base URL if not provided in kwargs (None for OpenAI default)
+        dummy_key: Dummy API key to use if api_key_env_var is None (e.g., for Ollama)
+        **kwargs: Additional client configuration (may include base_url override)
+
+    Returns:
+        Tuple of (api_key, client_kwargs) for client initialization
+
+    Raises:
+        DataSetGeneratorError: If required API key is missing
+    """
+    # Get API key from environment or use dummy key
+    if api_key_env_var:
+        api_key = os.getenv(api_key_env_var)
+        if not api_key:
+            _raise_api_key_error(api_key_env_var)
+    else:
+        api_key = dummy_key
+
+    # Set up base_url if provided
+    client_kwargs = {k: v for k, v in kwargs.items() if k != "base_url"}
+    if default_base_url:
+        client_kwargs["base_url"] = kwargs.get("base_url", default_base_url)
+
+    return api_key, client_kwargs
 
 
 def _create_openai_compatible_client(
@@ -137,20 +660,9 @@ def _create_openai_compatible_client(
     Raises:
         DataSetGeneratorError: If required API key is missing
     """
-    # Get API key from environment or use dummy key
-    if api_key_env_var:
-        api_key = os.getenv(api_key_env_var)
-        if not api_key:
-            _raise_api_key_error(api_key_env_var)
-    else:
-        api_key = dummy_key
-
-    # Set up base_url if provided
-    client_kwargs = {k: v for k, v in kwargs.items() if k != "base_url"}
-    if default_base_url:
-        base_url = kwargs.get("base_url", default_base_url)
-        client_kwargs["base_url"] = base_url
-
+    api_key, client_kwargs = _get_openai_client_config(
+        api_key_env_var, default_base_url, dummy_key, **kwargs
+    )
     return openai.OpenAI(api_key=api_key, **client_kwargs)
 
 
@@ -174,20 +686,9 @@ def _create_async_openai_compatible_client(
     Raises:
         DataSetGeneratorError: If required API key is missing
     """
-    # Get API key from environment or use dummy key
-    if api_key_env_var:
-        api_key = os.getenv(api_key_env_var)
-        if not api_key:
-            _raise_api_key_error(api_key_env_var)
-    else:
-        api_key = dummy_key
-
-    # Set up base_url if provided
-    client_kwargs = {k: v for k, v in kwargs.items() if k != "base_url"}
-    if default_base_url:
-        base_url = kwargs.get("base_url", default_base_url)
-        client_kwargs["base_url"] = base_url
-
+    api_key, client_kwargs = _get_openai_client_config(
+        api_key_env_var, default_base_url, dummy_key, **kwargs
+    )
     return openai.AsyncOpenAI(api_key=api_key, **client_kwargs)
 
 
@@ -262,7 +763,7 @@ def _inline_refs(schema_dict: dict, defs: dict | None = None) -> dict:
         return schema_dict
 
     # Create a copy to modify
-    result = {}
+    result: dict[str, Any] = {}
 
     for key, value in schema_dict.items():
         if key == "$defs":
@@ -295,6 +796,9 @@ def _strip_additional_properties(schema_dict: dict) -> dict:
     Fields like dict[str, Any] have additionalProperties: true and no properties defined.
     Gemini requires that object-type fields must have properties, so we exclude these
     fields from the schema entirely.
+
+    Note: This function preserves $defs and does NOT inline refs. Use _inline_refs
+    separately if ref inlining is needed.
 
     Args:
         schema_dict: JSON schema dictionary
@@ -367,112 +871,26 @@ def _strip_additional_properties(schema_dict: dict) -> dict:
     return schema_dict
 
 
-class DirectGeminiModel:
-    """Direct Gemini API client bypassing Outlines for structured output.
 
-    Uses Gemini's native response_json_schema parameter which is more reliable
-    than Outlines' wrapper for structured output generation.
+
+def _ensure_anthropic_strict_mode_compliance(schema_dict: dict) -> dict:
+    """Ensure schema complies with Anthropic's structured outputs requirements.
+
+    Anthropic's structured outputs require:
+    1. For objects, 'additionalProperties' must be explicitly set to false
+    2. ALL properties must be in the 'required' array (no optional fields allowed)
+    3. No fields with additionalProperties: true (incompatible with strict mode)
+
+    This is similar to OpenAI's strict mode requirements.
+
+    Args:
+        schema_dict: JSON schema dictionary
+
+    Returns:
+        Modified schema dict meeting Anthropic structured outputs requirements
     """
-
-    def __init__(self, client: genai.Client, model_name: str):
-        self.client = client
-        self.model_name = model_name
-
-    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
-        """Prepare JSON schema for Gemini by inlining refs and stripping incompatible fields."""
-        json_schema = schema.model_json_schema()
-        return _strip_additional_properties(_inline_refs(json_schema))
-
-    def __call__(
-        self,
-        prompt: str,
-        schema: type[BaseModel],
-        **kwargs,
-    ) -> str:
-        """Generate structured output using Gemini's native JSON schema support.
-
-        Args:
-            prompt: The input prompt
-            schema: Pydantic model class for structured output
-            **kwargs: Additional generation parameters (temperature, max_output_tokens, etc.)
-
-        Returns:
-            JSON string matching the schema
-        """
-        json_schema = self._prepare_json_schema(schema)
-
-        # Build generation config
-        config = genai_types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema=json_schema,
-            **kwargs,
-        )
-
-        # Call Gemini API directly
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=config,
-        )
-
-        if response.text is None:
-            raise DataSetGeneratorError("Gemini returned empty response")
-
-        return response.text
-
-
-class AsyncDirectGeminiModel:
-    """Async direct Gemini API client bypassing Outlines for structured output.
-
-    Uses Gemini's native response_json_schema parameter which is more reliable
-    than Outlines' wrapper for structured output generation.
-    """
-
-    def __init__(self, client: genai.Client, model_name: str):
-        self.client = client
-        self.model_name = model_name
-
-    def _prepare_json_schema(self, schema: type[BaseModel]) -> dict:
-        """Prepare JSON schema for Gemini by inlining refs and stripping incompatible fields."""
-        json_schema = schema.model_json_schema()
-        return _strip_additional_properties(_inline_refs(json_schema))
-
-    async def __call__(
-        self,
-        prompt: str,
-        schema: type[BaseModel],
-        **kwargs,
-    ) -> str:
-        """Asynchronously generate structured output using Gemini's native JSON schema support.
-
-        Args:
-            prompt: The input prompt
-            schema: Pydantic model class for structured output
-            **kwargs: Additional generation parameters (temperature, max_output_tokens, etc.)
-
-        Returns:
-            JSON string matching the schema
-        """
-        json_schema = self._prepare_json_schema(schema)
-
-        # Build generation config
-        config = genai_types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema=json_schema,
-            **kwargs,
-        )
-
-        # Call Gemini API directly using async method
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=config,
-        )
-
-        if response.text is None:
-            raise DataSetGeneratorError("Gemini returned empty response")
-
-        return response.text
+    # Reuse OpenAI's strict mode compliance function as requirements are similar
+    return _ensure_openai_strict_mode_compliance(schema_dict)
 
 
 def _strip_ref_sibling_keywords(schema_dict: dict) -> dict:
@@ -610,19 +1028,19 @@ def _ensure_openai_strict_mode_compliance(schema_dict: dict) -> dict:
     return schema_dict
 
 
-def _create_openai_compatible_schema(schema: type[BaseModel]) -> type[BaseModel]:
+@lru_cache(maxsize=128)
+def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     """
-    Create an OpenAI-compatible version of a Pydantic schema.
+    Get or create a cached OpenAI-compatible version of a Pydantic schema.
 
-    OpenAI's strict mode requires that all objects have 'additionalProperties: false'.
-    This function ensures the schema meets those requirements while preserving
-    Pydantic's correct handling of required vs optional fields.
+    This function caches transformed schemas to avoid repeated processing
+    of the same Pydantic model during multiple generation calls.
 
     Args:
         schema: Original Pydantic model
 
     Returns:
-        Wrapper model that generates OpenAI-compatible schemas
+        Cached wrapper model that generates OpenAI-compatible schemas
     """
 
     # Create a new model class that overrides model_json_schema
@@ -639,6 +1057,25 @@ def _create_openai_compatible_schema(schema: type[BaseModel]) -> type[BaseModel]
     OpenAICompatModel.__doc__ = schema.__doc__
 
     return OpenAICompatModel
+
+
+def _create_openai_compatible_schema(schema: type[BaseModel]) -> type[BaseModel]:
+    """
+    Create an OpenAI-compatible version of a Pydantic schema.
+
+    OpenAI's strict mode requires that all objects have 'additionalProperties: false'.
+    This function ensures the schema meets those requirements while preserving
+    Pydantic's correct handling of required vs optional fields.
+
+    Uses caching to avoid repeated transformation of the same schema.
+
+    Args:
+        schema: Original Pydantic model
+
+    Returns:
+        Wrapper model that generates OpenAI-compatible schemas
+    """
+    return _get_cached_openai_schema(schema)
 
 
 def make_outlines_model(provider: str, model_name: str, **kwargs) -> Any:
@@ -685,15 +1122,15 @@ def make_outlines_model(provider: str, model_name: str, **kwargs) -> Any:
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 _raise_api_key_error("ANTHROPIC_API_KEY")
-
-            client = anthropic.Anthropic(api_key=api_key, **kwargs)
-            return outlines.from_anthropic(client, model_name)
+            # Use native Anthropic structured outputs API
+            client = anthropic.AsyncAnthropic(api_key=api_key, **kwargs)
+            return AnthropicModel(client, model_name)
 
         if provider == "gemini":
             api_key = _get_gemini_api_key()
             # Use direct Gemini API instead of Outlines for better structured output reliability
             client = genai.Client(api_key=api_key)
-            return DirectGeminiModel(client, model_name)
+            return GeminiModel(client, model_name)
 
         _raise_unsupported_provider_error(provider)
 
@@ -737,11 +1174,19 @@ def make_async_outlines_model(provider: str, model_name: str, **kwargs) -> Any |
             )
             return outlines.from_openai(client, model_name)
 
+        if provider == "anthropic":
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                _raise_api_key_error("ANTHROPIC_API_KEY")
+            # Use native Anthropic structured outputs API
+            client = anthropic.AsyncAnthropic(api_key=api_key, **kwargs)
+            return AnthropicModel(client, model_name)
+
         if provider == "gemini":
             api_key = _get_gemini_api_key()
             # Use direct async Gemini API for better structured output reliability
             client = genai.Client(api_key=api_key)
-            return AsyncDirectGeminiModel(client, model_name)
+            return GeminiModel(client, model_name)
 
     except DataSetGeneratorError:
         raise
@@ -753,269 +1198,3 @@ def make_async_outlines_model(provider: str, model_name: str, **kwargs) -> Any |
     return None
 
 
-class LLMClient:
-    """Wrapper for Outlines models with retry logic and error handling."""
-
-    def __init__(
-        self,
-        provider: str,
-        model_name: str,
-        rate_limit_config: RateLimitConfig | dict | None = None,
-        **kwargs,
-    ):
-        """Initialize LLM client.
-
-        Args:
-            provider: Provider name
-            model_name: Model identifier
-            rate_limit_config: Rate limiting configuration (None uses provider defaults)
-            **kwargs: Additional client configuration
-        """
-        self.provider = provider
-        self.model_name = model_name
-
-        # Initialize rate limiting
-        if isinstance(rate_limit_config, dict):
-            self.rate_limit_config = create_rate_limit_config(provider, rate_limit_config)
-        elif rate_limit_config is None:
-            # Use provider-specific defaults
-            from .rate_limit_config import (  # noqa: PLC0415
-                get_default_rate_limit_config,
-            )
-
-            self.rate_limit_config = get_default_rate_limit_config(provider)
-        else:
-            self.rate_limit_config = rate_limit_config
-
-        self.retry_handler = RetryHandler(self.rate_limit_config, provider)
-
-        self.model: Any = make_outlines_model(provider, model_name, **kwargs)
-        self.async_model: Any | None = make_async_outlines_model(provider, model_name, **kwargs)
-        if self.model is None:
-            msg = f"Failed to create model for {provider}/{model_name}"
-            raise DataSetGeneratorError(msg)
-
-    def generate(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs) -> Any:  # noqa: ARG002
-        """Generate structured output using the provided schema.
-
-        Args:
-            prompt: Input prompt
-            schema: Pydantic model or other schema type
-            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
-            **kwargs: Additional generation parameters
-
-        Returns:
-            Generated output matching the schema
-
-        Raises:
-            DataSetGeneratorError: If generation fails after all retries
-
-        Note:
-            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
-            If provided, it will be ignored in favor of the configured retry handler.
-        """
-        return self._generate_with_retry(prompt, schema, **kwargs)
-
-    @retry_with_backoff
-    def _generate_with_retry(self, prompt: str, schema: Any, **kwargs) -> Any:
-        """Internal method that performs actual generation with retry wrapper.
-
-        This method is decorated with retry_with_backoff to handle rate limits
-        and transient errors automatically.
-        """
-        # Convert provider-specific parameters
-        kwargs = self._convert_generation_params(**kwargs)
-
-        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
-        # For OpenAI and OpenRouter, ensure all properties are in required array
-        generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
-            pass
-        elif (
-            self.provider in ("openai", "openrouter")
-            and isinstance(schema, type)
-            and issubclass(schema, BaseModel)
-        ):
-            generation_schema = _create_openai_compatible_schema(schema)
-
-        # Generate JSON string using the model
-        json_output = self.model(prompt, generation_schema, **kwargs)
-
-        # Parse and validate the JSON response with the ORIGINAL schema
-        # This ensures we still get proper validation
-        try:
-            return schema.model_validate_json(json_output)
-        except Exception as e:
-            raise DataSetGeneratorError(
-                f"Generation validation failed: {e}",
-                context={"raw_content": json_output},
-            ) from e
-
-    async def generate_async(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs) -> Any:  # noqa: ARG002
-        """Asynchronously generate structured output using provider async clients.
-
-        Args:
-            prompt: Input prompt
-            schema: Pydantic model or other schema type
-            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
-            **kwargs: Additional generation parameters
-
-        Returns:
-            Generated output matching the schema
-
-        Raises:
-            DataSetGeneratorError: If generation fails after all retries
-
-        Note:
-            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
-            If provided, it will be ignored in favor of the configured retry handler.
-        """
-        if self.async_model is None:
-            # Fallback to running the synchronous path in a worker thread
-            return await asyncio.to_thread(self.generate, prompt, schema, **kwargs)
-
-        return await self._generate_async_with_retry(prompt, schema, **kwargs)
-
-    @retry_with_backoff_async
-    async def _generate_async_with_retry(self, prompt: str, schema: Any, **kwargs) -> Any:
-        """Internal async method that performs actual generation with retry wrapper.
-
-        This method is decorated with retry_with_backoff_async to handle rate limits
-        and transient errors automatically.
-        """
-        kwargs = self._convert_generation_params(**kwargs)
-
-        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
-        # For OpenAI and OpenRouter, ensure all properties are in required array
-        generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
-            pass
-        elif (
-            self.provider in ("openai", "openrouter")
-            and isinstance(schema, type)
-            and issubclass(schema, BaseModel)
-        ):
-            generation_schema = _create_openai_compatible_schema(schema)
-
-        # Ensure we have an async model; if not, fall back to running the sync path
-        async_model = self.async_model
-        if async_model is None:
-            return await asyncio.to_thread(self.generate, prompt, schema, **kwargs)
-
-        # Call the async model (guaranteed non-None by check above)
-        json_output = await async_model(prompt, generation_schema, **kwargs)
-        # Validate with original schema to ensure proper validation
-        try:
-            return schema.model_validate_json(json_output)
-        except Exception as e:
-            raise DataSetGeneratorError(
-                f"Async generation validation failed: {e}",
-                context={"raw_content": json_output},
-            ) from e
-
-    async def generate_async_stream(self, prompt: str, schema: Any, max_retries: int = 3, **kwargs):  # noqa: ARG002
-        """Asynchronously generate structured output with streaming text chunks.
-
-        This method streams the LLM's output text as it's generated, then returns
-        the final parsed Pydantic model. It yields tuples of (chunk, result) where:
-        - During streaming: (text_chunk, None)
-        - When complete: (None, final_pydantic_model)
-
-        Args:
-            prompt: Input prompt
-            schema: Pydantic model or other schema type
-            max_retries: Maximum number of retry attempts (deprecated, use rate_limit_config)
-            **kwargs: Additional generation parameters
-
-        Yields:
-            tuple[str | None, Any | None]:
-                - (chunk, None) during streaming
-                - (None, model) when generation is complete
-
-        Raises:
-            DataSetGeneratorError: If generation fails after all retries
-
-        Note:
-            The max_retries parameter is deprecated. Use rate_limit_config in __init__ instead.
-
-        Example:
-            >>> async for chunk, result in client.generate_async_stream(prompt, MyModel):
-            ...     if chunk:
-            ...         print(chunk, end='', flush=True)  # Display streaming text
-            ...     if result:
-            ...         return result  # Final parsed model
-        """
-        # Call streaming generation directly (retry decorator doesn't work with generators)
-        kwargs = self._convert_generation_params(**kwargs)
-
-        # Apply provider-specific schema transformations
-        # Note: Gemini uses DirectGeminiModel which handles schema transformation internally
-        generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
-            pass
-        elif (
-            self.provider in ("openai", "openrouter")
-            and isinstance(schema, type)
-            and issubclass(schema, BaseModel)
-        ):
-            generation_schema = _create_openai_compatible_schema(schema)
-
-        # Check if model supports streaming
-        async_model = self.async_model or self.model
-        if not hasattr(async_model, "generate_stream"):
-            # Fallback: no streaming support, yield entire result at once
-            result = await self.generate_async(prompt, schema, max_retries, **kwargs)
-            yield (None, result)
-            return
-
-        # Stream generation
-        accumulated_text = []
-        try:
-            # For sync models used in async context
-            if self.async_model is None:
-                # Run streaming generation in thread pool
-                from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
-
-                def _sync_stream():
-                    return list(self.model.generate_stream(prompt, generation_schema, **kwargs))
-
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(_sync_stream)
-                    # Wait for completion and get all chunks
-                    chunks = await asyncio.wrap_future(future)
-                    for chunk in chunks:
-                        accumulated_text.append(chunk)
-                        yield (chunk, None)
-            else:
-                # True async streaming
-                stream = self.async_model.generate_stream(prompt, generation_schema, **kwargs)
-                async for chunk in stream:
-                    accumulated_text.append(chunk)
-                    yield (chunk, None)
-
-            # Parse accumulated JSON with original schema
-            full_text = "".join(accumulated_text)
-            result = schema.model_validate_json(full_text)
-            yield (None, result)
-
-        except Exception as e:
-            # Wrap and raise error with raw content for debugging
-            raw_content = "".join(accumulated_text) if accumulated_text else None
-            raise DataSetGeneratorError(
-                f"Streaming generation failed: {e}",
-                context={"raw_content": raw_content},
-            ) from e
-
-    def _convert_generation_params(self, **kwargs) -> dict:
-        """Convert generic parameters to provider-specific ones."""
-        # Convert max_tokens to max_output_tokens for Gemini
-        if self.provider == "gemini" and "max_tokens" in kwargs:
-            kwargs["max_output_tokens"] = kwargs.pop("max_tokens")
-
-        return kwargs
-
-    def __repr__(self) -> str:
-        return f"LLMClient(provider={self.provider}, model={self.model_name})"

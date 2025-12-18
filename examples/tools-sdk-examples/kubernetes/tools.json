@@ -1,0 +1,607 @@
+{
+  "tools": [
+    {
+      "name": "configuration_view",
+      "description": "Get the current Kubernetes configuration content as a kubeconfig YAML",
+      "parameters": [
+        {
+          "name": "minified",
+          "type": "bool",
+          "description": "Return a minified version of the configuration. If set to true, keeps only the current-context and the relevant pieces of the configuration for that context. If set to false, all contexts, clusters, auth-infos, and users are returned in the configuration. (Optional, default true)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "events_list",
+      "description": "List all the Kubernetes events in the current cluster from all namespaces",
+      "parameters": [
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Optional Namespace to retrieve the events from. If not provided, will list events from all namespaces",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "helm_install",
+      "description": "Install a Helm chart in the current or provided namespace",
+      "parameters": [
+        {
+          "name": "chart",
+          "type": "str",
+          "description": "Chart reference to install (for example: stable/grafana, oci://ghcr.io/nginxinc/charts/nginx-ingress)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Helm release (Optional, random name if not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to install the Helm chart in (Optional, current namespace if not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "values",
+          "type": "dict",
+          "description": "Values to pass to the Helm chart (Optional)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "helm_list",
+      "description": "List all the Helm releases in the current or provided namespace (or in all namespaces if specified)",
+      "parameters": [
+        {
+          "name": "all_namespaces",
+          "type": "bool",
+          "description": "If true, lists all Helm releases in all namespaces ignoring the namespace argument (Optional)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to list Helm releases from (Optional, all namespaces if not provided)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "helm_uninstall",
+      "description": "Uninstall a Helm release in the current or provided namespace",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Helm release to uninstall",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to uninstall the Helm release from (Optional, current namespace if not provided)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "namespaces_list",
+      "description": "List all the Kubernetes namespaces in the current cluster",
+      "parameters": [],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "nodes_log",
+      "description": "Get logs from a Kubernetes node (kubelet, kube-proxy, or other system logs). This accesses node logs through the Kubernetes API proxy to the kubelet",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the node to get logs from",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "query",
+          "type": "str",
+          "description": "query specifies services(s) or files from which to return logs (required). Example: \"kubelet\" to fetch kubelet logs, \"/<log-file-name>\" to fetch a specific log file from the node (e.g., \"/var/log/kubelet.log\" or \"/var/log/kube-proxy.log\")",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "tailLines",
+          "type": "int",
+          "description": "Number of lines to retrieve from the end of the logs (Optional, 0 means all logs)",
+          "required": false,
+          "default": "100"
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "nodes_stats_summary",
+      "description": "Get detailed resource usage statistics from a Kubernetes node via the kubelet's Summary API. Provides comprehensive metrics including CPU, memory, filesystem, and network usage at the node, pod, and container levels. On systems with cgroup v2 and kernel 4.20+, also includes PSI (Pressure Stall Information) metrics that show resource pressure for CPU, memory, and I/O. See https://kubernetes.io/docs/reference/instrumentation/understand-psi-metrics/ for details on PSI metrics",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the node to get stats from",
+          "required": true,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "nodes_top",
+      "description": "List the resource consumption (CPU and memory) as recorded by the Kubernetes Metrics Server for the specified Kubernetes Nodes or all nodes in the cluster",
+      "parameters": [
+        {
+          "name": "label_selector",
+          "type": "str",
+          "description": "Kubernetes label selector (e.g. 'node-role.kubernetes.io/worker=') to filter nodes by label (Optional, only applicable when name is not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Node to get the resource consumption from (Optional, all Nodes if not provided)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_delete",
+      "description": "Delete a Kubernetes Pod in the current or provided namespace with the provided name",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod to delete",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to delete the Pod from",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_exec",
+      "description": "Execute a command in a Kubernetes Pod in the current or provided namespace with the provided name and command",
+      "parameters": [
+        {
+          "name": "command",
+          "type": "list",
+          "description": "Command to execute in the Pod container. The first item is the command to be run, and the rest are the arguments to that command. Example: [\"ls\", \"-l\", \"/tmp\"]",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "container",
+          "type": "str",
+          "description": "Name of the Pod container where the command will be executed (Optional)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod where the command will be executed",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace of the Pod where the command will be executed",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_get",
+      "description": "Get a Kubernetes Pod in the current or provided namespace with the provided name",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to get the Pod from",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_list",
+      "description": "List all the Kubernetes pods in the current cluster from all namespaces",
+      "parameters": [
+        {
+          "name": "labelSelector",
+          "type": "str",
+          "description": "Optional Kubernetes label selector (e.g. 'app=myapp,env=prod' or 'app in (myapp,yourapp)'), use this option when you want to filter the pods by label",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_list_in_namespace",
+      "description": "List all the Kubernetes pods in the specified namespace in the current cluster",
+      "parameters": [
+        {
+          "name": "labelSelector",
+          "type": "str",
+          "description": "Optional Kubernetes label selector (e.g. 'app=myapp,env=prod' or 'app in (myapp,yourapp)'), use this option when you want to filter the pods by label",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to list pods from",
+          "required": true,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_log",
+      "description": "Get the logs of a Kubernetes Pod in the current or provided namespace with the provided name",
+      "parameters": [
+        {
+          "name": "container",
+          "type": "str",
+          "description": "Name of the Pod container to get the logs from (Optional)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod to get the logs from",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to get the Pod logs from",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "previous",
+          "type": "bool",
+          "description": "Return previous terminated container logs (Optional)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "tail",
+          "type": "int",
+          "description": "Number of lines to retrieve from the end of the logs (Optional, default: 100)",
+          "required": false,
+          "default": "100"
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_run",
+      "description": "Run a Kubernetes Pod in the current or provided namespace with the provided container image and optional name",
+      "parameters": [
+        {
+          "name": "image",
+          "type": "str",
+          "description": "Container Image to run in the Pod",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod (Optional, random name if not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to run the Pod in",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "port",
+          "type": "float",
+          "description": "TCP/IP port to expose from the Pod container (Optional, no port exposed if not provided)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "pods_top",
+      "description": "List the resource consumption (CPU and memory) as recorded by the Kubernetes Metrics Server for the specified Kubernetes Pods in the all namespaces, the provided namespace, or the current namespace",
+      "parameters": [
+        {
+          "name": "all_namespaces",
+          "type": "bool",
+          "description": "If true, list the resource consumption for all Pods in all namespaces. If false, list the resource consumption for Pods in the provided namespace or the current namespace",
+          "required": false,
+          "default": "True"
+        },
+        {
+          "name": "label_selector",
+          "type": "str",
+          "description": "Kubernetes label selector (e.g. 'app=myapp,env=prod' or 'app in (myapp,yourapp)'), use this option when you want to filter the pods by label (Optional, only applicable when name is not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the Pod to get the resource consumption from (Optional, all Pods in the namespace if not provided)",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Namespace to get the Pods resource consumption from (Optional, current namespace if not provided and all_namespaces is false)",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "resources_create_or_update",
+      "description": "Create or update a Kubernetes resource in the current cluster by providing a YAML or JSON representation of the resource\n(common apiVersion and kind include: v1 Pod, v1 Service, v1 Node, apps/v1 Deployment, networking.k8s.io/v1 Ingress)",
+      "parameters": [
+        {
+          "name": "resource",
+          "type": "str",
+          "description": "A JSON or YAML containing a representation of the Kubernetes resource. Should include top-level fields such as apiVersion,kind,metadata, and spec",
+          "required": true,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "resources_delete",
+      "description": "Delete a Kubernetes resource in the current cluster by providing its apiVersion, kind, optionally the namespace, and its name\n(common apiVersion and kind include: v1 Pod, v1 Service, v1 Node, apps/v1 Deployment, networking.k8s.io/v1 Ingress)",
+      "parameters": [
+        {
+          "name": "apiVersion",
+          "type": "str",
+          "description": "apiVersion of the resource (examples of valid apiVersion are: v1, apps/v1, networking.k8s.io/v1)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "kind",
+          "type": "str",
+          "description": "kind of the resource (examples of valid kind are: Pod, Service, Deployment, Ingress)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the resource",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Optional Namespace to delete the namespaced resource from (ignored in case of cluster scoped resources). If not provided, will delete resource from configured namespace",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "resources_get",
+      "description": "Get a Kubernetes resource in the current cluster by providing its apiVersion, kind, optionally the namespace, and its name\n(common apiVersion and kind include: v1 Pod, v1 Service, v1 Node, apps/v1 Deployment, networking.k8s.io/v1 Ingress)",
+      "parameters": [
+        {
+          "name": "apiVersion",
+          "type": "str",
+          "description": "apiVersion of the resource (examples of valid apiVersion are: v1, apps/v1, networking.k8s.io/v1)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "kind",
+          "type": "str",
+          "description": "kind of the resource (examples of valid kind are: Pod, Service, Deployment, Ingress)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the resource",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Optional Namespace to retrieve the namespaced resource from (ignored in case of cluster scoped resources). If not provided, will get resource from configured namespace",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "resources_list",
+      "description": "List Kubernetes resources and objects in the current cluster by providing their apiVersion and kind and optionally the namespace and label selector\n(common apiVersion and kind include: v1 Pod, v1 Service, v1 Node, apps/v1 Deployment, networking.k8s.io/v1 Ingress)",
+      "parameters": [
+        {
+          "name": "apiVersion",
+          "type": "str",
+          "description": "apiVersion of the resources (examples of valid apiVersion are: v1, apps/v1, networking.k8s.io/v1)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "kind",
+          "type": "str",
+          "description": "kind of the resources (examples of valid kind are: Pod, Service, Deployment, Ingress)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "labelSelector",
+          "type": "str",
+          "description": "Optional Kubernetes label selector (e.g. 'app=myapp,env=prod' or 'app in (myapp,yourapp)'), use this option when you want to filter the pods by label",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Optional Namespace to retrieve the namespaced resources from (ignored in case of cluster scoped resources). If not provided, will list resources from all namespaces",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    },
+    {
+      "name": "resources_scale",
+      "description": "Get or update the scale of a Kubernetes resource in the current cluster by providing its apiVersion, kind, name, and optionally the namespace. If the scale is set in the tool call, the scale will be updated to that value. Always returns the current scale of the resource",
+      "parameters": [
+        {
+          "name": "apiVersion",
+          "type": "str",
+          "description": "apiVersion of the resource (examples of valid apiVersion are apps/v1)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "kind",
+          "type": "str",
+          "description": "kind of the resource (examples of valid kind are: StatefulSet, Deployment)",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "description": "Name of the resource",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "namespace",
+          "type": "str",
+          "description": "Optional Namespace to get/update the namespaced resource scale from (ignored in case of cluster scoped resources). If not provided, will get/update resource scale from configured namespace",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "scale",
+          "type": "int",
+          "description": "Optional scale to update the resources scale to. If not provided, will return the current scale of the resource, and not update it",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "returns": "",
+      "category": "general",
+      "component": null
+    }
+  ]
+}

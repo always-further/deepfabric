@@ -1,4 +1,4 @@
-"""Tests for Gemini schema transformation functions and DirectGeminiModel."""
+"""Tests for Gemini schema transformation functions and GeminiModel."""
 
 import asyncio
 
@@ -10,8 +10,7 @@ from pydantic import BaseModel, Field
 
 from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.llm.client import (
-    AsyncDirectGeminiModel,
-    DirectGeminiModel,
+    GeminiModel,
     _inline_refs,
     _strip_additional_properties,
 )
@@ -311,81 +310,8 @@ class TestStripAdditionalProperties:
         assert "data" not in result["properties"]
 
 
-class TestDirectGeminiModel:
-    """Tests for DirectGeminiModel class."""
-
-    def test_prepare_json_schema_inlines_and_strips(self):
-        """_prepare_json_schema should inline refs and strip incompatible fields."""
-        mock_client = MagicMock()
-        model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
-
-        # Use a real Pydantic model
-        schema = model._prepare_json_schema(ParentItem)
-
-        # Should not have $ref (inlined)
-        assert "$defs" not in schema
-        # Check structure is preserved
-        assert "properties" in schema
-        assert "title" in schema["properties"]
-        assert "sub" in schema["properties"]
-
-    def test_prepare_json_schema_removes_dict_fields(self):
-        """_prepare_json_schema should remove dict[str, Any] fields."""
-        mock_client = MagicMock()
-        model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
-
-        schema = model._prepare_json_schema(ModelWithDict)
-
-        # metadata field should be removed (has additionalProperties)
-        assert "name" in schema["properties"]
-        assert "metadata" not in schema["properties"]
-
-    @patch("deepfabric.llm.client.genai_types.GenerateContentConfig")
-    def test_call_uses_response_json_schema(self, mock_config_class):
-        """__call__ should use response_json_schema parameter."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.text = '{"title": "Test", "sub": {"name": "Sub", "value": 1}, "items": []}'
-        mock_client.models.generate_content.return_value = mock_response
-
-        model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
-        result = model("Generate something", ParentItem)
-
-        # Verify config was created with response_json_schema
-        mock_config_class.assert_called_once()
-        call_kwargs = mock_config_class.call_args.kwargs
-        assert call_kwargs["response_mime_type"] == "application/json"
-        assert "response_json_schema" in call_kwargs
-
-        # Verify result
-        assert result == mock_response.text
-
-    def test_call_raises_on_empty_response(self):
-        """__call__ should raise DataSetGeneratorError on empty response."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.text = None
-        mock_client.models.generate_content.return_value = mock_response
-
-        model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
-
-        with pytest.raises(DataSetGeneratorError, match="empty response"):
-            model("Generate something", ParentItem)
-
-
-class TestAsyncDirectGeminiModel:
-    """Tests for AsyncDirectGeminiModel class."""
-
-    def test_prepare_json_schema_same_as_sync(self):
-        """Async model should prepare schemas the same as sync model."""
-        mock_client = MagicMock()
-        sync_model = DirectGeminiModel(mock_client, "gemini-1.5-flash")
-        async_model = AsyncDirectGeminiModel(mock_client, "gemini-1.5-flash")
-
-        sync_schema = sync_model._prepare_json_schema(ParentItem)
-        async_schema = async_model._prepare_json_schema(ParentItem)
-
-        assert sync_schema == async_schema
+class TestGeminiModel:
+    """Tests for GeminiModel class."""
 
     @patch("deepfabric.llm.client.genai_types.GenerateContentConfig")
     def test_call_uses_async_api(self, mock_config_class):  # noqa: ARG002
@@ -398,7 +324,7 @@ class TestAsyncDirectGeminiModel:
         # Set up async mock
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        model = AsyncDirectGeminiModel(mock_client, "gemini-1.5-flash")
+        model = GeminiModel(mock_client, "gemini-1.5-flash")
         result = asyncio.run(model("Generate something", ParentItem))
 
         # Verify async API was called
@@ -415,7 +341,7 @@ class TestAsyncDirectGeminiModel:
         mock_response.text = None
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        model = AsyncDirectGeminiModel(mock_client, "gemini-1.5-flash")
+        model = GeminiModel(mock_client, "gemini-1.5-flash")
 
         with pytest.raises(DataSetGeneratorError, match="empty response"):
             asyncio.run(model("Generate something", ParentItem))

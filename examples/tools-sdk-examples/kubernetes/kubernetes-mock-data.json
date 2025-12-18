@@ -1,0 +1,1277 @@
+{
+  "description": "Comprehensive Kubernetes mock data for testing tool execution with cluster management scenarios",
+  "version": "1.0.0",
+  "mockResponses": {
+    "configuration_view": {
+      "defaultResponse": {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "current-context": "default-context",
+        "contexts": [
+          {
+            "name": "default-context",
+            "context": {
+              "cluster": "default-cluster",
+              "user": "default-user",
+              "namespace": "default"
+            }
+          }
+        ],
+        "clusters": [
+          {
+            "name": "default-cluster",
+            "cluster": {
+              "server": "https://kubernetes.default.svc:6443",
+              "certificate-authority-data": "LS0tLS1CRUdJTi..."
+            }
+          }
+        ],
+        "users": [
+          {
+            "name": "default-user",
+            "user": {
+              "token": "eyJhbGciOiJSUzI1NiIs..."
+            }
+          }
+        ]
+      }
+    },
+    "namespaces_list": {
+      "defaultResponse": {
+        "items": [
+          {"name": "default", "status": "Active", "age": "45d"},
+          {"name": "kube-system", "status": "Active", "age": "45d"},
+          {"name": "kube-public", "status": "Active", "age": "45d"},
+          {"name": "kube-node-lease", "status": "Active", "age": "45d"}
+        ]
+      }
+    },
+    "events_list": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "pods_list": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "pods_list_in_namespace": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "pods_get": {
+      "defaultResponse": {
+        "error": "Pod not found"
+      }
+    },
+    "pods_log": {
+      "defaultResponse": {
+        "logs": ""
+      }
+    },
+    "pods_exec": {
+      "defaultResponse": {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    "pods_delete": {
+      "defaultResponse": {
+        "success": true,
+        "message": "Pod deleted successfully"
+      }
+    },
+    "pods_run": {
+      "defaultResponse": {
+        "success": true,
+        "pod": {
+          "name": "generated-pod-name",
+          "namespace": "default",
+          "status": "Pending"
+        }
+      }
+    },
+    "pods_top": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "nodes_top": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "nodes_log": {
+      "defaultResponse": {
+        "logs": ""
+      }
+    },
+    "nodes_stats_summary": {
+      "defaultResponse": {
+        "node": {},
+        "pods": []
+      }
+    },
+    "helm_list": {
+      "defaultResponse": {
+        "releases": []
+      }
+    },
+    "helm_install": {
+      "defaultResponse": {
+        "success": true,
+        "release": {
+          "name": "generated-release",
+          "namespace": "default",
+          "status": "deployed",
+          "revision": 1
+        }
+      }
+    },
+    "helm_uninstall": {
+      "defaultResponse": {
+        "success": true,
+        "message": "Release uninstalled successfully"
+      }
+    },
+    "resources_list": {
+      "defaultResponse": {
+        "items": []
+      }
+    },
+    "resources_get": {
+      "defaultResponse": {
+        "error": "Resource not found"
+      }
+    },
+    "resources_create_or_update": {
+      "defaultResponse": {
+        "success": true,
+        "message": "Resource created/updated successfully"
+      }
+    },
+    "resources_delete": {
+      "defaultResponse": {
+        "success": true,
+        "message": "Resource deleted successfully"
+      }
+    },
+    "resources_scale": {
+      "defaultResponse": {
+        "replicas": 1,
+        "availableReplicas": 1
+      }
+    }
+  },
+  "fixtures": {
+    "configuration_view": [
+      {
+        "match": {"minified": true},
+        "response": {
+          "apiVersion": "v1",
+          "kind": "Config",
+          "current-context": "production-cluster",
+          "contexts": [
+            {
+              "name": "production-cluster",
+              "context": {
+                "cluster": "prod-k8s",
+                "user": "admin",
+                "namespace": "default"
+              }
+            }
+          ],
+          "clusters": [
+            {
+              "name": "prod-k8s",
+              "cluster": {
+                "server": "https://k8s.prod.example.com:6443"
+              }
+            }
+          ],
+          "users": [
+            {
+              "name": "admin",
+              "user": {}
+            }
+          ]
+        }
+      }
+    ],
+    "namespaces_list": [
+      {
+        "match": {},
+        "response": {
+          "items": [
+            {"name": "default", "status": "Active", "age": "120d", "labels": {}},
+            {"name": "kube-system", "status": "Active", "age": "120d", "labels": {"kubernetes.io/metadata.name": "kube-system"}},
+            {"name": "kube-public", "status": "Active", "age": "120d", "labels": {}},
+            {"name": "kube-node-lease", "status": "Active", "age": "120d", "labels": {}},
+            {"name": "production", "status": "Active", "age": "90d", "labels": {"env": "production"}},
+            {"name": "staging", "status": "Active", "age": "90d", "labels": {"env": "staging"}},
+            {"name": "monitoring", "status": "Active", "age": "60d", "labels": {"app": "monitoring"}},
+            {"name": "ingress-nginx", "status": "Active", "age": "60d", "labels": {"app": "ingress"}}
+          ]
+        }
+      }
+    ],
+    "events_list": [
+      {
+        "match": {"namespace": "production"},
+        "response": {
+          "items": [
+            {
+              "type": "Normal",
+              "reason": "Scheduled",
+              "message": "Successfully assigned production/web-frontend-7d9f8b6c5-abc12 to node-1",
+              "involvedObject": {"kind": "Pod", "name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+              "firstTimestamp": "2024-12-17T10:30:00Z",
+              "lastTimestamp": "2024-12-17T10:30:00Z",
+              "count": 1
+            },
+            {
+              "type": "Normal",
+              "reason": "Pulled",
+              "message": "Container image \"nginx:1.25\" already present on machine",
+              "involvedObject": {"kind": "Pod", "name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+              "firstTimestamp": "2024-12-17T10:30:05Z",
+              "lastTimestamp": "2024-12-17T10:30:05Z",
+              "count": 1
+            },
+            {
+              "type": "Normal",
+              "reason": "Started",
+              "message": "Started container nginx",
+              "involvedObject": {"kind": "Pod", "name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+              "firstTimestamp": "2024-12-17T10:30:10Z",
+              "lastTimestamp": "2024-12-17T10:30:10Z",
+              "count": 1
+            },
+            {
+              "type": "Warning",
+              "reason": "BackOff",
+              "message": "Back-off restarting failed container",
+              "involvedObject": {"kind": "Pod", "name": "api-server-5c8f9d7b2-xyz99", "namespace": "production"},
+              "firstTimestamp": "2024-12-17T09:15:00Z",
+              "lastTimestamp": "2024-12-17T10:25:00Z",
+              "count": 14
+            }
+          ]
+        }
+      },
+      {
+        "match": {"namespace": "monitoring"},
+        "response": {
+          "items": [
+            {
+              "type": "Normal",
+              "reason": "ScalingReplicaSet",
+              "message": "Scaled up replica set prometheus-server-6d8f9c7b5 to 1",
+              "involvedObject": {"kind": "Deployment", "name": "prometheus-server", "namespace": "monitoring"},
+              "firstTimestamp": "2024-12-17T08:00:00Z",
+              "lastTimestamp": "2024-12-17T08:00:00Z",
+              "count": 1
+            }
+          ]
+        }
+      }
+    ],
+    "pods_list": [
+      {
+        "match": {},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend-7d9f8b6c5-abc12",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.1.15",
+              "node": "node-1",
+              "labels": {"app": "web-frontend", "env": "production"}
+            },
+            {
+              "name": "web-frontend-7d9f8b6c5-def34",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.2.22",
+              "node": "node-2",
+              "labels": {"app": "web-frontend", "env": "production"}
+            },
+            {
+              "name": "api-server-5c8f9d7b2-xyz99",
+              "namespace": "production",
+              "status": "CrashLoopBackOff",
+              "ready": "0/1",
+              "restarts": 14,
+              "age": "1d",
+              "ip": "10.244.1.18",
+              "node": "node-1",
+              "labels": {"app": "api-server", "env": "production"}
+            },
+            {
+              "name": "redis-master-0",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "5d",
+              "ip": "10.244.3.10",
+              "node": "node-3",
+              "labels": {"app": "redis", "role": "master"}
+            },
+            {
+              "name": "prometheus-server-6d8f9c7b5-mnop1",
+              "namespace": "monitoring",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "7d",
+              "ip": "10.244.2.30",
+              "node": "node-2",
+              "labels": {"app": "prometheus", "component": "server"}
+            },
+            {
+              "name": "grafana-8b7c6d5e4-qrst2",
+              "namespace": "monitoring",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 1,
+              "age": "7d",
+              "ip": "10.244.1.35",
+              "node": "node-1",
+              "labels": {"app": "grafana"}
+            },
+            {
+              "name": "coredns-5d78c9869d-abcd1",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "10.244.0.2",
+              "node": "control-plane",
+              "labels": {"k8s-app": "kube-dns"}
+            },
+            {
+              "name": "ingress-nginx-controller-7c9d8e6f5-uvwx3",
+              "namespace": "ingress-nginx",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 2,
+              "age": "30d",
+              "ip": "10.244.1.50",
+              "node": "node-1",
+              "labels": {"app.kubernetes.io/name": "ingress-nginx"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"labelSelector": "app=web-frontend"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend-7d9f8b6c5-abc12",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.1.15",
+              "node": "node-1",
+              "labels": {"app": "web-frontend", "env": "production"}
+            },
+            {
+              "name": "web-frontend-7d9f8b6c5-def34",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.2.22",
+              "node": "node-2",
+              "labels": {"app": "web-frontend", "env": "production"}
+            }
+          ]
+        }
+      }
+    ],
+    "pods_list_in_namespace": [
+      {
+        "match": {"namespace": "production"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend-7d9f8b6c5-abc12",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.1.15",
+              "node": "node-1",
+              "labels": {"app": "web-frontend", "env": "production"}
+            },
+            {
+              "name": "web-frontend-7d9f8b6c5-def34",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "2d",
+              "ip": "10.244.2.22",
+              "node": "node-2",
+              "labels": {"app": "web-frontend", "env": "production"}
+            },
+            {
+              "name": "api-server-5c8f9d7b2-xyz99",
+              "namespace": "production",
+              "status": "CrashLoopBackOff",
+              "ready": "0/1",
+              "restarts": 14,
+              "age": "1d",
+              "ip": "10.244.1.18",
+              "node": "node-1",
+              "labels": {"app": "api-server", "env": "production"}
+            },
+            {
+              "name": "redis-master-0",
+              "namespace": "production",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "5d",
+              "ip": "10.244.3.10",
+              "node": "node-3",
+              "labels": {"app": "redis", "role": "master"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"namespace": "monitoring"},
+        "response": {
+          "items": [
+            {
+              "name": "prometheus-server-6d8f9c7b5-mnop1",
+              "namespace": "monitoring",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "7d",
+              "ip": "10.244.2.30",
+              "node": "node-2",
+              "labels": {"app": "prometheus", "component": "server"}
+            },
+            {
+              "name": "grafana-8b7c6d5e4-qrst2",
+              "namespace": "monitoring",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 1,
+              "age": "7d",
+              "ip": "10.244.1.35",
+              "node": "node-1",
+              "labels": {"app": "grafana"}
+            },
+            {
+              "name": "alertmanager-9a8b7c6d5-efgh4",
+              "namespace": "monitoring",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "7d",
+              "ip": "10.244.3.40",
+              "node": "node-3",
+              "labels": {"app": "alertmanager"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"namespace": "kube-system"},
+        "response": {
+          "items": [
+            {
+              "name": "coredns-5d78c9869d-abcd1",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "10.244.0.2",
+              "node": "control-plane",
+              "labels": {"k8s-app": "kube-dns"}
+            },
+            {
+              "name": "coredns-5d78c9869d-efgh2",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "10.244.0.3",
+              "node": "control-plane",
+              "labels": {"k8s-app": "kube-dns"}
+            },
+            {
+              "name": "etcd-control-plane",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "192.168.1.10",
+              "node": "control-plane",
+              "labels": {"component": "etcd", "tier": "control-plane"}
+            },
+            {
+              "name": "kube-apiserver-control-plane",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "192.168.1.10",
+              "node": "control-plane",
+              "labels": {"component": "kube-apiserver", "tier": "control-plane"}
+            },
+            {
+              "name": "kube-controller-manager-control-plane",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 1,
+              "age": "120d",
+              "ip": "192.168.1.10",
+              "node": "control-plane",
+              "labels": {"component": "kube-controller-manager", "tier": "control-plane"}
+            },
+            {
+              "name": "kube-scheduler-control-plane",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 1,
+              "age": "120d",
+              "ip": "192.168.1.10",
+              "node": "control-plane",
+              "labels": {"component": "kube-scheduler", "tier": "control-plane"}
+            },
+            {
+              "name": "kube-proxy-node1",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "192.168.1.11",
+              "node": "node-1",
+              "labels": {"k8s-app": "kube-proxy"}
+            },
+            {
+              "name": "kube-proxy-node2",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "192.168.1.12",
+              "node": "node-2",
+              "labels": {"k8s-app": "kube-proxy"}
+            },
+            {
+              "name": "kube-proxy-node3",
+              "namespace": "kube-system",
+              "status": "Running",
+              "ready": "1/1",
+              "restarts": 0,
+              "age": "120d",
+              "ip": "192.168.1.13",
+              "node": "node-3",
+              "labels": {"k8s-app": "kube-proxy"}
+            }
+          ]
+        }
+      }
+    ],
+    "pods_get": [
+      {
+        "match": {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+        "response": {
+          "apiVersion": "v1",
+          "kind": "Pod",
+          "metadata": {
+            "name": "web-frontend-7d9f8b6c5-abc12",
+            "namespace": "production",
+            "labels": {"app": "web-frontend", "env": "production", "pod-template-hash": "7d9f8b6c5"},
+            "ownerReferences": [{"apiVersion": "apps/v1", "kind": "ReplicaSet", "name": "web-frontend-7d9f8b6c5"}],
+            "creationTimestamp": "2024-12-15T10:30:00Z"
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "nginx",
+                "image": "nginx:1.25",
+                "ports": [{"containerPort": 80, "protocol": "TCP"}],
+                "resources": {
+                  "requests": {"cpu": "100m", "memory": "128Mi"},
+                  "limits": {"cpu": "500m", "memory": "512Mi"}
+                },
+                "livenessProbe": {"httpGet": {"path": "/healthz", "port": 80}, "initialDelaySeconds": 10, "periodSeconds": 10},
+                "readinessProbe": {"httpGet": {"path": "/ready", "port": 80}, "initialDelaySeconds": 5, "periodSeconds": 5}
+              }
+            ],
+            "nodeName": "node-1",
+            "serviceAccountName": "default"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {"type": "Initialized", "status": "True"},
+              {"type": "Ready", "status": "True"},
+              {"type": "ContainersReady", "status": "True"},
+              {"type": "PodScheduled", "status": "True"}
+            ],
+            "hostIP": "192.168.1.11",
+            "podIP": "10.244.1.15",
+            "startTime": "2024-12-15T10:30:00Z",
+            "containerStatuses": [
+              {
+                "name": "nginx",
+                "state": {"running": {"startedAt": "2024-12-15T10:30:10Z"}},
+                "ready": true,
+                "restartCount": 0,
+                "image": "nginx:1.25",
+                "imageID": "docker-pullable://nginx@sha256:abc123..."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "match": {"name": "api-server-5c8f9d7b2-xyz99", "namespace": "production"},
+        "response": {
+          "apiVersion": "v1",
+          "kind": "Pod",
+          "metadata": {
+            "name": "api-server-5c8f9d7b2-xyz99",
+            "namespace": "production",
+            "labels": {"app": "api-server", "env": "production", "pod-template-hash": "5c8f9d7b2"},
+            "ownerReferences": [{"apiVersion": "apps/v1", "kind": "ReplicaSet", "name": "api-server-5c8f9d7b2"}],
+            "creationTimestamp": "2024-12-16T08:00:00Z"
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "api",
+                "image": "mycompany/api-server:v2.1.0",
+                "ports": [{"containerPort": 8080, "protocol": "TCP"}],
+                "env": [
+                  {"name": "DATABASE_URL", "valueFrom": {"secretKeyRef": {"name": "db-credentials", "key": "url"}}},
+                  {"name": "REDIS_HOST", "value": "redis-master.production.svc.cluster.local"}
+                ],
+                "resources": {
+                  "requests": {"cpu": "250m", "memory": "256Mi"},
+                  "limits": {"cpu": "1000m", "memory": "1Gi"}
+                }
+              }
+            ],
+            "nodeName": "node-1",
+            "serviceAccountName": "api-server"
+          },
+          "status": {
+            "phase": "Running",
+            "conditions": [
+              {"type": "Initialized", "status": "True"},
+              {"type": "Ready", "status": "False", "reason": "ContainersNotReady"},
+              {"type": "ContainersReady", "status": "False"},
+              {"type": "PodScheduled", "status": "True"}
+            ],
+            "hostIP": "192.168.1.11",
+            "podIP": "10.244.1.18",
+            "startTime": "2024-12-16T08:00:00Z",
+            "containerStatuses": [
+              {
+                "name": "api",
+                "state": {
+                  "waiting": {
+                    "reason": "CrashLoopBackOff",
+                    "message": "back-off 5m0s restarting failed container=api pod=api-server-5c8f9d7b2-xyz99_production"
+                  }
+                },
+                "lastState": {
+                  "terminated": {
+                    "exitCode": 1,
+                    "reason": "Error",
+                    "message": "Connection refused: unable to connect to database",
+                    "startedAt": "2024-12-17T10:20:00Z",
+                    "finishedAt": "2024-12-17T10:20:05Z"
+                  }
+                },
+                "ready": false,
+                "restartCount": 14,
+                "image": "mycompany/api-server:v2.1.0",
+                "imageID": "docker-pullable://mycompany/api-server@sha256:def456..."
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "pods_log": [
+      {
+        "match": {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+        "response": {
+          "logs": "2024/12/17 10:30:10 [notice] 1#1: using the \"epoll\" event method\n2024/12/17 10:30:10 [notice] 1#1: nginx/1.25.3\n2024/12/17 10:30:10 [notice] 1#1: built by gcc 12.2.0 (Debian 12.2.0-14)\n2024/12/17 10:30:10 [notice] 1#1: OS: Linux 5.15.0-91-generic\n2024/12/17 10:30:10 [notice] 1#1: start worker processes\n2024/12/17 10:30:10 [notice] 1#1: start worker process 29\n2024/12/17 10:30:10 [notice] 1#1: start worker process 30\n10.244.1.1 - - [17/Dec/2024:10:31:00 +0000] \"GET /healthz HTTP/1.1\" 200 2 \"-\" \"kube-probe/1.28\"\n10.244.1.1 - - [17/Dec/2024:10:31:05 +0000] \"GET /ready HTTP/1.1\" 200 2 \"-\" \"kube-probe/1.28\"\n10.244.0.5 - - [17/Dec/2024:10:32:15 +0000] \"GET / HTTP/1.1\" 200 615 \"-\" \"Mozilla/5.0\"\n10.244.0.5 - - [17/Dec/2024:10:32:15 +0000] \"GET /static/css/main.css HTTP/1.1\" 200 1234 \"-\" \"Mozilla/5.0\"\n10.244.0.5 - - [17/Dec/2024:10:32:16 +0000] \"GET /static/js/app.js HTTP/1.1\" 200 45678 \"-\" \"Mozilla/5.0\""
+        }
+      },
+      {
+        "match": {"name": "api-server-5c8f9d7b2-xyz99", "namespace": "production"},
+        "response": {
+          "logs": "2024-12-17T10:20:00.123Z INFO  Starting API server v2.1.0\n2024-12-17T10:20:00.125Z INFO  Loading configuration from environment\n2024-12-17T10:20:00.130Z INFO  Connecting to database...\n2024-12-17T10:20:00.135Z ERROR Failed to connect to database: dial tcp 10.96.45.12:5432: connect: connection refused\n2024-12-17T10:20:00.136Z ERROR Database connection error: unable to establish connection after 3 retries\n2024-12-17T10:20:00.137Z FATAL Application startup failed: database unavailable\n2024-12-17T10:20:05.000Z INFO  Process exited with code 1"
+        }
+      },
+      {
+        "match": {"name": "api-server-5c8f9d7b2-xyz99", "namespace": "production", "previous": true},
+        "response": {
+          "logs": "2024-12-17T10:15:00.123Z INFO  Starting API server v2.1.0\n2024-12-17T10:15:00.125Z INFO  Loading configuration from environment\n2024-12-17T10:15:00.130Z INFO  Connecting to database...\n2024-12-17T10:15:00.135Z ERROR Failed to connect to database: dial tcp 10.96.45.12:5432: connect: connection refused\n2024-12-17T10:15:00.136Z ERROR Database connection error: unable to establish connection after 3 retries\n2024-12-17T10:15:00.137Z FATAL Application startup failed: database unavailable\n2024-12-17T10:15:05.000Z INFO  Process exited with code 1"
+        }
+      },
+      {
+        "match": {"name": "prometheus-server-6d8f9c7b5-mnop1", "namespace": "monitoring"},
+        "response": {
+          "logs": "ts=2024-12-17T08:00:00.000Z caller=main.go:535 level=info msg=\"Starting Prometheus\" version=\"2.48.0\"\nts=2024-12-17T08:00:00.001Z caller=main.go:536 level=info build_context=\"(go=go1.21.4)\"\nts=2024-12-17T08:00:00.100Z caller=main.go:800 level=info msg=\"Server is ready to receive web requests.\"\nts=2024-12-17T10:00:00.000Z caller=scrape.go:1456 level=info component=\"scrape manager\" msg=\"Scrape discovery manager stopped\"\nts=2024-12-17T10:00:00.001Z caller=scrape.go:1234 level=info target=\"kubernetes-pods\" msg=\"Discovered 45 targets\""
+        }
+      }
+    ],
+    "pods_exec": [
+      {
+        "match": {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production", "command": ["ls", "-la", "/etc/nginx"]},
+        "response": {
+          "stdout": "total 24\ndrwxr-xr-x 3 root root 4096 Dec 15 10:30 .\ndrwxr-xr-x 1 root root 4096 Dec 15 10:30 ..\ndrwxr-xr-x 2 root root 4096 Dec 15 10:30 conf.d\n-rw-r--r-- 1 root root 1007 Nov 14 12:00 fastcgi_params\n-rw-r--r-- 1 root root  648 Nov 14 12:00 nginx.conf\n-rw-r--r-- 1 root root  636 Nov 14 12:00 scgi_params\n-rw-r--r-- 1 root root  664 Nov 14 12:00 uwsgi_params",
+          "stderr": "",
+          "exitCode": 0
+        }
+      },
+      {
+        "match": {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production", "command": ["cat", "/etc/nginx/nginx.conf"]},
+        "response": {
+          "stdout": "user  nginx;\nworker_processes  auto;\n\nerror_log  /var/log/nginx/error.log notice;\npid        /var/run/nginx.pid;\n\nevents {\n    worker_connections  1024;\n}\n\nhttp {\n    include       /etc/nginx/mime.types;\n    default_type  application/octet-stream;\n\n    log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\" '\n                      '$status $body_bytes_sent \"$http_referer\" '\n                      '\"$http_user_agent\" \"$http_x_forwarded_for\"';\n\n    access_log  /var/log/nginx/access.log  main;\n\n    sendfile        on;\n    keepalive_timeout  65;\n\n    include /etc/nginx/conf.d/*.conf;\n}",
+          "stderr": "",
+          "exitCode": 0
+        }
+      }
+    ],
+    "pods_top": [
+      {
+        "match": {"all_namespaces": true},
+        "response": {
+          "items": [
+            {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production", "cpu": "45m", "memory": "128Mi"},
+            {"name": "web-frontend-7d9f8b6c5-def34", "namespace": "production", "cpu": "52m", "memory": "135Mi"},
+            {"name": "api-server-5c8f9d7b2-xyz99", "namespace": "production", "cpu": "0m", "memory": "0Mi"},
+            {"name": "redis-master-0", "namespace": "production", "cpu": "15m", "memory": "64Mi"},
+            {"name": "prometheus-server-6d8f9c7b5-mnop1", "namespace": "monitoring", "cpu": "125m", "memory": "512Mi"},
+            {"name": "grafana-8b7c6d5e4-qrst2", "namespace": "monitoring", "cpu": "35m", "memory": "256Mi"},
+            {"name": "coredns-5d78c9869d-abcd1", "namespace": "kube-system", "cpu": "8m", "memory": "32Mi"},
+            {"name": "ingress-nginx-controller-7c9d8e6f5-uvwx3", "namespace": "ingress-nginx", "cpu": "22m", "memory": "180Mi"}
+          ]
+        }
+      },
+      {
+        "match": {"namespace": "production"},
+        "response": {
+          "items": [
+            {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production", "cpu": "45m", "memory": "128Mi"},
+            {"name": "web-frontend-7d9f8b6c5-def34", "namespace": "production", "cpu": "52m", "memory": "135Mi"},
+            {"name": "api-server-5c8f9d7b2-xyz99", "namespace": "production", "cpu": "0m", "memory": "0Mi"},
+            {"name": "redis-master-0", "namespace": "production", "cpu": "15m", "memory": "64Mi"}
+          ]
+        }
+      }
+    ],
+    "nodes_top": [
+      {
+        "match": {},
+        "response": {
+          "items": [
+            {"name": "control-plane", "cpu": "245m", "cpuPercent": "12%", "memory": "1.2Gi", "memoryPercent": "30%"},
+            {"name": "node-1", "cpu": "890m", "cpuPercent": "22%", "memory": "3.5Gi", "memoryPercent": "44%"},
+            {"name": "node-2", "cpu": "650m", "cpuPercent": "16%", "memory": "2.8Gi", "memoryPercent": "35%"},
+            {"name": "node-3", "cpu": "420m", "cpuPercent": "10%", "memory": "2.1Gi", "memoryPercent": "26%"}
+          ]
+        }
+      },
+      {
+        "match": {"name": "node-1"},
+        "response": {
+          "items": [
+            {"name": "node-1", "cpu": "890m", "cpuPercent": "22%", "memory": "3.5Gi", "memoryPercent": "44%"}
+          ]
+        }
+      }
+    ],
+    "nodes_log": [
+      {
+        "match": {"name": "node-1", "query": "kubelet"},
+        "response": {
+          "logs": "Dec 17 10:30:00 node-1 kubelet[1234]: I1217 10:30:00.123456   1234 kubelet.go:2345] SyncLoop (ADD, \"api\"): \"web-frontend-7d9f8b6c5-abc12_production\"\nDec 17 10:30:05 node-1 kubelet[1234]: I1217 10:30:05.234567   1234 kuberuntime_manager.go:456] Creating container nginx in pod web-frontend-7d9f8b6c5-abc12_production\nDec 17 10:30:10 node-1 kubelet[1234]: I1217 10:30:10.345678   1234 kuberuntime_manager.go:789] Started container nginx in pod web-frontend-7d9f8b6c5-abc12_production\nDec 17 10:35:00 node-1 kubelet[1234]: I1217 10:35:00.456789   1234 prober.go:123] Liveness probe for \"web-frontend-7d9f8b6c5-abc12_production/nginx\" succeeded\nDec 17 10:35:05 node-1 kubelet[1234]: I1217 10:35:05.567890   1234 prober.go:123] Readiness probe for \"web-frontend-7d9f8b6c5-abc12_production/nginx\" succeeded"
+        }
+      }
+    ],
+    "nodes_stats_summary": [
+      {
+        "match": {"name": "node-1"},
+        "response": {
+          "node": {
+            "nodeName": "node-1",
+            "systemContainers": [
+              {"name": "kubelet", "cpu": {"usageNanoCores": 45000000}, "memory": {"workingSetBytes": 134217728}},
+              {"name": "runtime", "cpu": {"usageNanoCores": 32000000}, "memory": {"workingSetBytes": 268435456}}
+            ],
+            "startTime": "2024-08-17T00:00:00Z",
+            "cpu": {"usageNanoCores": 890000000, "usageCoreNanoSeconds": 123456789012345},
+            "memory": {"availableBytes": 4294967296, "usageBytes": 3758096384, "workingSetBytes": 3221225472, "rssBytes": 2684354560},
+            "network": {"rxBytes": 12345678901, "txBytes": 9876543210, "interfaces": [{"name": "eth0", "rxBytes": 12345678901, "txBytes": 9876543210}]},
+            "fs": {"availableBytes": 53687091200, "capacityBytes": 107374182400, "usedBytes": 48318382080}
+          },
+          "pods": [
+            {
+              "podRef": {"name": "web-frontend-7d9f8b6c5-abc12", "namespace": "production"},
+              "startTime": "2024-12-15T10:30:00Z",
+              "containers": [
+                {
+                  "name": "nginx",
+                  "cpu": {"usageNanoCores": 45000000},
+                  "memory": {"workingSetBytes": 134217728, "rssBytes": 125829120}
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "helm_list": [
+      {
+        "match": {"all_namespaces": true},
+        "response": {
+          "releases": [
+            {"name": "ingress-nginx", "namespace": "ingress-nginx", "revision": "3", "status": "deployed", "chart": "ingress-nginx-4.8.3", "appVersion": "1.9.4", "updated": "2024-11-15T14:30:00Z"},
+            {"name": "prometheus", "namespace": "monitoring", "revision": "5", "status": "deployed", "chart": "prometheus-25.8.0", "appVersion": "v2.48.0", "updated": "2024-12-01T09:00:00Z"},
+            {"name": "grafana", "namespace": "monitoring", "revision": "2", "status": "deployed", "chart": "grafana-7.0.8", "appVersion": "10.2.2", "updated": "2024-12-01T09:15:00Z"},
+            {"name": "redis", "namespace": "production", "revision": "1", "status": "deployed", "chart": "redis-18.4.0", "appVersion": "7.2.3", "updated": "2024-12-10T11:00:00Z"},
+            {"name": "cert-manager", "namespace": "cert-manager", "revision": "4", "status": "deployed", "chart": "cert-manager-v1.13.2", "appVersion": "v1.13.2", "updated": "2024-10-20T08:00:00Z"}
+          ]
+        }
+      },
+      {
+        "match": {"namespace": "monitoring"},
+        "response": {
+          "releases": [
+            {"name": "prometheus", "namespace": "monitoring", "revision": "5", "status": "deployed", "chart": "prometheus-25.8.0", "appVersion": "v2.48.0", "updated": "2024-12-01T09:00:00Z"},
+            {"name": "grafana", "namespace": "monitoring", "revision": "2", "status": "deployed", "chart": "grafana-7.0.8", "appVersion": "10.2.2", "updated": "2024-12-01T09:15:00Z"}
+          ]
+        }
+      }
+    ],
+    "helm_install": [
+      {
+        "match": {"chart": "bitnami/postgresql", "namespace": "production"},
+        "response": {
+          "success": true,
+          "release": {
+            "name": "postgresql",
+            "namespace": "production",
+            "status": "deployed",
+            "revision": 1,
+            "chart": "postgresql-13.2.24",
+            "appVersion": "16.1.0",
+            "notes": "PostgreSQL can be accessed via port 5432 on the following DNS name from within your cluster:\n\n    postgresql.production.svc.cluster.local\n\nTo get the password for postgres:\n\n    export POSTGRES_PASSWORD=$(kubectl get secret --namespace production postgresql -o jsonpath=\"{.data.postgres-password}\" | base64 -d)"
+          }
+        }
+      }
+    ],
+    "resources_list": [
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend",
+              "namespace": "production",
+              "replicas": 2,
+              "availableReplicas": 2,
+              "readyReplicas": 2,
+              "age": "30d",
+              "labels": {"app": "web-frontend"}
+            },
+            {
+              "name": "api-server",
+              "namespace": "production",
+              "replicas": 1,
+              "availableReplicas": 0,
+              "readyReplicas": 0,
+              "age": "15d",
+              "labels": {"app": "api-server"}
+            },
+            {
+              "name": "prometheus-server",
+              "namespace": "monitoring",
+              "replicas": 1,
+              "availableReplicas": 1,
+              "readyReplicas": 1,
+              "age": "60d",
+              "labels": {"app": "prometheus", "component": "server"}
+            },
+            {
+              "name": "grafana",
+              "namespace": "monitoring",
+              "replicas": 1,
+              "availableReplicas": 1,
+              "readyReplicas": 1,
+              "age": "60d",
+              "labels": {"app": "grafana"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment", "namespace": "production"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend",
+              "namespace": "production",
+              "replicas": 2,
+              "availableReplicas": 2,
+              "readyReplicas": 2,
+              "age": "30d",
+              "labels": {"app": "web-frontend"}
+            },
+            {
+              "name": "api-server",
+              "namespace": "production",
+              "replicas": 1,
+              "availableReplicas": 0,
+              "readyReplicas": 0,
+              "age": "15d",
+              "labels": {"app": "api-server"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "v1", "kind": "Service"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend",
+              "namespace": "production",
+              "type": "ClusterIP",
+              "clusterIP": "10.96.100.10",
+              "ports": [{"port": 80, "targetPort": 80, "protocol": "TCP"}],
+              "selector": {"app": "web-frontend"}
+            },
+            {
+              "name": "api-server",
+              "namespace": "production",
+              "type": "ClusterIP",
+              "clusterIP": "10.96.100.20",
+              "ports": [{"port": 8080, "targetPort": 8080, "protocol": "TCP"}],
+              "selector": {"app": "api-server"}
+            },
+            {
+              "name": "redis-master",
+              "namespace": "production",
+              "type": "ClusterIP",
+              "clusterIP": "10.96.100.30",
+              "ports": [{"port": 6379, "targetPort": 6379, "protocol": "TCP"}],
+              "selector": {"app": "redis", "role": "master"}
+            },
+            {
+              "name": "prometheus-server",
+              "namespace": "monitoring",
+              "type": "ClusterIP",
+              "clusterIP": "10.96.200.10",
+              "ports": [{"port": 9090, "targetPort": 9090, "protocol": "TCP"}],
+              "selector": {"app": "prometheus"}
+            },
+            {
+              "name": "grafana",
+              "namespace": "monitoring",
+              "type": "ClusterIP",
+              "clusterIP": "10.96.200.20",
+              "ports": [{"port": 3000, "targetPort": 3000, "protocol": "TCP"}],
+              "selector": {"app": "grafana"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "networking.k8s.io/v1", "kind": "Ingress"},
+        "response": {
+          "items": [
+            {
+              "name": "web-frontend-ingress",
+              "namespace": "production",
+              "hosts": ["app.example.com"],
+              "address": "192.168.1.100",
+              "class": "nginx",
+              "rules": [
+                {
+                  "host": "app.example.com",
+                  "paths": [
+                    {"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "web-frontend", "port": 80}}}
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "grafana-ingress",
+              "namespace": "monitoring",
+              "hosts": ["grafana.example.com"],
+              "address": "192.168.1.100",
+              "class": "nginx",
+              "rules": [
+                {
+                  "host": "grafana.example.com",
+                  "paths": [
+                    {"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "grafana", "port": 3000}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "v1", "kind": "Node"},
+        "response": {
+          "items": [
+            {
+              "name": "control-plane",
+              "status": "Ready",
+              "roles": ["control-plane"],
+              "age": "120d",
+              "version": "v1.28.4",
+              "internalIP": "192.168.1.10",
+              "osImage": "Ubuntu 22.04.3 LTS",
+              "kernelVersion": "5.15.0-91-generic",
+              "containerRuntime": "containerd://1.7.11",
+              "allocatable": {"cpu": "2", "memory": "4Gi", "pods": "110"}
+            },
+            {
+              "name": "node-1",
+              "status": "Ready",
+              "roles": ["worker"],
+              "age": "120d",
+              "version": "v1.28.4",
+              "internalIP": "192.168.1.11",
+              "osImage": "Ubuntu 22.04.3 LTS",
+              "kernelVersion": "5.15.0-91-generic",
+              "containerRuntime": "containerd://1.7.11",
+              "allocatable": {"cpu": "4", "memory": "8Gi", "pods": "110"}
+            },
+            {
+              "name": "node-2",
+              "status": "Ready",
+              "roles": ["worker"],
+              "age": "120d",
+              "version": "v1.28.4",
+              "internalIP": "192.168.1.12",
+              "osImage": "Ubuntu 22.04.3 LTS",
+              "kernelVersion": "5.15.0-91-generic",
+              "containerRuntime": "containerd://1.7.11",
+              "allocatable": {"cpu": "4", "memory": "8Gi", "pods": "110"}
+            },
+            {
+              "name": "node-3",
+              "status": "Ready",
+              "roles": ["worker"],
+              "age": "120d",
+              "version": "v1.28.4",
+              "internalIP": "192.168.1.13",
+              "osImage": "Ubuntu 22.04.3 LTS",
+              "kernelVersion": "5.15.0-91-generic",
+              "containerRuntime": "containerd://1.7.11",
+              "allocatable": {"cpu": "4", "memory": "8Gi", "pods": "110"}
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "v1", "kind": "Secret", "namespace": "production"},
+        "response": {
+          "items": [
+            {
+              "name": "db-credentials",
+              "namespace": "production",
+              "type": "Opaque",
+              "data": {"url": "[REDACTED]", "username": "[REDACTED]", "password": "[REDACTED]"},
+              "age": "60d"
+            },
+            {
+              "name": "api-server-token",
+              "namespace": "production",
+              "type": "kubernetes.io/service-account-token",
+              "age": "60d"
+            },
+            {
+              "name": "tls-secret",
+              "namespace": "production",
+              "type": "kubernetes.io/tls",
+              "data": {"tls.crt": "[REDACTED]", "tls.key": "[REDACTED]"},
+              "age": "30d"
+            }
+          ]
+        }
+      },
+      {
+        "match": {"apiVersion": "v1", "kind": "ConfigMap", "namespace": "production"},
+        "response": {
+          "items": [
+            {
+              "name": "api-server-config",
+              "namespace": "production",
+              "data": {
+                "config.yaml": "server:\n  port: 8080\n  readTimeout: 30s\n  writeTimeout: 30s\nlogging:\n  level: info\n  format: json\ncache:\n  enabled: true\n  ttl: 300"
+              },
+              "age": "15d"
+            },
+            {
+              "name": "nginx-config",
+              "namespace": "production",
+              "data": {
+                "nginx.conf": "worker_processes auto;\nevents { worker_connections 1024; }"
+              },
+              "age": "30d"
+            }
+          ]
+        }
+      }
+    ],
+    "resources_get": [
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "web-frontend", "namespace": "production"},
+        "response": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "web-frontend",
+            "namespace": "production",
+            "labels": {"app": "web-frontend"},
+            "creationTimestamp": "2024-11-17T10:00:00Z"
+          },
+          "spec": {
+            "replicas": 2,
+            "selector": {"matchLabels": {"app": "web-frontend"}},
+            "template": {
+              "metadata": {"labels": {"app": "web-frontend", "env": "production"}},
+              "spec": {
+                "containers": [
+                  {
+                    "name": "nginx",
+                    "image": "nginx:1.25",
+                    "ports": [{"containerPort": 80}],
+                    "resources": {
+                      "requests": {"cpu": "100m", "memory": "128Mi"},
+                      "limits": {"cpu": "500m", "memory": "512Mi"}
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "status": {
+            "replicas": 2,
+            "updatedReplicas": 2,
+            "readyReplicas": 2,
+            "availableReplicas": 2,
+            "conditions": [
+              {"type": "Available", "status": "True", "reason": "MinimumReplicasAvailable"},
+              {"type": "Progressing", "status": "True", "reason": "NewReplicaSetAvailable"}
+            ]
+          }
+        }
+      },
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "api-server", "namespace": "production"},
+        "response": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "api-server",
+            "namespace": "production",
+            "labels": {"app": "api-server"},
+            "creationTimestamp": "2024-12-02T08:00:00Z"
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {"matchLabels": {"app": "api-server"}},
+            "template": {
+              "metadata": {"labels": {"app": "api-server", "env": "production"}},
+              "spec": {
+                "serviceAccountName": "api-server",
+                "containers": [
+                  {
+                    "name": "api",
+                    "image": "mycompany/api-server:v2.1.0",
+                    "ports": [{"containerPort": 8080}],
+                    "env": [
+                      {"name": "DATABASE_URL", "valueFrom": {"secretKeyRef": {"name": "db-credentials", "key": "url"}}},
+                      {"name": "REDIS_HOST", "value": "redis-master.production.svc.cluster.local"}
+                    ],
+                    "resources": {
+                      "requests": {"cpu": "250m", "memory": "256Mi"},
+                      "limits": {"cpu": "1000m", "memory": "1Gi"}
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "status": {
+            "replicas": 1,
+            "updatedReplicas": 1,
+            "readyReplicas": 0,
+            "availableReplicas": 0,
+            "unavailableReplicas": 1,
+            "conditions": [
+              {"type": "Available", "status": "False", "reason": "MinimumReplicasUnavailable", "message": "Deployment does not have minimum availability."},
+              {"type": "Progressing", "status": "True", "reason": "ReplicaSetUpdated"}
+            ]
+          }
+        }
+      }
+    ],
+    "resources_scale": [
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "web-frontend", "namespace": "production"},
+        "response": {
+          "replicas": 2,
+          "availableReplicas": 2,
+          "readyReplicas": 2
+        }
+      },
+      {
+        "match": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "web-frontend", "namespace": "production", "scale": 3},
+        "response": {
+          "replicas": 3,
+          "availableReplicas": 2,
+          "readyReplicas": 2,
+          "message": "Deployment scaled to 3 replicas. 1 replica pending."
+        }
+      }
+    ]
+  }
+}

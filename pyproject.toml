@@ -1,7 +1,7 @@
 [project]
-name = "deepfabric"
-version = "4.3.1"
-description = "Large Scale Topic based Synthetic Data Generation for LLM Fine-Tuning & Training"
+name = "DeepFabric"
+version = "4.4.0"
+description = "Curate High Quality Datasets, Train, Evaluate and Ship"
 authors = [{name = "Luke Hinds", email = "luke@alwaysfurther.ai"}]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,13 +11,13 @@ dependencies = [
     "kagglehub>=0.3.0",
     "outlines==1.2.9",
     "openai>=1.107.2",
-    "anthropic>=0.67.0",
+    "anthropic>=0.75.0",
     "PyYAML>=6.0.1",
     "click>=8.1.7",
     "pydantic>=2.0.0",
     "mermaid-py>=0.8.0",
     "rich>=13.0.0",
-    "google-genai>=1.36.0",
+    "google-genai>=1.56.0",
     "google-api-core>=2.0.0",
     "posthog>=3.0.0",
     "packaging>=25.0",
@@ -27,7 +27,7 @@ dependencies = [
     "peft>=0.7.0",
     "protobuf>=3.20.0",
     "sentencepiece>=0.1.99",
-    "ollama>=0.1.0",
+    "ollama>=0.6.1",
     "componentize-py>=0.19.3",
     "spin-sdk>=3.4.1",
 ]
@@ -110,7 +110,7 @@ select = [
 
 ignore = [
     "E501",      # Line too long (handled by formatter)
-    "ISC001",    # 
+    "ISC001",    #
     "B008",      # Do not perform function call in argument defaults
     "C901",      # Function is too complex
     "T201",      # Print found
@@ -119,6 +119,7 @@ ignore = [
     "PLR0915",   # Too many statements
     "ERA001",    # Commented out code
     "TRY003",    # Avoid specifying long messages outside the exception class
+    "TRY301",    # Abstract raise to inner function (valid for error propagation patterns)
     "PLR0912",   # Too many branches
 ]
 
