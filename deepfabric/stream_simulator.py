@@ -16,8 +16,13 @@ from .constants import STREAM_SIM_CHUNK_DELAY_MS, STREAM_SIM_CHUNK_SIZE
 if TYPE_CHECKING:
     from .progress import ProgressReporter
 
-# Track current stream task to prevent interleaving (mutable container to avoid global statement)
-_stream_state: dict[str, asyncio.Task | None] = {"current_task": None}
+
+# Track current stream task to prevent interleaving
+class _StreamState:
+    current_task: asyncio.Task | None = None
+
+
+_stream_state = _StreamState()
 
 
 class StreamSimulatorConfig(BaseModel):
@@ -58,9 +63,8 @@ def simulate_stream(
         return None
 
     # Cancel any in-flight stream to prevent interleaving
-    current_task = _stream_state["current_task"]
-    if current_task is not None and not current_task.done():
-        current_task.cancel()
+    if _stream_state.current_task is not None and not _stream_state.current_task.done():
+        _stream_state.current_task.cancel()
 
     async def _simulate_impl() -> None:
         """Internal implementation of chunk emission."""
@@ -82,5 +86,5 @@ def simulate_stream(
             # Gracefully handle cancellation
             pass
 
-    _stream_state["current_task"] = asyncio.create_task(_simulate_impl())
-    return _stream_state["current_task"]
+    _stream_state.current_task = asyncio.create_task(_simulate_impl())
+    return _stream_state.current_task
