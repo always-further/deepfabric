@@ -16,6 +16,9 @@ from .constants import STREAM_SIM_CHUNK_DELAY_MS, STREAM_SIM_CHUNK_SIZE
 if TYPE_CHECKING:
     from .progress import ProgressReporter
 
+# Track current stream task to prevent interleaving (mutable container to avoid global statement)
+_stream_state: dict[str, asyncio.Task | None] = {"current_task": None}
+
 
 # Track current stream task to prevent interleaving
 class _StreamState:
