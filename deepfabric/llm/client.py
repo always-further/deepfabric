@@ -111,6 +111,9 @@ class LLMClient:
         """
         return self._generate_with_retry(prompt, schema, **kwargs)
 
+    # Providers that only support async generation (native API, not Outlines)
+    _ASYNC_ONLY_PROVIDERS = frozenset({"anthropic", "gemini"})
+
     @retry_with_backoff
     def _generate_with_retry(self, prompt: str, schema: Any, **kwargs) -> Any:
         """Internal method that performs actual generation with retry wrapper.
@@ -118,16 +121,20 @@ class LLMClient:
         This method is decorated with retry_with_backoff to handle rate limits
         and transient errors automatically.
         """
+        # Check for async-only providers
+        if self.provider in self._ASYNC_ONLY_PROVIDERS:
+            raise DataSetGeneratorError(
+                f"Synchronous generation is not supported for {self.provider}. "
+                f"Use generate_async() instead.",
+                context={"provider": self.provider},
+            )
+
         # Convert provider-specific parameters
         kwargs = self._convert_generation_params(**kwargs)
 
-        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
         # For OpenAI and OpenRouter, ensure all properties are in required array
         generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
-            pass
-        elif (
+        if (
             self.provider in ("openai", "openrouter")
             and isinstance(schema, type)
             and issubclass(schema, BaseModel)
@@ -181,11 +188,11 @@ class LLMClient:
         """
         kwargs = self._convert_generation_params(**kwargs)
 
-        # For Gemini with DirectGeminiModel, pass schema directly (handles transformation internally)
+        # Native providers (Anthropic, Gemini) handle schema transformation internally
         # For OpenAI and OpenRouter, ensure all properties are in required array
         generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
+        if self.provider in self._ASYNC_ONLY_PROVIDERS:
+            # Native model classes handle schema transformation internally
             pass
         elif (
             self.provider in ("openai", "openrouter")
@@ -197,6 +204,7 @@ class LLMClient:
         # Ensure we have an async model; if not, fall back to running the sync path
         async_model = self.async_model
         if async_model is None:
+            # Note: This will raise an error for async-only providers
             return await asyncio.to_thread(self.generate, prompt, schema, **kwargs)
 
         # Call the async model (guaranteed non-None by check above)
@@ -206,7 +214,6 @@ class LLMClient:
         try:
             return schema.model_validate_json(json_output)
         except Exception as e:
-            print(f"Validation error: {e}")
             raise DataSetGeneratorError(
                 f"Async generation validation failed: {e}",
                 context={"raw_content": json_output},
@@ -247,11 +254,11 @@ class LLMClient:
         # Call streaming generation directly (retry decorator doesn't work with generators)
         kwargs = self._convert_generation_params(**kwargs)
 
-        # Apply provider-specific schema transformations
-        # Note: Gemini uses DirectGeminiModel which handles schema transformation internally
+        # Native providers (Anthropic, Gemini) handle schema transformation internally
+        # For OpenAI and OpenRouter, ensure all properties are in required array
         generation_schema = schema
-        if self.provider == "gemini":
-            # DirectGeminiModel handles schema transformation internally
+        if self.provider in self._ASYNC_ONLY_PROVIDERS:
+            # Native model classes handle schema transformation internally
             pass
         elif (
             self.provider in ("openai", "openrouter")
