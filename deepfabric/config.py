@@ -604,13 +604,27 @@ See documentation for full examples.
             params["scenario_seed"] = self.generation.tools.scenario_seed
             params["max_agent_steps"] = self.generation.tools.max_agent_steps
             # MCP tool loading - auto-derive from spin_endpoint if not explicit
+            # BUT only if available_tools is empty (meaning load all tools from endpoint)
+            # If available_tools is specified, assume user wants those specific tools
+            # from the DEFAULT_TOOL_REGISTRY, not from an endpoint
             tools_endpoint = self.generation.tools.tools_endpoint
-            if not tools_endpoint and self.generation.tools.spin_endpoint:
+            if (
+                not tools_endpoint
+                and self.generation.tools.spin_endpoint
+                and not self.generation.tools.available
+            ):
                 tools_endpoint = (
                     f"{self.generation.tools.spin_endpoint.rstrip('/')}/mock/list-tools"
                 )
             params["tools_endpoint"] = tools_endpoint
-            params["tool_execute_path"] = self.generation.tools.tool_execute_path or "/mock/execute"
+            # Only set tool_execute_path if explicitly configured or if using tools_endpoint
+            # When using default VFS tools, leave it None so component-based routing works
+            if self.generation.tools.tool_execute_path:
+                params["tool_execute_path"] = self.generation.tools.tool_execute_path
+            elif tools_endpoint:
+                # Only default to /mock/execute when loading from endpoint
+                params["tool_execute_path"] = "/mock/execute"
+            # else: leave unset, SpinClient will use component-based routing
 
         # Handle overrides
         override_provider = overrides.pop("provider", None)

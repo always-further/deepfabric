@@ -52,6 +52,39 @@ generation:
 
   max_retries: 3  # Retry on API failures
 
+  # Optional: Seed initial files into the VFS before generation
+  scenario_seed:
+    files:
+      "Dockerfile": |
+        FROM python:3.13
+        WORKDIR /usr/local/app
+
+        # Install the application dependencies
+        COPY requirements.txt ./
+        RUN pip install --no-cache-dir -r requirements.txt
+
+        # Copy in the source code
+        COPY src ./src
+        EXPOSE 8080
+
+        # Setup an app user so the container doesn't run as the root user
+        RUN useradd app
+        USER app
+
+        CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+      "main.py": |
+        def greet(name):
+            return f"Hello, {name}!"
+
+        if __name__ == "__main__":
+            print(greet("World"))
+      "config.json": |
+        {
+          "version": "1.0.0",
+          "debug": true,
+          "max_retries": 3
+        }
+
   # LLM configuration for generation
   llm:
     provider: "gemini"

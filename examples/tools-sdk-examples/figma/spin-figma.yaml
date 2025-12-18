@@ -28,8 +28,8 @@ topics:
   prompt: "Tasks for a Figma design assistant that exports icons, downloads images, and helps developers implement visual assets from UI designs"
   mode: graph
   system_prompt: ""
-  depth: 5
-  degree: 6
+  depth: 3
+  degree: 3
   max_concurrent: 3
   save_as: "figma-topics.jsonl"
 
@@ -102,6 +102,6 @@ output:
     4. Export images when needed for implementation
 
   include_system_message: false
-  num_samples: 300
-  batch_size: 4
+  num_samples: 5
+  batch_size: 3
   save_as: "figma-dataset.jsonl"
