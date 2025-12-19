@@ -604,15 +604,10 @@ See documentation for full examples.
             params["scenario_seed"] = self.generation.tools.scenario_seed
             params["max_agent_steps"] = self.generation.tools.max_agent_steps
             # MCP tool loading - auto-derive from spin_endpoint if not explicit
-            # BUT only if available_tools is empty (meaning load all tools from endpoint)
-            # If available_tools is specified, assume user wants those specific tools
-            # from the DEFAULT_TOOL_REGISTRY, not from an endpoint
+            # The available_tools list is used to FILTER which tools to use,
+            # not to determine WHERE to load tools from
             tools_endpoint = self.generation.tools.tools_endpoint
-            if (
-                not tools_endpoint
-                and self.generation.tools.spin_endpoint
-                and not self.generation.tools.available
-            ):
+            if not tools_endpoint and self.generation.tools.spin_endpoint:
                 tools_endpoint = (
                     f"{self.generation.tools.spin_endpoint.rstrip('/')}/mock/list-tools"
                 )

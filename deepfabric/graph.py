@@ -14,6 +14,7 @@ from .constants import (
     TOPIC_GRAPH_SUMMARY,
 )
 from .llm import LLMClient
+from .llm.rate_limit_detector import RateLimitDetector
 from .metrics import trace
 from .prompts import GRAPH_EXPANSION_PROMPT
 from .schemas import GraphSubtopics
@@ -23,14 +24,8 @@ from .topic_model import TopicModel
 if TYPE_CHECKING:  # only for type hints to avoid runtime cycles
     from .progress import ProgressReporter
 
-
-def validate_graph_response(response_text: str) -> dict[str, Any] | None:
-    """Clean and validate the JSON response for the graph from the LLM."""
-    try:
-        return json.loads(response_text)
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"Failed to parse the input string as JSON.\n{e}")
-        return None
+RETRY_BASE_DELAY = 0.5  # seconds
+ERROR_MESSAGE_MAX_LENGTH = 40  # Max chars for error messages in TUI
 
 
 class GraphConfig(BaseModel):
@@ -227,9 +222,11 @@ class Graph(TopicModel):
         """Visualize the graph and save it to a file."""
         try:
             from mermaid import Mermaid  # noqa: PLC0415
-        except ImportError:
-            print("Please install mermaid-py to visualize the graph: uv add mermaid-py")
-            return
+        except ImportError as err:
+            raise ImportError(
+                "Mermaid package is required for graph visualization. "
+                "Please install it via 'pip install mermaid'."
+            ) from err
 
         graph_definition = "graph TD\n"
         for node in self.nodes.values():
@@ -310,28 +307,101 @@ class Graph(TopicModel):
             yield {"event": "error", "error": str(e)}
             raise
 
-    async def get_subtopics_and_connections(  # noqa: PLR0912
-        self, parent_node: Node, num_subtopics: int
+    def _process_subtopics_response(
+        self, response: GraphSubtopics, parent_node: Node
     ) -> tuple[int, int]:
-        """Generate subtopics and connections for a given node. Returns (subtopics_added, connections_added)."""
+        """Process a GraphSubtopics response, adding nodes and edges to the graph.
+
+        Args:
+            response: The structured response containing subtopics and connections.
+            parent_node: The parent node to connect new subtopics to.
+
+        Returns:
+            A tuple of (subtopics_added, connections_added).
+        """
         subtopics_added = 0
         connections_added = 0
-        graph_summary = (
-            self.to_json()
-            if len(self.nodes) <= TOPIC_GRAPH_SUMMARY
-            else "Graph too large to display"
-        )
 
-        graph_prompt = GRAPH_EXPANSION_PROMPT.replace("{{current_graph_summary}}", graph_summary)
-        graph_prompt = graph_prompt.replace("{{current_topic}}", parent_node.topic)
-        graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
+        for subtopic_data in response.subtopics:
+            new_node = self.add_node(subtopic_data.topic)
+            self.add_edge(parent_node.id, new_node.id)
+            subtopics_added += 1
+            for connection_id in subtopic_data.connections:
+                if connection_id in self.nodes:
+                    self.add_edge(connection_id, new_node.id)
+                    connections_added += 1
 
-        last_error = None
+        return subtopics_added, connections_added
+
+    def _get_friendly_error_message(self, exception: Exception) -> str:
+        """Convert an exception into a user-friendly error message for TUI display.
+
+        Args:
+            exception: The exception that occurred during generation.
+
+        Returns:
+            A concise, user-friendly error message suitable for display.
+        """
+        # Check for rate limit errors using the detector
+        if RateLimitDetector.is_rate_limit_error(exception, self.provider):
+            return self._format_rate_limit_message(exception)
+
+        error_str = str(exception).lower()
+
+        # Check for validation/schema errors (Pydantic issues)
+        validation_indicators = ["validation failed", "validation error", "validationerror"]
+        if any(ind in error_str for ind in validation_indicators):
+            return "Response format issue - retrying"
+
+        # Check for network/connection errors
+        network_indicators = ["timeout", "connection", "network", "socket"]
+        if any(ind in error_str for ind in network_indicators):
+            return "Connection issue - retrying"
+
+        # Check for server errors
+        server_indicators = ["503", "502", "500", "504", "server error", "service unavailable"]
+        if any(ind in error_str for ind in server_indicators):
+            return "Server error - retrying"
+
+        # Fallback: truncate the original error for display
+        return self._truncate_error_message(str(exception))
+
+    def _format_rate_limit_message(self, exception: Exception) -> str:
+        """Format a rate limit error into a user-friendly message."""
+        quota_info = RateLimitDetector.extract_quota_info(exception, self.provider)
+        if quota_info.daily_quota_exhausted:
+            return "Daily quota exhausted - waiting"
+        if quota_info.quota_type:
+            return f"Rate limit ({quota_info.quota_type}) - backing off"
+        return "Rate limit reached - backing off"
+
+    def _truncate_error_message(self, message: str) -> str:
+        """Truncate an error message to fit within the TUI display limit."""
+        if len(message) > ERROR_MESSAGE_MAX_LENGTH:
+            return message[: ERROR_MESSAGE_MAX_LENGTH - 3] + "..."
+        return message
+
+    async def _generate_subtopics_with_retry(
+        self, prompt: str, parent_node: Node
+    ) -> GraphSubtopics | None:
+        """Generate subtopics with retry logic and exponential backoff.
+
+        Args:
+            prompt: The prompt to send to the LLM.
+            parent_node: The parent node (used for error tracking and retry events).
+
+        Returns:
+            The GraphSubtopics response, or None if all retries failed.
+
+        Raises:
+            RuntimeError: If authentication fails (API key errors are not retried).
+        """
+        last_error: str | None = None
+
         for attempt in range(MAX_RETRY_ATTEMPTS):
             try:
-                # Always use non-streaming for reliable structured output
                 response = await self.llm_client.generate_async(
-                    prompt=graph_prompt,
+                    prompt=prompt,
                     schema=GraphSubtopics,
                     max_retries=1,  # Don't retry inside - we handle it here
                     max_tokens=DEFAULT_MAX_TOKENS,
@@ -345,51 +415,75 @@ class Graph(TopicModel):
                     source="graph_generation",
                 )
 
-                # Process structured response
-                for subtopic_data in response.subtopics:
-                    new_node = self.add_node(subtopic_data.topic)
-                    self.add_edge(parent_node.id, new_node.id)
-                    subtopics_added += 1
-                    for connection_id in subtopic_data.connections:
-                        if connection_id in self.nodes:
-                            self.add_edge(connection_id, new_node.id)
-                            connections_added += 1
-
             except Exception as e:
                 last_error = str(e)
-                # Check if it's an API key related error - don't retry these
                 error_str = str(e).lower()
+
+                # Check if it's an API key related error - don't retry these
                 if any(
                     keyword in error_str
                     for keyword in ["api_key", "api key", "authentication", "unauthorized"]
                 ):
-                    error_msg = f"Authentication failed for provider '{self.provider}'. Please set the required API key environment variable."
+                    error_msg = (
+                        f"Authentication failed for provider '{self.provider}'. "
+                        "Please set the required API key environment variable."
+                    )
                     raise RuntimeError(error_msg) from e
 
                 # Log retry attempt if not the last one
                 if attempt < MAX_RETRY_ATTEMPTS - 1:
-                    # Emit retry event to TUI if progress reporter available
                     if self.progress_reporter:
+                        # Use friendly error message for TUI display
+                        friendly_error = self._get_friendly_error_message(e)
                         self.progress_reporter.emit_node_retry(
                             node_topic=parent_node.topic,
                             attempt=attempt + 1,
                             max_attempts=MAX_RETRY_ATTEMPTS,
-                            error_summary=last_error or "Unknown error",
+                            error_summary=friendly_error,
                         )
                     # Brief delay before retry with exponential backoff
-                    delay = (2**attempt) * 0.5  # 0.5s, 1s, 2s
+                    delay = (2**attempt) * RETRY_BASE_DELAY
                     await asyncio.sleep(delay)
-                    continue
 
             else:
-                # Success - return the results
-                return subtopics_added, connections_added
+                # Success - return the response
+                return response
 
         # All retries exhausted - record failure
         self.failed_generations.append(
             {"node_id": parent_node.id, "attempts": MAX_RETRY_ATTEMPTS, "last_error": last_error}
         )
-        return 0, 0  # No subtopics or connections added on failure
+        return None
+
+    async def get_subtopics_and_connections(
+        self, parent_node: Node, num_subtopics: int
+    ) -> tuple[int, int]:
+        """Generate subtopics and connections for a given node.
+
+        Args:
+            parent_node: The node to generate subtopics for.
+            num_subtopics: The number of subtopics to generate.
+
+        Returns:
+            A tuple of (subtopics_added, connections_added).
+        """
+        graph_summary = (
+            self.to_json()
+            if len(self.nodes) <= TOPIC_GRAPH_SUMMARY
+            else "Graph too large to display"
+        )
+
+        graph_prompt = GRAPH_EXPANSION_PROMPT.replace("{{current_graph_summary}}", graph_summary)
+        graph_prompt = graph_prompt.replace("{{current_topic}}", parent_node.topic)
+        graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
+
+        response = await self._generate_subtopics_with_retry(graph_prompt, parent_node)
+        if response is None:
+            return 0, 0
+
+        return self._process_subtopics_response(
+            response, parent_node
+        )  # No subtopics or connections added on failure
 
     def get_all_paths(self) -> list[list[str]]:
         """Returns all paths from the root to leaf nodes."""

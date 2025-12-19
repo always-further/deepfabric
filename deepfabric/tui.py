@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
+from rich.align import Align
 from rich.console import Console, RenderableType
 from rich.layout import Layout
 from rich.live import Live
@@ -97,6 +98,8 @@ MIN_PREVIEW_LINES = 4  # Minimum preview lines to enforce
 # Vertical space occupied by other UI elements when calculating dynamic preview height.
 # Accounts for: footer (3) + status panel (8) + panel borders and margins (~9)
 PREVIEW_VERTICAL_OFFSET = 20
+# Offset for Graph/Tree TUIs which have simpler layouts: footer (3) + status (8) + borders (2)
+TOPIC_PREVIEW_OFFSET = 13
 # Truncation limits for event log display
 EVENT_TOPIC_MAX_LENGTH = 20  # Max chars for topic names in events
 EVENT_ERROR_MAX_LENGTH = 80  # Max chars for error summaries in events
@@ -161,7 +164,9 @@ class DeepFabricTUI:
         """
         renderable: RenderableType
         renderable = Text(content, style="dim") if isinstance(content, str) else content
-        return Panel(renderable, title=title, border_style="dim", padding=(0, 1), expand=True)
+        # Wrap in Align to ensure content is top-aligned when panel expands
+        aligned = Align(renderable, vertical="top")
+        return Panel(aligned, title=title, border_style="dim", padding=(0, 1), expand=True)
 
     def build_events_panel(self, events: list[str], title: str = "Events") -> Panel:
         """Create a compact events panel for the left column."""
@@ -423,10 +428,23 @@ class TreeBuildingTUI(TopicBuildingMixin, StreamObserver):
             display_text = re.sub(r"[^\S\n]+", " ", display_text)
 
             # Compute dynamic preview lines based on terminal height
+            # Use TOPIC_PREVIEW_OFFSET for tree/graph TUIs (simpler layout)
             terminal_height = self.console.size.height
-            target_lines = max(MIN_PREVIEW_LINES, terminal_height - PREVIEW_VERTICAL_OFFSET)
+            target_lines = max(MIN_PREVIEW_LINES, terminal_height - TOPIC_PREVIEW_OFFSET)
             lines = display_text.splitlines()
-            visible = "\n".join(lines[-target_lines:])
+
+            # Handle low-newline content (like JSON) to fill panel properly
+            if len(lines) >= int(target_lines / 2):
+                # Plenty of newlines: take the last N lines
+                visible_lines = lines[-target_lines:]
+            else:
+                # Low-newline content: take a character tail and then split
+                approx_right_cols = max(40, int(self.console.size.width * 0.42))
+                char_tail = max(800, approx_right_cols * max(8, target_lines - 2))
+                tail = display_text[-char_tail:]
+                visible_lines = tail.splitlines()[-target_lines:]
+
+            visible = "\n".join(visible_lines)
 
             # Update right-hand panel (nested preview)
             try:
@@ -714,10 +732,23 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
             display_text = re.sub(r"[^\S\n]+", " ", display_text)
 
             # Compute dynamic preview lines based on terminal height
+            # Use TOPIC_PREVIEW_OFFSET for tree/graph TUIs (simpler layout)
             terminal_height = self.console.size.height
-            target_lines = max(MIN_PREVIEW_LINES, terminal_height - PREVIEW_VERTICAL_OFFSET)
+            target_lines = max(MIN_PREVIEW_LINES, terminal_height - TOPIC_PREVIEW_OFFSET)
             lines = display_text.splitlines()
-            visible = "\n".join(lines[-target_lines:])
+
+            # Handle low-newline content (like JSON) to fill panel properly
+            if len(lines) >= int(target_lines / 2):
+                # Plenty of newlines: take the last N lines
+                visible_lines = lines[-target_lines:]
+            else:
+                # Low-newline content: take a character tail and then split
+                approx_right_cols = max(40, int(self.console.size.width * 0.42))
+                char_tail = max(800, approx_right_cols * max(8, target_lines - 2))
+                tail = display_text[-char_tail:]
+                visible_lines = tail.splitlines()[-target_lines:]
+
+            visible = "\n".join(visible_lines)
 
             # Update the streaming panel
             try:

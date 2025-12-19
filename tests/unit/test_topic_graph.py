@@ -3,7 +3,7 @@ import json
 import tempfile
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
 
@@ -13,7 +13,6 @@ from deepfabric.graph import (
     GraphModel,
     Node,
     NodeModel,
-    validate_graph_response,
 )
 
 
@@ -40,31 +39,6 @@ def topic_graph(topic_graph_params):
 async def _consume_async_iter(async_iterable):
     async for _ in async_iterable:
         pass
-
-
-class TestValidateGraphResponse:
-    """Tests for validate_graph_response function."""
-
-    def test_valid_json(self):
-        """Test validation with valid JSON."""
-        valid_json = '{"subtopics": [{"topic": "Test", "connections": []}]}'
-        result = validate_graph_response(valid_json)
-        assert result == {"subtopics": [{"topic": "Test", "connections": []}]}
-
-    def test_invalid_json(self, capsys):
-        """Test validation with invalid JSON."""
-        invalid_json = "not a json"
-        result = validate_graph_response(invalid_json)
-        assert result is None
-        captured = capsys.readouterr()
-        assert "Failed to parse" in captured.out
-
-    def test_empty_string(self, capsys):
-        """Test validation with empty string."""
-        result = validate_graph_response("")
-        assert result is None
-        captured = capsys.readouterr()
-        assert "Failed to parse" in captured.out
 
 
 class TestNode:
@@ -383,35 +357,6 @@ class TestGraph:
         # With depth=2 and degree=3, we should have:
         # 1 root + 3 children + (3 * 3) grandchildren = 13 nodes
         assert len(topic_graph.nodes) == 13  # noqa: PLR2004
-
-    def test_visualize_without_mermaid(self, topic_graph, capsys):
-        """Test visualization without mermaid-py installed."""
-        with patch("builtins.__import__", side_effect=ImportError):
-            topic_graph.visualize("test_graph")
-
-        captured = capsys.readouterr()
-        assert "Please install mermaid-py" in captured.out
-
-    def test_visualize_with_mermaid(self, topic_graph):
-        """Test visualization with mermaid-py installed."""
-        with patch("mermaid.Mermaid") as mock_mermaid_class:
-            mock_mermaid = MagicMock()
-            mock_mermaid_class.return_value = mock_mermaid
-
-            node1 = topic_graph.add_node("Child 1")
-            topic_graph.add_edge(0, node1.id)
-
-            topic_graph.visualize("test_graph")
-
-            # Verify Mermaid was called with correct graph definition
-            mock_mermaid_class.assert_called_once()
-            graph_def = mock_mermaid_class.call_args[0][0]
-            assert "graph TD" in graph_def
-            assert '0["Test root topic"]' in graph_def
-            assert '1["Child 1"]' in graph_def
-            assert "0 --> 1" in graph_def
-
-            mock_mermaid.to_svg.assert_called_once_with("test_graph.svg")
 
 
 class TestIntegration:

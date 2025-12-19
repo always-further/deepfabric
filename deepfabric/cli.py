@@ -527,10 +527,10 @@ def generate(  # noqa: PLR0913
     try:
         # Configure TUI before any output
         configure_tui(options.tui)
-        tui = get_tui() # type: ignore
+        tui = get_tui()  # type: ignore
 
         # Show initialization header
-        tui.info("Initializing DeepFabric...") # type: ignore
+        tui.info("Initializing DeepFabric...")  # type: ignore
         print()
 
         preparation = _load_and_prepare_generation_context(options)
