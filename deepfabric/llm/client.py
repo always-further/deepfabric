@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 
 from functools import lru_cache
 from typing import Any
@@ -1047,7 +1048,6 @@ def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     Returns:
         Cached wrapper model that generates OpenAI-compatible schemas
     """
-
     # Create a new model class that overrides model_json_schema
     class OpenAICompatModel(schema):  # type: ignore[misc,valid-type]
         @classmethod
@@ -1061,8 +1061,13 @@ def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     OpenAICompatModel.__name__ = f"{schema.__name__}OpenAICompat"
     OpenAICompatModel.__doc__ = schema.__doc__
 
-    # Rebuild model to resolve forward references (e.g., PendingToolCall in AgentStep)
-    OpenAICompatModel.model_rebuild()
+    # Rebuild model with the schema's original module namespace to resolve
+    # forward references (e.g., PendingToolCall in AgentStep)
+    schema_module = sys.modules.get(schema.__module__)
+    if schema_module:
+        OpenAICompatModel.model_rebuild(_types_namespace=vars(schema_module))
+    else:
+        OpenAICompatModel.model_rebuild()
 
     return OpenAICompatModel
 
