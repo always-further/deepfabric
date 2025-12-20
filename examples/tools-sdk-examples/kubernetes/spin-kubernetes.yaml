@@ -85,41 +85,43 @@ generation:
     agent_mode: single_turn
 
   tools:
-    # Spin service endpoint for mock tool execution
+    # Spin service endpoint
     spin_endpoint: "http://localhost:3000"
-    tool_execute_path: "/mock/execute"
+    # Load tool definitions from mock endpoint
+    tools_endpoint: "http://localhost:3000/mock/list-tools"
 
-    # Available Kubernetes tools
-    available:
-      # Configuration
-      - configuration_view
-      # Namespace operations
-      - namespaces_list
-      # Events
-      - events_list
-      # Pod operations
-      - pods_list
-      - pods_list_in_namespace
-      - pods_get
-      - pods_log
-      - pods_exec
-      - pods_delete
-      - pods_run
-      - pods_top
-      # Node operations
-      - nodes_top
-      - nodes_log
-      - nodes_stats_summary
-      # Helm operations
-      - helm_list
-      - helm_install
-      - helm_uninstall
-      # Generic resource operations
-      - resources_list
-      - resources_get
-      - resources_create_or_update
-      - resources_delete
-      - resources_scale
+    # Component-based routing: 'mock' routes to /mock/execute
+    components:
+      mock:
+        # Configuration
+        - configuration_view
+        # Namespace operations
+        - namespaces_list
+        # Events
+        - events_list
+        # Pod operations
+        - pods_list
+        - pods_list_in_namespace
+        - pods_get
+        - pods_log
+        - pods_exec
+        - pods_delete
+        - pods_run
+        - pods_top
+        # Node operations
+        - nodes_top
+        - nodes_log
+        - nodes_stats_summary
+        # Helm operations
+        - helm_list
+        - helm_install
+        - helm_uninstall
+        # Generic resource operations
+        - resources_list
+        - resources_get
+        - resources_create_or_update
+        - resources_delete
+        - resources_scale
 
     max_per_query: 5
     strict: false

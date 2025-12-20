@@ -38,11 +38,12 @@ generation:
     # Spin service endpoint for real tool execution
     spin_endpoint: "http://localhost:3000"
 
-    # Use only VFS tools (read_file, write_file, list_files, delete_file)
-    available:
-      - read_file
-      - write_file
-      - list_files
+    # Component-based tools: builtin routes to /vfs/execute
+    components:
+      builtin:
+        - read_file
+        - write_file
+        - list_files
 
     max_per_query: 3
     strict: false

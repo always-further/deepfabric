@@ -43,27 +43,30 @@ generation:
     agent_mode: multi_turn
 
   tools:
-    # Spin service endpoint for real tool execution
-    # GitHub component available at /github/...
+    # Spin service endpoint
     spin_endpoint: "http://localhost:3000"
+    # Load GitHub tool definitions from endpoint
+    tools_endpoint: "http://localhost:3000/github/list-tools"
 
-    # Available GitHub tools
-    available:
-      - gh_get_file_contents      # Read files from repos
-      - gh_search_code            # Search code across GitHub
-      - gh_search_repositories    # Find repositories
-      - gh_list_issues            # List issues in a repo
-      - gh_get_issue              # Get issue details
-      - gh_list_pull_requests     # List PRs in a repo
-      - gh_get_pull_request       # Get PR details
-      - gh_list_commits           # List recent commits
-      - gh_get_commit             # Get commit details
-      - gh_list_branches          # List branches
-      # file system tools for managing local files
-      - file_path
-      - read_file
-      - write_file
-      - list_files
+    # Component-based routing:
+    # - 'github' routes to /github/execute for GitHub API tools
+    # - 'builtin' routes to /vfs/execute for filesystem tools
+    components:
+      github:
+        - gh_get_file_contents      # Read files from repos
+        - gh_search_code            # Search code across GitHub
+        - gh_search_repositories    # Find repositories
+        - gh_list_issues            # List issues in a repo
+        - gh_get_issue              # Get issue details
+        - gh_list_pull_requests     # List PRs in a repo
+        - gh_get_pull_request       # Get PR details
+        - gh_list_commits           # List recent commits
+        - gh_get_commit             # Get commit details
+        - gh_list_branches          # List branches
+      builtin:
+        - read_file
+        - write_file
+        - list_files
 
     max_per_query: 4
     strict: false

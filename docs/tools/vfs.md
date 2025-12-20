@@ -17,13 +17,14 @@ The Virtual Filesystem (VFS) component provides file operations in an isolated, 
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
-    available:
-      - read_file
-      - write_file
-      - list_files
+    components:
+      builtin:  # Routes to /vfs/execute
+        - read_file
+        - write_file
+        - list_files
 ```
 
-Filter to specific tools with `available`. Omit to use all VFS tools.
+The `builtin` component maps to VFS tools and routes to `/vfs/execute`. List specific tools or omit the list to include all builtin tools.
 
 ## Session Isolation
 
@@ -49,6 +50,11 @@ Pre-populate files for scenarios:
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
+    components:
+      builtin:
+        - read_file
+        - write_file
+        - list_files
     scenario_seed:
       files:
         "config.json": '{"debug": true, "port": 8080}'

@@ -1,0 +1,51 @@
+#####################################################################
+# Basic Dataset Configuration
+#####################################################################
+# This configuration file sets up a basic dataset generation
+# process using topic generation and data generation engines.
+# The dataset focuses on Python programming fundamentals.
+# There are no advanced features like Tool Use or Reasoning enabled.
+####################################################################
+
+# Topic generation - creates a graph of related topics
+topics:
+  prompt: "Python programming fundamentals"
+  mode: graph
+  system_prompt: ""
+  depth: 3         # Graph depth
+  degree: 3        # Number of subtopics per parent node
+  save_as: "basic-graph-topics.jsonl"
+
+  # LLM configuration for topic graph generation
+  llm:
+    provider: "openrouter"
+    model: "nvidia/nemotron-3-nano-30b-a3b:free"
+    temperature: 0.8
+
+# Data generation - creates the actual training examples
+generation:
+  system_prompt: "Generate clear, educational Q&A pairs about Python programming."
+  instructions: "Create diverse questions and detailed answers suitable for learning Python."
+
+  # Conversation configuration
+  conversation:
+    type: basic  # Simple Q&A format
+
+  max_retries: 3  # Retry on API failures
+
+  # LLM configuration for generation
+  llm:
+    provider: "openrouter"
+    model: "qwen/qwen3-vl-235b-a22b-instruct"
+    temperature: 0.7
+
+# Output configuration
+output:
+  # System prompt that goes INTO the training data
+  system_prompt: |
+    You are a helpful AI assistant that provides accurate and informative responses.
+
+  include_system_message: true
+  num_samples: 4       # Number of examples to generate
+  batch_size: 3        # Parallel generation batch size
+  save_as: "basic-dataset.jsonl"

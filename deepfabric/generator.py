@@ -37,12 +37,9 @@ from .prompts import (
     STRUCTURED_COT_PROMPT,
     AgentPromptBuilder,
 )
-from .schemas import Conversation, get_conversation_schema
-from .tools.loader import (
-    get_available_tools,
-    load_tools_from_dict,
-    load_tools_from_endpoint,
-)
+from .schemas import Conversation, ToolRegistry, get_conversation_schema
+from .tools import BUILTIN_TOOL_REGISTRY
+from .tools.loader import load_tools_from_dict, load_tools_from_endpoint
 from .topic_model import TopicModel
 from .utils import ensure_not_running_loop, is_validation_error
 
@@ -152,9 +149,13 @@ class DataSetGeneratorConfig(BaseModel):
     )
 
     # Tool configuration (used when agent_mode is enabled or for tool_calling)
-    available_tools: list[str] = Field(
-        default_factory=list,
-        description="List of tool names available (empty means all tools from registry)",
+    tool_components: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Map of component name to tool names. 'builtin' uses built-in tools "
+            "and routes to /vfs/execute. Other components load from tools_endpoint "
+            "and route to /{component}/execute."
+        ),
     )
     custom_tools: list[dict] = Field(
         default_factory=list, description="Custom tool definitions as dictionaries"
@@ -259,10 +260,8 @@ class DataSetGenerator:
         self.tool_registry = None
         if (
             self.config.agent_mode is not None
-            or self.config.available_tools
+            or self.config.tool_components
             or self.config.custom_tools
-            or self.config.tools_endpoint
-            or self.config.spin_endpoint
         ):
             self._initialize_tool_registry()
 
@@ -270,37 +269,52 @@ class DataSetGenerator:
         self.progress_reporter: ProgressReporter | None = None
 
     def _initialize_tool_registry(self):
-        """Initialize tool registry from configuration.
+        """Initialize tool registry from component configuration.
 
-        Tools are loaded from (in priority order):
-        1. tools_endpoint - HTTP endpoint returning MCP-format tools (e.g., /mock/list-tools)
-        2. custom_tools - Tools defined inline in config as dicts
-        3. DEFAULT_TOOL_REGISTRY - Built-in VFS tools (fallback)
+        Tools are loaded based on the tool_components mapping:
+        - 'builtin': Uses BUILTIN_TOOL_REGISTRY (read_file, write_file, etc.)
+        - Other components: Loads from tools_endpoint and sets component field
 
-        The available_tools filter restricts which tools are exposed.
+        Each tool's component field determines routing (/{component}/execute).
         """
         try:
-            custom_registry = None
+            all_tools = []
+            endpoint_registry = None
 
-            # Option 1: Load tools from HTTP endpoint (MCP format)
-            if self.config.tools_endpoint:
-                custom_registry = load_tools_from_endpoint(self.config.tools_endpoint)
+            # Load tools from endpoint if needed for non-builtin components
+            non_builtin_components = {
+                k: v for k, v in self.config.tool_components.items() if k != "builtin"
+            }
+            if non_builtin_components and self.config.tools_endpoint:
+                endpoint_registry = load_tools_from_endpoint(self.config.tools_endpoint)
                 logger.info(
                     "Loaded %d tools from endpoint: %s",
-                    len(custom_registry.tools),
+                    len(endpoint_registry.tools),
                     self.config.tools_endpoint,
                 )
 
-            # Option 2: Load custom tools from dict if provided
-            elif self.config.custom_tools:
-                custom_registry = load_tools_from_dict(self.config.custom_tools)
+            # Process each component
+            for component_name, tool_names in self.config.tool_components.items():
+                if component_name == "builtin":
+                    # Filter from builtin registry
+                    for tool in BUILTIN_TOOL_REGISTRY.tools:
+                        if tool.name in tool_names:
+                            all_tools.append(tool)
+                elif endpoint_registry:
+                    # Filter from endpoint registry and set component
+                    for tool in endpoint_registry.tools:
+                        if tool.name in tool_names:
+                            # Create copy with component set
+                            tool_copy = tool.model_copy(update={"component": component_name})
+                            all_tools.append(tool_copy)
 
-            # Get available tools based on configuration
-            # Falls back to DEFAULT_TOOL_REGISTRY (VFS tools) if no custom registry
-            self.tool_registry = get_available_tools(
-                available_tool_names=self.config.available_tools or None,
-                custom_registry=custom_registry,
-            )
+            # Add custom tools if provided
+            if self.config.custom_tools:
+                custom_registry = load_tools_from_dict(self.config.custom_tools)
+                all_tools.extend(custom_registry.tools)
+
+            self.tool_registry = ToolRegistry(tools=all_tools)
+            logger.info("Initialized tool registry with %d tools", len(all_tools))
 
         except Exception as e:  # noqa: BLE001
             raise DataSetGeneratorError(f"Failed to initialize tool registry: {str(e)}") from e

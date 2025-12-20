@@ -34,9 +34,10 @@ generation:
 
   tools:
     spin_endpoint: "http://localhost:3000"
-    available:
-      - read_file
-      - write_file
+    components:
+      builtin:
+        - read_file
+        - write_file
 
   max_retries: 3
   llm:
@@ -116,12 +117,30 @@ Controls sample generation.
 | Field | Type | Description |
 |-------|------|-------------|
 | `spin_endpoint` | string | Spin service URL |
-| `tools_endpoint` | string | MCP tools endpoint |
-| `available` | list | Tool names to use (empty = all) |
+| `tools_endpoint` | string | Endpoint to load tool definitions (for non-builtin components) |
+| `components` | object | Map of component name to tool names (see below) |
 | `custom` | list | Inline tool definitions |
 | `max_per_query` | int | Max tools per sample |
 | `max_agent_steps` | int | Max ReAct iterations |
 | `scenario_seed` | object | Initial file state |
+
+##### components
+
+The `components` field maps component names to lists of tool names. Each component routes to `/{component}/execute`:
+
+```yaml
+components:
+  builtin:              # Routes to /vfs/execute (built-in tools)
+    - read_file
+    - write_file
+  mock:                 # Routes to /mock/execute
+    - get_weather
+  github:               # Routes to /github/execute
+    - list_issues
+```
+
+- `builtin`: Uses built-in VFS tools (read_file, write_file, list_files, delete_file)
+- Other components: Load tool definitions from `tools_endpoint`
 
 ### output
 

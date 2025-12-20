@@ -64,14 +64,16 @@ generation:
     agent_mode: single_turn
 
   tools:
-    # Spin service endpoint for mock tool execution
+    # Spin service endpoint
     spin_endpoint: "http://localhost:3000"
-    tool_execute_path: "/mock/execute"
+    # Load tool definitions from mock endpoint
+    tools_endpoint: "http://localhost:3000/mock/list-tools"
 
-    # Available Figma tools (loaded via import-tools command)
-    available:
-      - download_figma_images
-      - get_figma_data
+    # Component-based routing: 'mock' routes to /mock/execute
+    components:
+      mock:
+        - download_figma_images
+        - get_figma_data
 
     max_per_query: 3
     strict: false

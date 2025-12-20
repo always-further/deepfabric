@@ -62,7 +62,14 @@ Configure DeepFabric to use it:
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
+    components:
+      builtin:  # VFS tools -> /vfs/execute
+        - read_file
+        - write_file
+        - list_files
 ```
+
+Each component routes to its own endpoint (`/{component}/execute`).
 
 ## Session Isolation
 

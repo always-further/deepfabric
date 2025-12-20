@@ -1061,6 +1061,9 @@ def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     OpenAICompatModel.__name__ = f"{schema.__name__}OpenAICompat"
     OpenAICompatModel.__doc__ = schema.__doc__
 
+    # Rebuild model to resolve forward references (e.g., PendingToolCall in AgentStep)
+    OpenAICompatModel.model_rebuild()
+
     return OpenAICompatModel
 
 

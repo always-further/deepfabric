@@ -119,6 +119,7 @@ target/
 # IDE specific settings
 .idea/
 *.iml
+.serena/
 
 # Logs
 *.log

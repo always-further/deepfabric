@@ -48,10 +48,13 @@ generation:
   tools:
     spin_endpoint: "http://localhost:3000"
     tools_endpoint: "http://localhost:3000/mock/list-tools"
-    tool_execute_path: "/mock/execute"
+    components:
+      mock:  # Routes to /mock/execute
+        - get_weather
+        - search_code
 ```
 
-Use `tools_endpoint` to load tools and `tool_execute_path` for execution.
+The `mock` component routes to `/mock/execute`. Tool definitions are loaded from `tools_endpoint` and filtered by the tool names listed under `components.mock`.
 
 ## Mock Responses
 
@@ -162,12 +165,16 @@ Note: Mock execute uses `name` and `arguments`, unlike VFS which uses `tool` and
 ## Example: GitHub Tools
 
 ```yaml
-# Load GitHub tool schemas
+# Load GitHub tool schemas via mock component
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
     tools_endpoint: "http://localhost:3000/mock/list-tools"
-    tool_execute_path: "/mock/execute"
+    components:
+      mock:
+        - create_issue
+        - list_issues
+        - get_file_contents
 ```
 
 Then load schemas and fixtures:

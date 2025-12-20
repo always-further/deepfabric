@@ -96,38 +96,40 @@ generation:
     agent_mode: single_turn
 
   tools:
-    # Spin service endpoint for mock tool execution
+    # Spin service endpoint
     spin_endpoint: "http://localhost:3000"
-    tool_execute_path: "/mock/execute"
+    # Load tool definitions from mock endpoint
+    tools_endpoint: "http://localhost:3000/mock/list-tools"
 
-    # Available Blender tools (loaded via import-tools command)
-    available:
-      # Scene tools
-      - get_scene_info
-      - get_object_info
-      - get_viewport_screenshot
-      - execute_blender_code
-      # PolyHaven tools
-      - get_polyhaven_status
-      - get_polyhaven_categories
-      - search_polyhaven_assets
-      - download_polyhaven_asset
-      - set_texture
-      # Sketchfab tools
-      - get_sketchfab_status
-      - search_sketchfab_models
-      - download_sketchfab_model
-      # Hyper3D tools
-      - get_hyper3d_status
-      - generate_hyper3d_model_via_text
-      - generate_hyper3d_model_via_images
-      - poll_rodin_job_status
-      - import_generated_asset
-      # Hunyuan3D tools
-      - get_hunyuan3d_status
-      - generate_hunyuan3d_model
-      - poll_hunyuan_job_status
-      - import_generated_asset_hunyuan
+    # Component-based routing: 'mock' routes to /mock/execute
+    components:
+      mock:
+        # Scene tools
+        - get_scene_info
+        - get_object_info
+        - get_viewport_screenshot
+        - execute_blender_code
+        # PolyHaven tools
+        - get_polyhaven_status
+        - get_polyhaven_categories
+        - search_polyhaven_assets
+        - download_polyhaven_asset
+        - set_texture
+        # Sketchfab tools
+        - get_sketchfab_status
+        - search_sketchfab_models
+        - download_sketchfab_model
+        # Hyper3D tools
+        - get_hyper3d_status
+        - generate_hyper3d_model_via_text
+        - generate_hyper3d_model_via_images
+        - poll_rodin_job_status
+        - import_generated_asset
+        # Hunyuan3D tools
+        - get_hunyuan3d_status
+        - generate_hunyuan3d_model
+        - poll_hunyuan_job_status
+        - import_generated_asset_hunyuan
 
     max_per_query: 5
     strict: false

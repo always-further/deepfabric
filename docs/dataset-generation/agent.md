@@ -26,10 +26,11 @@ generation:
 
   tools:
     spin_endpoint: "http://localhost:3000"
-    available:
-      - read_file
-      - write_file
-      - list_files
+    components:
+      builtin:
+        - read_file
+        - write_file
+        - list_files
     max_per_query: 3
     max_agent_steps: 5
 
@@ -79,10 +80,11 @@ generation:
 
   tools:
     spin_endpoint: "http://localhost:3000"
-    available:
-      - read_file
-      - write_file
-      - list_files
+    components:
+      builtin:
+        - read_file
+        - write_file
+        - list_files
     max_agent_steps: 5
 ```
 
@@ -96,9 +98,13 @@ Multi-turn datasets include:
 ```yaml
 tools:
   spin_endpoint: "http://localhost:3000"  # Spin service URL
-  available:                               # Filter to specific tools
-    - read_file
-    - write_file
+  components:                              # Component-based tool routing
+    builtin:                               # Built-in VFS tools -> /vfs/execute
+      - read_file
+      - write_file
+    mock:                                  # Mock tools -> /mock/execute
+      - get_weather
+  tools_endpoint: "http://localhost:3000/mock/list-tools"  # For non-builtin tools
   max_per_query: 3                         # Max tools per sample
   max_agent_steps: 5                       # Max reasoning iterations
   scenario_seed:                           # Pre-populate files

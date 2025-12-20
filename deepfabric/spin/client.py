@@ -234,6 +234,7 @@ class SpinSession:
             result = await self.execute_tool(
                 tool_name="write_file",
                 arguments={"file_path": file_path, "content": content},
+                component="vfs",  # Builtin VFS tool
             )
             if not result.success:
                 logger.error("Failed to seed file %s: %s", file_path, result.result)

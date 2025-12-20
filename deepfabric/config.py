@@ -181,14 +181,45 @@ class ConversationConfig(BaseModel):
 
 
 class ToolsConfig(BaseModel):
-    """Configuration for tool/function calling in generation."""
+    """Configuration for tool/function calling in generation.
 
-    available: list[str] = Field(
-        default_factory=list,
-        description="List of tool names to filter (empty means all available tools)",
+    Tools are organized by component - each component routes to a different
+    Spin endpoint (e.g., /vfs/execute, /github/execute, /slack/execute).
+
+    Example:
+        tools:
+          spin_endpoint: "http://localhost:3000"
+          components:
+            builtin: [read_file, write_file]     # Routes to /vfs/execute
+            github: [gh_get_file_contents]       # Routes to /github/execute
+            slack: [send_message]                # Routes to /slack/execute
+          tools_endpoint: "http://localhost:3000/mock/list-tools"  # For non-builtin tools
+    """
+
+    spin_endpoint: str | None = Field(
+        default=None,
+        description="Spin service URL for real tool execution (e.g., 'http://localhost:3000')",
+    )
+    components: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Map of component name to tool names. 'builtin' uses built-in tools "
+            "(read_file, write_file, list_files, delete_file) and routes to /vfs/execute. "
+            "Other components (github, slack, etc.) load tools from tools_endpoint "
+            "and route to /{component}/execute."
+        ),
+    )
+    tools_endpoint: str | None = Field(
+        default=None,
+        description=(
+            "HTTP endpoint to load tool definitions from in MCP format "
+            "(e.g., 'http://localhost:3000/mock/list-tools'). "
+            "Required for non-builtin components."
+        ),
     )
     custom: list[dict] = Field(
-        default_factory=list, description="Custom tool definitions as dictionaries"
+        default_factory=list,
+        description="Custom tool definitions as dictionaries (for inline tool definitions)",
     )
     max_per_query: int = Field(
         default=3, ge=1, le=10, description="Maximum number of tools per query/turn"
@@ -196,18 +227,6 @@ class ToolsConfig(BaseModel):
     strict: bool = Field(
         default=True,
         description="If True, discard samples exceeding max_per_query. If False, truncate.",
-    )
-    spin_endpoint: str | None = Field(
-        default=None,
-        description="Spin service URL for real tool execution (e.g., 'http://localhost:3000')",
-    )
-    tools_endpoint: str | None = Field(
-        default=None,
-        description="HTTP endpoint to load tool definitions from in MCP format (e.g., 'http://localhost:3000/mock/list-tools'). If not set, defaults to spin_endpoint + '/mock/list-tools' when spin_endpoint is provided.",
-    )
-    tool_execute_path: str | None = Field(
-        default=None,
-        description="Path for tool execution (e.g., '/mock/execute'). Combined with spin_endpoint. Defaults to '/mock/execute'.",
     )
     scenario_seed: dict | None = Field(
         default=None,
@@ -218,6 +237,14 @@ class ToolsConfig(BaseModel):
         ge=1,
         le=10,
         description="Maximum ReAct reasoning steps before forcing conclusion",
+    )
+
+    tool_execute_path: str | None = Field(
+        default=None,
+        description=(
+            "Custom path for tool execution (e.g., '/mock/execute'). "
+            "If not set, uses component-based routing (/{component}/execute)."
+        ),
     )
 
 
@@ -596,30 +623,15 @@ See documentation for full examples.
 
         # Tool config
         if self.generation.tools:
-            params["available_tools"] = self.generation.tools.available
+            params["tool_components"] = self.generation.tools.components
+            params["tools_endpoint"] = self.generation.tools.tools_endpoint
+            params["tool_execute_path"] = self.generation.tools.tool_execute_path
             params["custom_tools"] = self.generation.tools.custom
             params["max_tools_per_query"] = self.generation.tools.max_per_query
             params["max_tools_strict"] = self.generation.tools.strict
             params["spin_endpoint"] = self.generation.tools.spin_endpoint
             params["scenario_seed"] = self.generation.tools.scenario_seed
             params["max_agent_steps"] = self.generation.tools.max_agent_steps
-            # MCP tool loading - auto-derive from spin_endpoint if not explicit
-            # The available_tools list is used to FILTER which tools to use,
-            # not to determine WHERE to load tools from
-            tools_endpoint = self.generation.tools.tools_endpoint
-            if not tools_endpoint and self.generation.tools.spin_endpoint:
-                tools_endpoint = (
-                    f"{self.generation.tools.spin_endpoint.rstrip('/')}/mock/list-tools"
-                )
-            params["tools_endpoint"] = tools_endpoint
-            # Only set tool_execute_path if explicitly configured or if using tools_endpoint
-            # When using default VFS tools, leave it None so component-based routing works
-            if self.generation.tools.tool_execute_path:
-                params["tool_execute_path"] = self.generation.tools.tool_execute_path
-            elif tools_endpoint:
-                # Only default to /mock/execute when loading from endpoint
-                params["tool_execute_path"] = "/mock/execute"
-            # else: leave unset, SpinClient will use component-based routing
 
         # Handle overrides
         override_provider = overrides.pop("provider", None)

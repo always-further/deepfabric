@@ -67,10 +67,11 @@ generation:
   # Start Spin service: cd tools-sdk && spin build && spin up
   tools:
     spin_endpoint: "http://localhost:3000"  # Spin service URL
-    available:                  # Filter to specific tools (empty = all VFS tools)
-      - read_file
-      - write_file
-      - list_files
+    components:
+      builtin:                  # Built-in VFS tools (routes to /vfs/execute)
+        - read_file
+        - write_file
+        - list_files
     max_per_query: 3            # Maximum tools per query
     max_agent_steps: 5          # Max ReAct reasoning iterations
 

@@ -87,22 +87,28 @@ generation:
 
   tools:
     spin_endpoint: "http://localhost:3000"
+    # Load GitHub tools from mock endpoint
+    tools_endpoint: "http://localhost:3000/mock/list-tools"
 
-    # Filter to commonly used GitHub tools
-    available:
-      - get_file_contents
-      - list_issues
-      - issue_read
-      - list_pull_requests
-      - pull_request_read
-      - search_code
-      - search_repositories
-      - list_commits
-      - get_commit
-      - list_branches
-      - read_file
-      - write_file
-      - list_files
+    # Component-based tool configuration:
+    # - 'builtin' routes to /vfs/execute for filesystem tools
+    # - 'mock' routes to /mock/execute for GitHub mock tools
+    components:
+      builtin:
+        - read_file
+        - write_file
+        - list_files
+      mock:
+        - get_file_contents
+        - list_issues
+        - issue_read
+        - list_pull_requests
+        - pull_request_read
+        - search_code
+        - search_repositories
+        - list_commits
+        - get_commit
+        - list_branches
 
     scenario_seed:
       files:

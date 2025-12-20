@@ -17,8 +17,8 @@ topics:
   save_as: "devops-topics.jsonl"
 
   llm:
-    provider: "anthropic"
-    model: "claude-opus-4-5-20251101"
+    provider: "openai"
+    model: "gpt-4.1-mini-2025-04-14"
     temperature: 0.8
 
 # Data generation with real tool execution
@@ -27,7 +27,16 @@ generation:
     Generate scenrios of common devops tasks and actions, involving
     software engineering and writing of code to perform infrastructure management
 
-  instructions: "Create scenarios requiring file reading and writing."
+  instructions: |
+    The following files are available for tool operations of reading, writing, and listing:
+    - Dockerfile
+    - main.py
+    - config.json
+    - terraform/main.tf
+    - scripts/deploy.sh
+    - README.md
+    - requirements.txt
+    - infrastructure.yml
 
   conversation:
     type: chain_of_thought
@@ -39,10 +48,11 @@ generation:
     spin_endpoint: "http://localhost:3000"
 
     # Filter to specific tools (empty/omitted = all tools from endpoint)
-    # available:
-    #   - read_file
-    #   - write_file
-    #   - list_files
+    components:
+      builtin:  # Built-in VFS tools
+        - read_file
+        - write_file
+        - list_files
 
     max_per_query: 3
     strict: false
@@ -83,11 +93,47 @@ generation:
             "max_retries": 3
           }
 
+        "terraform/main.tf": |
+          provider "aws" {
+            region = "us-west-2"
+          }
+
+          resource "aws_instance" "web" {
+            ami           = "ami-0c55b159cbfafe1f0"
+            instance_type = "t2.micro"
+
+            tags = {
+              Name = "HelloWorld"
+            }
+          }
+
+        "scripts/deploy.sh": |
+          #!/bin/bash
+          echo "Starting deployment..."
+          # Deployment commands go here
+          echo "Deployment complete."
+
+        "README.md": |
+          # DevOps Project
+          This project contains infrastructure as code and deployment scripts for the application.
+
+        "requirements.txt": |
+          fastapi
+          uvicorn
+          boto3
+
+        "infrastructure.yml": |
+          resources:
+            - type: aws_instance
+              properties:
+                instance_type: t2.micro
+                ami: ami-0c55b159cbfafe1f0
+
   max_retries: 3
 
   llm:
-    provider: "anthropic"
-    model: "claude-opus-4-5-20251101"
+    provider: "openai"
+    model: "gpt-4.1-mini-2025-04-14"
     temperature: 0.7
 
 # Output configuration
@@ -102,4 +148,4 @@ output:
   include_system_message: true
   num_samples: 3
   batch_size: 3
-  save_as: "spin-vfs-dataset.jsonl"
+  save_as: "coding-agent-dataset.jsonl"
