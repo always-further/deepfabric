@@ -85,6 +85,3 @@ def load_tools_from_dict(tool_dicts: list[dict[str, Any]]) -> ToolRegistry:
         return ToolRegistry(tools=tools)
     except Exception as e:
         raise ConfigurationError(f"Invalid tool definitions: {str(e)}") from e
-
-
-

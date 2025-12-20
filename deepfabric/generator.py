@@ -285,7 +285,12 @@ class DataSetGenerator:
             non_builtin_components = {
                 k: v for k, v in self.config.tool_components.items() if k != "builtin"
             }
-            if non_builtin_components and self.config.tools_endpoint:
+            if non_builtin_components:
+                if not self.config.tools_endpoint:
+                    raise DataSetGeneratorError(
+                        f"Non-builtin components {list(non_builtin_components.keys())} require "
+                        "'tools_endpoint' to load tool definitions."
+                    )
                 endpoint_registry = load_tools_from_endpoint(self.config.tools_endpoint)
                 logger.info(
                     "Loaded %d tools from endpoint: %s",
