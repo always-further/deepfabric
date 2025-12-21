@@ -998,8 +998,3 @@ class GraphSubtopics(BaseModel):
         description="List of subtopics with their connections",
         min_length=1,
     )
-
-
-# Rebuild models with forward references to resolve them at module load time
-# This fixes "PendingToolCall is not defined" errors when using AgentStep
-AgentStep.model_rebuild()

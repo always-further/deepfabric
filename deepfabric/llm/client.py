@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import sys
 
@@ -21,6 +22,8 @@ from .rate_limit_config import (
     get_default_rate_limit_config,
 )
 from .retry_handler import RetryHandler, retry_with_backoff, retry_with_backoff_async
+
+logger = logging.getLogger(__name__)
 
 # JSON Schema union type keys that need recursive processing
 _UNION_KEYS = ("anyOf", "oneOf", "allOf")
@@ -1048,6 +1051,7 @@ def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     Returns:
         Cached wrapper model that generates OpenAI-compatible schemas
     """
+
     # Create a new model class that overrides model_json_schema
     class OpenAICompatModel(schema):  # type: ignore[misc,valid-type]
         @classmethod
@@ -1067,6 +1071,11 @@ def _get_cached_openai_schema(schema: type[BaseModel]) -> type[BaseModel]:
     if schema_module:
         OpenAICompatModel.model_rebuild(_types_namespace=vars(schema_module))
     else:
+        logger.warning(
+            "Could not find module '%s' in sys.modules. "
+            "Forward reference resolution for dynamically created models may fail.",
+            schema.__module__,
+        )
         OpenAICompatModel.model_rebuild()
 
     return OpenAICompatModel
