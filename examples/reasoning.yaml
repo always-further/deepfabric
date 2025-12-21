@@ -41,6 +41,9 @@ generation:
     model: "gemini-2.5-flash"
     temperature: 0.7
 
+  # Use extended token limit for long reasoning chains
+  max_tokens: 4500
+
 # Output configuration
 output:
   # System prompt that goes INTO the training data
