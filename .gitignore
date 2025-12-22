@@ -133,3 +133,4 @@ formats/*
 # coverage files
 .coverage.*
 tools-sdk/.spin/*
+notebooks/lora-output/*

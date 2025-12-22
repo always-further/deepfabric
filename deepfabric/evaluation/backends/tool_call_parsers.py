@@ -351,11 +351,11 @@ class ToolCallParserRegistry:
         logger.debug("No specific parser found, using generic fallback")
         return self._fallback()
 
-    def get_parser_for_model(self, model_path: str) -> ToolCallParser:
+    def get_parser_for_model(self, model: str) -> ToolCallParser:
         """Get parser by loading model config and detecting architecture.
 
         Args:
-            model_path: Path to model or HuggingFace Hub ID
+            model: Path to model or HuggingFace Hub ID
 
         Returns:
             Instantiated parser for the model
@@ -363,7 +363,7 @@ class ToolCallParserRegistry:
         from transformers import AutoConfig  # noqa: PLC0415
 
         try:
-            config = AutoConfig.from_pretrained(model_path)  # nosec
+            config = AutoConfig.from_pretrained(model)  # nosec
             architectures = getattr(config, "architectures", None)
             return self.get_parser(architectures)
         except Exception as e:
@@ -387,16 +387,16 @@ def get_parser(architectures: list[str] | None = None) -> ToolCallParser:
     return _registry.get_parser(architectures)
 
 
-def get_parser_for_model(model_path: str) -> ToolCallParser:
-    """Get a parser for a model by path.
+def get_parser_for_model(model: str) -> ToolCallParser:
+    """Get a parser for a model.
 
     Args:
-        model_path: Path to model or HuggingFace Hub ID
+        model: Model path or HuggingFace Hub ID
 
     Returns:
         Instantiated parser
     """
-    return _registry.get_parser_for_model(model_path)
+    return _registry.get_parser_for_model(model)
 
 
 def register_parser(architecture: str, parser_class: type[ToolCallParser]) -> None:

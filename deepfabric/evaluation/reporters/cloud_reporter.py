@@ -103,7 +103,7 @@ class CloudReporter(BaseReporter):
             run_data = {
                 "project_id": self.project_id,
                 "name": f"Evaluation - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}",
-                "model_name": result.config.inference_config.model_path,
+                "model_name": result.config.inference_config.model,
                 "model_provider": result.config.inference_config.backend,
                 "config": {
                     "evaluators": getattr(result.config, "evaluators", ["tool_calling"]),

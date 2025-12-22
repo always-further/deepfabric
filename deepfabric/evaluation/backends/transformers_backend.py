@@ -62,7 +62,7 @@ class TransformersBackend(InferenceBackend):
         self._architectures: list[str] = []
         tokenizer_kwargs: dict[str, Any] = {}
         try:
-            model_config = AutoConfig.from_pretrained(config.model_path)  # nosec
+            model_config = AutoConfig.from_pretrained(config.model)  # nosec
             self._architectures = getattr(model_config, "architectures", []) or []
             if any(arch in MISTRAL_ARCHITECTURES for arch in self._architectures):
                 tokenizer_kwargs["fix_mistral_regex"] = True
@@ -84,8 +84,8 @@ class TransformersBackend(InferenceBackend):
             try:
                 from unsloth import FastLanguageModel  # type: ignore # noqa: PLC0415
 
-                # Load from adapter path if provided, otherwise from model_path
-                load_path = config.adapter_path if config.adapter_path else config.model_path
+                # Load from adapter path if provided, otherwise from model
+                load_path = config.adapter_path if config.adapter_path else config.model
                 self.model, self.tokenizer = FastLanguageModel.from_pretrained(
                     model_name=load_path,
                     max_seq_length=config.max_seq_length,
@@ -104,11 +104,11 @@ class TransformersBackend(InferenceBackend):
         # Standard transformers/PEFT loading
         if not self.loaded_with_unsloth:
             self.tokenizer = AutoTokenizer.from_pretrained(  # nosec
-                config.model_path, **tokenizer_kwargs
+                config.model, **tokenizer_kwargs
             )
 
             self.model = AutoModelForCausalLM.from_pretrained(  # nosec
-                config.model_path,
+                config.model,
                 device_map=device_map,
                 dtype=dtype,
             )

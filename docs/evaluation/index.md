@@ -18,7 +18,7 @@ from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
 
 config = EvaluatorConfig(
     inference_config=InferenceConfig(
-        model_path="./output/checkpoint-final",
+        model="./output/checkpoint-final",
         backend="transformers",
     ),
 )

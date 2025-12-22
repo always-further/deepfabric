@@ -1,5 +1,6 @@
 """Inference backend implementations."""
 
+from .llm_eval_backend import LLMEvalBackend
 from .ollama_backend import OllamaBackend
 from .tool_call_parsers import (
     GenericToolCallParser,
@@ -18,6 +19,7 @@ from .transformers_backend import TransformersBackend
 __all__ = [
     "TransformersBackend",
     "OllamaBackend",
+    "LLMEvalBackend",
     # Tool call parsers
     "ToolCallParser",
     "ToolCallParserRegistry",

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..schemas import ToolDefinition
 
@@ -11,16 +11,32 @@ from ..schemas import ToolDefinition
 class InferenceConfig(BaseModel):
     """Configuration for model inference."""
 
-    model_path: str = Field(
-        description="Path to model (local path or HuggingFace Hub ID)",
+    model: str = Field(
+        description="Model identifier (local path, HuggingFace Hub ID, or model name for cloud providers)",
     )
     adapter_path: str | None = Field(
         default=None,
         description="Path to PEFT/LoRA adapter (if using adapter-based fine-tuning)",
     )
-    backend: Literal["transformers", "ollama"] = Field(
+    backend: Literal["transformers", "ollama", "llm"] = Field(
         default="transformers",
         description="Inference backend to use",
+    )
+    provider: Literal["openai", "anthropic", "gemini", "openrouter"] | None = Field(
+        default=None,
+        description="Cloud LLM provider (required when backend='llm')",
+    )
+    api_key: str | None = Field(
+        default=None,
+        description="API key for the provider (falls back to environment variable if not set)",
+    )
+    base_url: str | None = Field(
+        default=None,
+        description="Custom base URL for the API (e.g., for OpenRouter or proxies)",
+    )
+    rate_limit_config: dict | None = Field(
+        default=None,
+        description="Rate limiting configuration overrides",
     )
     use_unsloth: bool = Field(
         default=False,
@@ -61,6 +77,14 @@ class InferenceConfig(BaseModel):
         ge=1,
         description="Batch size for inference",
     )
+
+    @model_validator(mode="after")
+    def validate_llm_backend_config(self) -> "InferenceConfig":
+        """Ensure provider is set when using LLM backend."""
+        if self.backend == "llm" and self.provider is None:
+            msg = "provider must be specified when backend='llm'"
+            raise ValueError(msg)
+        return self
 
 
 class ModelResponse(BaseModel):
@@ -150,6 +174,10 @@ def create_inference_backend(config: InferenceConfig) -> InferenceBackend:
         from .backends.ollama_backend import OllamaBackend  # noqa: PLC0415
 
         return OllamaBackend(config)
+    if config.backend == "llm":
+        from .backends.llm_eval_backend import LLMEvalBackend  # noqa: PLC0415
+
+        return LLMEvalBackend(config)
 
     msg = f"Unsupported backend: {config.backend}"
     raise ValueError(msg)

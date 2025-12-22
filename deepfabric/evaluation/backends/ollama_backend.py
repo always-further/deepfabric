@@ -27,15 +27,15 @@ class OllamaBackend(InferenceBackend):
             config: Inference configuration
 
         Note:
-            - model_path should be the Ollama model name (e.g., "mistral", "llama2")
+            - model should be the Ollama model name (e.g., "mistral", "llama2")
             - Ollama server must be running (ollama serve)
             - Device setting is ignored (Ollama handles device automatically)
         """
         super().__init__(config)
 
-        # Use model_path directly as Ollama model name
+        # Use model directly as Ollama model name
         # Supports: "qwen3:8b", "hf.co/user/model:latest", etc.
-        self.model_name = config.model_path
+        self.model_name = config.model
 
         # Verify model is available
         try:

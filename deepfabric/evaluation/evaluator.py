@@ -36,12 +36,12 @@ class EvaluatorConfig(BaseModel):
         default=None,
         description="Path to save evaluation results",
     )
-    model_path: str | None = Field(
+    model: str | None = Field(
         default=None,
-        description="Path to model to evaluate (overrides inference_config.model_path)",
+        description="Model to evaluate (overrides inference_config.model)",
     )
     inference_config: InferenceConfig = Field(
-        description="Inference backend configuration (includes model_path)",
+        description="Inference backend configuration (includes model)",
     )
     batch_size: int = Field(
         default=1,
@@ -119,7 +119,7 @@ class Evaluator:
             "evaluator_created",
             {
                 "backend": self.config.inference_config.backend,
-                "model_path": self.config.inference_config.model_path,
+                "model": self.config.inference_config.model,
                 "has_adapter": self.config.inference_config.adapter_path is not None,
                 "evaluators": (
                     list(self.config.evaluators)
@@ -804,7 +804,7 @@ class Evaluator:
             "evaluation_completed",
             {
                 "backend": self.config.inference_config.backend,
-                "model_path": self.config.inference_config.model_path,
+                "model": self.config.inference_config.model,
                 "has_adapter": self.config.inference_config.adapter_path is not None,
                 "samples_evaluated": metrics.samples_evaluated,
                 "samples_processed": metrics.samples_processed,

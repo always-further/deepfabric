@@ -53,8 +53,10 @@ trainer.train()
 
 **Reasoning traces** can be included in training or used as auxiliary data.
 
+**Training callbacks** integrate with the training loop for logging, early stopping, and custom behavior.
+
 ## Next Steps
 
 - [Loading Datasets](loading.md) - HuggingFace integration
 - [Chat Templates](chat-templates.md) - Formatting for different models
-- [Training Frameworks](frameworks.md) - TRL and Unsloth patterns
+- [Training Frameworks](frameworks.md) - TRL, Unsloth, SFTConfig, TrainerControl, and callbacks

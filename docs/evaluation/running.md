@@ -10,8 +10,8 @@ from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
 config = EvaluatorConfig(
     # Model configuration
     inference_config=InferenceConfig(
-        model_path="./output/checkpoint-final",  # Local path or HuggingFace ID
-        backend="transformers",                   # transformers or ollama
+        model="./output/checkpoint-final",  # Local path, HuggingFace ID, or model name
+        backend="transformers",              # transformers, ollama, or llm
         temperature=0.7,
         max_tokens=2048,
     ),
@@ -40,7 +40,7 @@ eval_ds = splits["test"]
 # Configure and run
 config = EvaluatorConfig(
     inference_config=InferenceConfig(
-        model_path="./fine-tuned-model",
+        model="./fine-tuned-model",
         backend="transformers",
     ),
 )
@@ -55,7 +55,7 @@ results = evaluator.evaluate(dataset=eval_ds)
 config = EvaluatorConfig(
     dataset_path="eval_dataset.jsonl",
     inference_config=InferenceConfig(
-        model_path="./fine-tuned-model",
+        model="./fine-tuned-model",
         backend="transformers",
     ),
 )
@@ -72,7 +72,7 @@ Local inference with HuggingFace transformers:
 
 ```python
 InferenceConfig(
-    model_path="./fine-tuned-model",
+    model="./fine-tuned-model",
     backend="transformers",
     device=None,              # Auto-detect (cuda, mps, cpu)
     temperature=0.7,
@@ -84,7 +84,7 @@ InferenceConfig(
 
 ```python
 InferenceConfig(
-    model_path="Qwen/Qwen2.5-7B-Instruct",
+    model="Qwen/Qwen2.5-7B-Instruct",
     adapter_path="./lora-adapter",
     backend="transformers",
 )
@@ -96,7 +96,7 @@ For adapters trained with Unsloth:
 
 ```python
 InferenceConfig(
-    model_path="unsloth/Qwen2.5-7B-Instruct",
+    model="unsloth/Qwen2.5-7B-Instruct",
     adapter_path="./unsloth-adapter",
     backend="transformers",
     use_unsloth=True,
@@ -111,8 +111,88 @@ For models served via Ollama:
 
 ```python
 InferenceConfig(
-    model_path="qwen2.5:7b",
+    model="qwen2.5:7b",
     backend="ollama",
+)
+```
+
+### Cloud LLM Providers
+
+Evaluate against cloud LLM APIs with native tool calling support:
+
+#### OpenAI
+
+```python
+InferenceConfig(
+    model="gpt-4o",
+    backend="llm",
+    provider="openai",
+    # api_key="sk-...",  # Or set OPENAI_API_KEY env var
+)
+```
+
+#### Anthropic
+
+```python
+InferenceConfig(
+    model="claude-3-5-sonnet-20241022",
+    backend="llm",
+    provider="anthropic",
+    # api_key="...",  # Or set ANTHROPIC_API_KEY env var
+)
+```
+
+#### Google Gemini
+
+```python
+InferenceConfig(
+    model="gemini-2.0-flash",
+    backend="llm",
+    provider="gemini",
+    # api_key="...",  # Or set GOOGLE_API_KEY or GEMINI_API_KEY env var
+)
+```
+
+#### OpenRouter
+
+Access many models through OpenRouter:
+
+```python
+InferenceConfig(
+    model="openai/gpt-4o",  # Or any OpenRouter model ID
+    backend="llm",
+    provider="openrouter",
+    # api_key="...",  # Or set OPENROUTER_API_KEY env var
+)
+```
+
+#### Custom Base URL
+
+For proxies or custom endpoints:
+
+```python
+InferenceConfig(
+    model="gpt-4o",
+    backend="llm",
+    provider="openai",
+    base_url="https://your-proxy.com/v1",
+)
+```
+
+#### Rate Limiting
+
+Cloud backends include built-in retry with exponential backoff. Customize with:
+
+```python
+InferenceConfig(
+    model="gpt-4o",
+    backend="llm",
+    provider="openai",
+    rate_limit_config={
+        "max_retries": 5,
+        "base_delay": 1.0,
+        "max_delay": 60.0,
+    },
 )
 ```
 
