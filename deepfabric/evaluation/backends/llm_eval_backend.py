@@ -71,14 +71,14 @@ class LLMEvalBackend(InferenceBackend):
 
     def _create_client(self) -> Any:
         """Create the appropriate async client for the provider."""
-        if self.provider == "openai":
-            return self._create_openai_client()
-        if self.provider == "anthropic":
-            return self._create_anthropic_client()
-        if self.provider == "gemini":
-            return self._create_gemini_client()
-        if self.provider == "openrouter":
-            return self._create_openrouter_client()
+        client_creators = {
+            "openai": self._create_openai_client,
+            "anthropic": self._create_anthropic_client,
+            "gemini": self._create_gemini_client,
+            "openrouter": self._create_openrouter_client,
+        }
+        if creator := client_creators.get(self.provider):
+            return creator()
         msg = f"Unsupported provider: {self.provider}"
         raise ValueError(msg)
 
@@ -203,12 +203,14 @@ class LLMEvalBackend(InferenceBackend):
         tools: list[ToolDefinition] | None = None,
     ) -> ModelResponse:
         """Execute generation based on provider."""
-        if self.provider in ("openai", "openrouter"):
-            return await self._generate_openai_async(messages, tools)
-        if self.provider == "anthropic":
-            return await self._generate_anthropic_async(messages, tools)
-        if self.provider == "gemini":
-            return await self._generate_gemini_async(messages, tools)
+        generators = {
+            "openai": self._generate_openai_async,
+            "openrouter": self._generate_openai_async,
+            "anthropic": self._generate_anthropic_async,
+            "gemini": self._generate_gemini_async,
+        }
+        if generator := generators.get(self.provider):
+            return await generator(messages, tools)
         msg = f"Unsupported provider: {self.provider}"
         raise ValueError(msg)
 
@@ -242,8 +244,10 @@ class LLMEvalBackend(InferenceBackend):
                 # Parse arguments from JSON string
                 try:
                     args = json.loads(tc.function.arguments)
-                except json.JSONDecodeError:
-                    args = tc.function.arguments
+                except json.JSONDecodeError as e:
+                    logger.warning("Failed to parse tool call arguments as JSON: %s (%s)", tc.function.arguments, e)
+                    args = {}
+
                 parsed = {
                     "name": tc.function.name,
                     "arguments": args,
