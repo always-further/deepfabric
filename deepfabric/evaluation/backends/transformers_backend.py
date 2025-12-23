@@ -84,14 +84,26 @@ class TransformersBackend(InferenceBackend):
             try:
                 from unsloth import FastLanguageModel  # type: ignore # noqa: PLC0415
 
-                # Load from adapter path if provided, otherwise from model
-                load_path = config.adapter_path if config.adapter_path else config.model
-                self.model, self.tokenizer = FastLanguageModel.from_pretrained(
-                    model_name=load_path,
-                    max_seq_length=config.max_seq_length,
-                    dtype=dtype,
-                    load_in_4bit=config.load_in_4bit,
-                )
+                if config.adapter_path:
+                    # Load base model first, then apply adapter
+                    self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+                        model_name=config.model,
+                        max_seq_length=config.max_seq_length,
+                        dtype=dtype,
+                        load_in_4bit=config.load_in_4bit,
+                    )
+                    # Load LoRA adapter using PEFT
+                    from peft import PeftModel  # noqa: PLC0415
+
+                    self.model = PeftModel.from_pretrained(self.model, config.adapter_path)
+                else:
+                    # Load merged model or base model directly
+                    self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+                        model_name=config.model,
+                        max_seq_length=config.max_seq_length,
+                        dtype=dtype,
+                        load_in_4bit=config.load_in_4bit,
+                    )
                 FastLanguageModel.for_inference(self.model)
                 self.loaded_with_unsloth = True
             except ImportError:
