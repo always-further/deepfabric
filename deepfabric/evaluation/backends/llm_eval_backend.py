@@ -283,12 +283,13 @@ class LLMEvalBackend(InferenceBackend):
                     }
                 )
 
+        # Anthropic doesn't allow both temperature and top_p together
+        # Use temperature only (the more commonly configured parameter)
         kwargs: dict[str, Any] = {
             "model": self.model_name,
             "messages": anthropic_messages,
             "max_tokens": self.config.max_tokens,
             "temperature": self.config.temperature,
-            "top_p": self.config.top_p,
         }
 
         if system_message:
