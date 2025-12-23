@@ -24,12 +24,23 @@ Then load:
 dataset = load_dataset("your-username/my-dataset", split="train")
 ```
 
-## Train/Test Split
+## Train/Validation/Test Split
+
+For proper evaluation, split into three sets:
 
 ```python
+# Two-way split (simple)
 splits = dataset.train_test_split(test_size=0.1, seed=42)
 train_ds = splits["train"]
 eval_ds = splits["test"]
+
+# Three-way split (recommended for tool-calling evaluation)
+train_temp = dataset.train_test_split(test_size=0.2, seed=42)
+train_ds = train_temp["train"]  # 80% for training
+
+val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
+val_ds = val_test["train"]   # 10% for validation during training
+test_ds = val_test["test"]   # 10% for final evaluation (hold out!)
 ```
 
 ## Accessing Fields
@@ -62,6 +73,23 @@ agent_samples = dataset.filter(
     lambda x: x.get("reasoning", {}).get("style") == "agent"
 )
 ```
+
+## Optimizing Tool-Calling Datasets
+
+Tool-calling datasets can have large sequence lengths due to tool schemas. Use `prepare_dataset_for_training` to reduce overhead:
+
+```python
+from deepfabric.training import prepare_dataset_for_training
+
+# Filter to only tools actually used in each conversation
+prepared = prepare_dataset_for_training(
+    dataset,
+    tool_strategy="used_only",
+    clean_tool_schemas=True,
+)
+```
+
+See [Dataset Preparation](dataset-preparation.md) for details.
 
 ## Shuffling
 

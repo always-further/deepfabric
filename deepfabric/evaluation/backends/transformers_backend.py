@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 from typing import Any
 
@@ -79,10 +80,23 @@ class TransformersBackend(InferenceBackend):
         )
 
         self.loaded_with_unsloth = False
-        # Load with Unsloth if requested
-        if config.use_unsloth:
+
+        # Detect if Unsloth has already patched the environment
+        # This happens when user imports unsloth in the same runtime
+        unsloth_patched = "unsloth" in sys.modules
+
+        # Use Unsloth if explicitly requested OR if Unsloth has patched the environment
+        # (to avoid "apply_qkv" errors from patched attention classes)
+        use_unsloth_loading = config.use_unsloth or unsloth_patched
+
+        if use_unsloth_loading:
             try:
                 from unsloth import FastLanguageModel  # type: ignore # noqa: PLC0415
+
+                if unsloth_patched and not config.use_unsloth:
+                    logger.info(
+                        "Unsloth detected in environment, using Unsloth loader for compatibility"
+                    )
 
                 if config.adapter_path:
                     # Load base model first, then apply adapter

@@ -763,8 +763,16 @@ Remember: You have access to the tools listed above and have used them in this c
         # Insert system message if configured
         self._insert_system_message_if_configured(messages)
 
-        # Convert tools to OpenAI format
-        tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]
+        # Convert tools to OpenAI format, filtering based on inclusion strategy
+        if self.config.tool_inclusion_strategy == "used_only" and tool_results:
+            used_names = {te.tool_name for te in tool_results}
+            tools_openai = [
+                tool.to_openai()
+                for tool in self.tool_registry.tools
+                if tool.name in used_names
+            ]
+        else:
+            tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]
 
         return Conversation(
             messages=messages,
@@ -1291,8 +1299,16 @@ Is the user's original task/goal from the scenario fully completed?
         # Insert system message if configured
         self._insert_system_message_if_configured(messages)
 
-        # Convert tools to OpenAI format
-        tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]
+        # Convert tools to OpenAI format, filtering based on inclusion strategy
+        if self.config.tool_inclusion_strategy == "used_only" and all_executions:
+            used_names = {te.tool_name for te in all_executions}
+            tools_openai = [
+                tool.to_openai()
+                for tool in self.tool_registry.tools
+                if tool.name in used_names
+            ]
+        else:
+            tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]
 
         return Conversation(
             messages=messages,

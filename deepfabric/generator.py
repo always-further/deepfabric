@@ -213,6 +213,10 @@ class DataSetGeneratorConfig(BaseModel):
         le=20,
         description="Minimum number of tool calls required before allowing early conversation conclusion",
     )
+    tool_inclusion_strategy: Literal["all", "used_only"] = Field(
+        default="used_only",
+        description="Which tools to include in each sample: 'all' includes full catalog, 'used_only' includes only tools actually called (recommended for training)",
+    )
 
 
 class DataSetGenerator:
