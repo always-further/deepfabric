@@ -780,12 +780,16 @@ class Evaluator:
         console.print("[bold blue]Running evaluation...[/bold blue]")
         evaluations = []
 
-        for idx, sample in tqdm(enumerate(samples), total=len(samples), desc="Evaluating"):
+        pbar = tqdm(enumerate(samples), total=len(samples), desc="Evaluating")
+        for idx, sample in pbar:
             eval_result = self.evaluate_sample(sample, idx)
             evaluations.append(eval_result)
 
             # Stream sample to reporters (for cloud real-time tracking)
             self.reporter.report_sample(eval_result)
+
+            # Force refresh for notebook compatibility
+            pbar.refresh()
 
         console.print("[bold green]Evaluation complete![/bold green]")
 
