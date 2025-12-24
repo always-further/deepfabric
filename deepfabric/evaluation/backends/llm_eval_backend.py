@@ -431,12 +431,17 @@ class LLMEvalBackend(InferenceBackend):
 
         Gemini has specific requirements:
         - Does not support additionalProperties
+        - Requires 'items' field for array types
         """
         result = dict(schema)
 
         # Remove additionalProperties (not supported by Gemini)
         if "additionalProperties" in result:
             del result["additionalProperties"]
+
+        # Ensure array types have items defined (Gemini requires this)
+        if result.get("type") == "array" and "items" not in result:
+            result["items"] = {"type": "string"}  # Default to string array
 
         # Recursively process nested schemas
         if "properties" in result:
