@@ -107,6 +107,10 @@ class SampleEvaluation(BaseModel):
 
     sample_id: int = Field(description="Sample index")
     query: str = Field(description="Input query")
+    available_tools: list[str] = Field(
+        default_factory=list,
+        description="List of tool names available for this sample",
+    )
     expected_tool: str | None = Field(
         default=None,
         description="Expected tool name",
