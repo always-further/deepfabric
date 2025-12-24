@@ -196,10 +196,10 @@ def prepare_dataset_for_training(
 
     # Get initial stats
     if "tools" in dataset.column_names:
-        initial_tool_counts = [
-            len(sample.get("tools", []) or []) for sample in dataset
-        ]
-        avg_initial = sum(initial_tool_counts) / len(initial_tool_counts) if initial_tool_counts else 0
+        initial_tool_counts = [len(sample.get("tools", []) or []) for sample in dataset]
+        avg_initial = (
+            sum(initial_tool_counts) / len(initial_tool_counts) if initial_tool_counts else 0
+        )
         logger.info("Initial average tools per sample: %.1f", avg_initial)
 
     # Apply tool filtering
@@ -216,9 +216,7 @@ def prepare_dataset_for_training(
 
     # Log final stats
     if "tools" in processed.column_names:
-        final_tool_counts = [
-            len(sample.get("tools", []) or []) for sample in processed
-        ]
+        final_tool_counts = [len(sample.get("tools", []) or []) for sample in processed]
         avg_final = sum(final_tool_counts) / len(final_tool_counts) if final_tool_counts else 0
         logger.info("Final average tools per sample: %.1f", avg_final)
 

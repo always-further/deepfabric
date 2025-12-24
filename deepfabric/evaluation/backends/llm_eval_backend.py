@@ -245,7 +245,11 @@ class LLMEvalBackend(InferenceBackend):
                 try:
                     args = json.loads(tc.function.arguments)
                 except json.JSONDecodeError as e:
-                    logger.warning("Failed to parse tool call arguments as JSON: %s (%s)", tc.function.arguments, e)
+                    logger.warning(
+                        "Failed to parse tool call arguments as JSON: %s (%s)",
+                        tc.function.arguments,
+                        e,
+                    )
                     args = {}
 
                 parsed = {

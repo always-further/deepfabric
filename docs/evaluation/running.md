@@ -105,6 +105,47 @@ InferenceConfig(
 )
 ```
 
+### Using In-Memory Models
+
+After training, you can pass the model directly to the evaluator without saving and reloading from disk. This avoids duplicate GPU memory usage and speeds up the train-evaluate workflow:
+
+```python
+from unsloth import FastLanguageModel
+from trl import SFTTrainer
+from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
+
+# Train your model
+trainer = SFTTrainer(model=model, tokenizer=tokenizer, ...)
+trainer.train()
+
+# Prepare for inference (important for Unsloth models)
+FastLanguageModel.for_inference(model)
+
+# Pass the in-memory model directly - no reloading needed
+config = EvaluatorConfig(
+    inference_config=InferenceConfig(
+        model=model,            # Pass model object directly
+        tokenizer=tokenizer,    # Required when using in-memory model
+        temperature=0.1,
+        max_tokens=512,
+    ),
+    max_samples=100,
+    save_predictions=True,
+    output_path="eval_results.json",
+)
+
+evaluator = Evaluator(config)
+results = evaluator.evaluate(dataset=eval_ds)
+```
+
+This approach:
+
+- **Avoids OOM errors** by not loading a second copy of the model
+- **Saves time** by skipping disk I/O for model weights
+- **Enables rapid iteration** in notebook environments like Colab
+
+Note: The `tokenizer` parameter is required when passing an in-memory model object.
+
 ### Ollama
 
 For models served via Ollama:

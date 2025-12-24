@@ -1,9 +1,9 @@
 """Model inference interfaces and implementations for evaluation."""
 
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..schemas import ToolDefinition
 
@@ -11,8 +11,15 @@ from ..schemas import ToolDefinition
 class InferenceConfig(BaseModel):
     """Configuration for model inference."""
 
-    model: str = Field(
-        description="Model identifier (local path, HuggingFace Hub ID, or model name for cloud providers)",
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    model: str | Any = Field(
+        description="Model identifier (local path, HuggingFace Hub ID, or model name for cloud providers). "
+        "Can also be a pre-loaded model object to avoid reloading.",
+    )
+    tokenizer: Any | None = Field(
+        default=None,
+        description="Pre-loaded tokenizer object. Required when model is a pre-loaded model object.",
     )
     adapter_path: str | None = Field(
         default=None,
@@ -79,11 +86,26 @@ class InferenceConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_llm_backend_config(self) -> "InferenceConfig":
-        """Ensure provider is set when using LLM backend."""
+    def validate_config(self) -> "InferenceConfig":
+        """Validate configuration consistency."""
+        # Ensure provider is set when using LLM backend
         if self.backend == "llm" and self.provider is None:
             msg = "provider must be specified when backend='llm'"
             raise ValueError(msg)
+
+        # Check if model is a pre-loaded object (not a string path)
+        is_preloaded_model = not isinstance(self.model, str)
+
+        # If model is pre-loaded, tokenizer must also be provided
+        if is_preloaded_model and self.tokenizer is None:
+            msg = "tokenizer must be provided when using a pre-loaded model object"
+            raise ValueError(msg)
+
+        # Pre-loaded models only work with transformers backend
+        if is_preloaded_model and self.backend != "transformers":
+            msg = "pre-loaded model objects are only supported with backend='transformers'"
+            raise ValueError(msg)
+
         return self
 
 

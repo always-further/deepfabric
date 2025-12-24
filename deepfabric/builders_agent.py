@@ -767,9 +767,7 @@ Remember: You have access to the tools listed above and have used them in this c
         if self.config.tool_inclusion_strategy == "used_only" and tool_results:
             used_names = {te.tool_name for te in tool_results}
             tools_openai = [
-                tool.to_openai()
-                for tool in self.tool_registry.tools
-                if tool.name in used_names
+                tool.to_openai() for tool in self.tool_registry.tools if tool.name in used_names
             ]
         else:
             tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]
@@ -1303,9 +1301,7 @@ Is the user's original task/goal from the scenario fully completed?
         if self.config.tool_inclusion_strategy == "used_only" and all_executions:
             used_names = {te.tool_name for te in all_executions}
             tools_openai = [
-                tool.to_openai()
-                for tool in self.tool_registry.tools
-                if tool.name in used_names
+                tool.to_openai() for tool in self.tool_registry.tools if tool.name in used_names
             ]
         else:
             tools_openai = [tool.to_openai() for tool in self.tool_registry.tools]

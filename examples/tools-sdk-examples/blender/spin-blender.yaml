@@ -100,6 +100,7 @@ generation:
     spin_endpoint: "http://localhost:3000"
     # Load tool definitions from mock endpoint
     tools_endpoint: "http://localhost:3000/mock/list-tools"
+    tool_execute_path: "/mock/execute"
 
     # Component-based routing: 'mock' routes to /mock/execute
     components:
@@ -140,8 +141,8 @@ generation:
   max_retries: 3
 
   llm:
-    provider: "gemini"
-    model: "gemini-2.5-flash"
+    provider: "openai"
+    model: "gpt-4.1-2025-04-14"
     temperature: 0.4
 
   rate_limit:
@@ -180,6 +181,6 @@ output:
     4. Suggest follow-up actions if relevant
 
   include_system_message: false
-  num_samples: 300
+  num_samples: 10
   batch_size: 4
   save_as: "blender-dataset.jsonl"

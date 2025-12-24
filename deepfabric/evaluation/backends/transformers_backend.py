@@ -37,9 +37,15 @@ class TransformersBackend(InferenceBackend):
         """
         super().__init__(config)
 
+        # Check if model is pre-loaded (not a string path)
+        is_preloaded = not isinstance(config.model, str)
+
         # Determine device
         if config.device:
             self.device = config.device
+        elif is_preloaded:
+            # Get device from pre-loaded model
+            self.device = str(next(config.model.parameters()).device)
         # Auto-detect best available device
         elif torch.cuda.is_available():
             self.device = "cuda"
@@ -49,7 +55,7 @@ class TransformersBackend(InferenceBackend):
             self.device = "cpu"
 
         # Determine dtype based on device
-        if self.device == "cuda":
+        if self.device == "cuda" or self.device.startswith("cuda:"):
             dtype = torch.float16
             device_map = "auto"
         elif self.device == "mps":
@@ -59,8 +65,33 @@ class TransformersBackend(InferenceBackend):
             dtype = torch.float32
             device_map = None
 
+        # Handle pre-loaded model case - skip all loading logic
+        if is_preloaded:
+            self.model = config.model
+            self.tokenizer = config.tokenizer
+            self.loaded_with_unsloth = False
+
+            # Detect architecture from pre-loaded model's config
+            self._architectures = []
+            if hasattr(self.model, "config"):
+                self._architectures = getattr(self.model.config, "architectures", []) or []
+
+            # Initialize tool call parser
+            self._tool_call_parser: ToolCallParser = get_parser(self._architectures)
+            logger.info(
+                "Using pre-loaded model with %s parser for architectures: %s",
+                type(self._tool_call_parser).__name__,
+                self._architectures or ["unknown"],
+            )
+
+            # Set padding token if not set
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+
+            return  # Skip remaining initialization
+
         # Detect model architecture for parser selection and tokenizer config
-        self._architectures: list[str] = []
+        self._architectures = []
         tokenizer_kwargs: dict[str, Any] = {}
         try:
             model_config = AutoConfig.from_pretrained(config.model)  # nosec
@@ -72,7 +103,7 @@ class TransformersBackend(InferenceBackend):
             logger.warning("Could not detect model architecture: %s", e)
 
         # Initialize tool call parser based on detected architecture
-        self._tool_call_parser: ToolCallParser = get_parser(self._architectures)
+        self._tool_call_parser = get_parser(self._architectures)
         logger.info(
             "Using %s for model architectures: %s",
             type(self._tool_call_parser).__name__,
