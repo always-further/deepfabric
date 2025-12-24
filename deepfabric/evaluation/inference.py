@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from ..schemas import ToolDefinition
 
@@ -84,6 +84,28 @@ class InferenceConfig(BaseModel):
         ge=1,
         description="Batch size for inference",
     )
+
+    @field_serializer("model")
+    def serialize_model(self, value: str | Any) -> str:
+        """Serialize model field - convert objects to descriptive string."""
+        if isinstance(value, str):
+            return value
+        # For in-memory model objects, return a descriptive string
+        model_class = type(value).__name__
+        model_name = getattr(getattr(value, "config", None), "name_or_path", "unknown")
+        return f"<in-memory:{model_class}:{model_name}>"
+
+    @field_serializer("tokenizer")
+    def serialize_tokenizer(self, value: Any | None) -> str | None:
+        """Serialize tokenizer field - convert objects to descriptive string."""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        # For in-memory tokenizer objects, return a descriptive string
+        tokenizer_class = type(value).__name__
+        tokenizer_name = getattr(value, "name_or_path", "unknown")
+        return f"<in-memory:{tokenizer_class}:{tokenizer_name}>"
 
     @model_validator(mode="after")
     def validate_config(self) -> "InferenceConfig":
