@@ -432,7 +432,11 @@ class LLMEvalBackend(InferenceBackend):
         Gemini has specific requirements:
         - Does not support additionalProperties
         - Requires 'items' field for array types
+        - Handles nested schemas in anyOf, oneOf, allOf
         """
+        if not isinstance(schema, dict):
+            return schema
+
         result = dict(schema)
 
         # Remove additionalProperties (not supported by Gemini)
@@ -440,11 +444,16 @@ class LLMEvalBackend(InferenceBackend):
             del result["additionalProperties"]
 
         # Ensure array types have items defined (Gemini requires this)
-        if result.get("type") == "array" and "items" not in result:
+        # Check both explicit type and type within anyOf/oneOf
+        is_array = result.get("type") == "array"
+        if not is_array and "type" in result and isinstance(result["type"], list):
+            is_array = "array" in result["type"]
+
+        if is_array and "items" not in result:
             result["items"] = {"type": "string"}  # Default to string array
 
-        # Recursively process nested schemas
-        if "properties" in result:
+        # Recursively process nested schemas in properties
+        if "properties" in result and isinstance(result["properties"], dict):
             for prop_name, prop_schema in result["properties"].items():
                 if isinstance(prop_schema, dict):
                     result["properties"][prop_name] = self._convert_schema_for_gemini(prop_schema)
@@ -452,6 +461,30 @@ class LLMEvalBackend(InferenceBackend):
         # Process items in arrays
         if "items" in result and isinstance(result["items"], dict):
             result["items"] = self._convert_schema_for_gemini(result["items"])
+
+        # Process anyOf, oneOf, allOf schemas
+        for key in ("anyOf", "oneOf", "allOf"):
+            if key in result and isinstance(result[key], list):
+                result[key] = [
+                    self._convert_schema_for_gemini(sub_schema)
+                    for sub_schema in result[key]
+                    if isinstance(sub_schema, dict)
+                ]
+                # If any sub-schema is an array type, ensure it has items
+                for sub_schema in result[key]:
+                    if isinstance(sub_schema, dict):
+                        sub_is_array = sub_schema.get("type") == "array"
+                        if sub_is_array and "items" not in sub_schema:
+                            sub_schema["items"] = {"type": "string"}
+
+        # Process nested definitions/defs
+        for key in ("definitions", "$defs"):
+            if key in result and isinstance(result[key], dict):
+                result[key] = {
+                    name: self._convert_schema_for_gemini(def_schema)
+                    for name, def_schema in result[key].items()
+                    if isinstance(def_schema, dict)
+                }
 
         return result
 
