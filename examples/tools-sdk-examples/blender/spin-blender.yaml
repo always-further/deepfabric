@@ -181,6 +181,6 @@ output:
     4. Suggest follow-up actions if relevant
 
   include_system_message: false
-  num_samples: 10
-  batch_size: 4
+  num_samples: 2
+  batch_size: 1
   save_as: "blender-dataset.jsonl"

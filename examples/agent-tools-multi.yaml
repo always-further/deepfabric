@@ -38,7 +38,7 @@ generation:
     type: chain_of_thought
     reasoning_style: agent
     # Multi-turn: extended conversations with multiple tool calls
-    agent_mode: multi_turn
+    agent_mode: single_turn
     min_turns: 2
     max_turns: 4
     min_tool_calls: 2
