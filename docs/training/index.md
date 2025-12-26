@@ -6,7 +6,7 @@ DeepFabric datasets integrate directly with popular training frameworks. This se
 
 ```
 1. Generate dataset      →  deepfabric generate config.yaml
-2. Upload to Hub         →  deepfabric upload dataset.jsonl --repo user/dataset
+2. Upload to Hub         →  deepfabric upload-hf dataset.jsonl --repo user/dataset
 3. Load in training      →  load_dataset("user/dataset")
 4. Prepare dataset       →  prepare_dataset_for_training()  [optional but recommended]
 5. Format with template  →  tokenizer.apply_chat_template()

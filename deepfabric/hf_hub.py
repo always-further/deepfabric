@@ -210,5 +210,5 @@ class HFUploader:
         else:
             return {
                 "status": "success",
-                "message": f"Dataset pushed successfully to {hf_dataset_repo}.",
+                "message": f"Dataset pushed successfully to https://huggingface.co/datasets/{hf_dataset_repo}",
             }

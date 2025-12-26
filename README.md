@@ -171,7 +171,7 @@ deepfabric generate config.yaml --output-save-as dataset.jsonl
 Or upload to HuggingFace Hub:
 
 ```bash
-deepfabric upload dataset.jsonl --repo your-username/my-dataset
+deepfabric upload-hf dataset.jsonl --repo your-username/my-dataset
 ```
 
 ### 2. Load and Split for Training

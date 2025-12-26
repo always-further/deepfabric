@@ -557,7 +557,7 @@ def generate(  # noqa: PLR0913
         sys.exit(1)
 
 
-@cli.command()
+@cli.command("upload-hf")
 @click.argument("dataset_file", type=click.Path(exists=True))
 @click.option(
     "--repo",
@@ -573,14 +573,14 @@ def generate(  # noqa: PLR0913
     multiple=True,
     help="Tags for the dataset (can be specified multiple times)",
 )
-def upload(
+def upload_hf(
     dataset_file: str,
     repo: str,
     token: str | None = None,
     tags: list[str] | None = None,
 ) -> None:
     """Upload a dataset to Hugging Face Hub."""
-    trace("cli_upload", {"has_tags": len(tags) > 0 if tags else False})
+    trace("cli_upload_hf", {"has_tags": len(tags) > 0 if tags else False})
 
     try:
         # Get token from CLI arg or env var

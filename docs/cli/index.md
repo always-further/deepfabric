@@ -16,7 +16,9 @@ The DeepFabric CLI provides six core commands, each addressing a specific aspect
 
 **`visualize`** creates SVG representations of topic graphs, enabling visual exploration of domain structures and relationship patterns.
 
-**`upload`** publishes datasets to Hugging Face Hub with automatically generated metadata and dataset cards.
+**`upload-hf`** publishes datasets to Hugging Face Hub.
+
+**`upload-kaggle`** publishes datasets to Kaggle.
 
 **`info`** displays version information, available commands, and environment configuration status.
 
@@ -51,7 +53,7 @@ deepfabric generate config.yaml
 deepfabric visualize topic_graph.json --output structure.svg
 
 # Upload to Hugging Face
-deepfabric upload dataset.jsonl --repo username/dataset-name
+deepfabric upload-hf dataset.jsonl --repo username/dataset-name
 ```
 
 Each command operates independently, allowing selective re-execution when iterating on specific aspects of your generation process.
@@ -84,6 +86,7 @@ Detailed documentation for each command covers syntax, options, examples, and co
 [**format**](format.md) - Apply formatters to existing datasets
 [**validate**](validate.md) - Configuration validation and problem detection
 [**visualize**](visualize.md) - Topic graph visualization and analysis
-[**upload**](upload.md) - Hugging Face Hub integration and publishing
+[**upload-hf**](upload-hf.md) - Hugging Face Hub integration and publishing
+[**upload-kaggle**](upload-kaggle.md) - Kaggle integration and publishing
 
 Each command section includes practical examples, common usage patterns, and troubleshooting guidance for typical issues encountered during synthetic data generation workflows.

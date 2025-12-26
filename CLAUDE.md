@@ -98,3 +98,4 @@ deepfabric start config.yaml --model gpt-4 --temperature 0.8 --hf-repo user/data
 - Python 3.11+ required
 - Google-style docstrings preferred
 - do not place imports anywhere but the top of the file
+- when updating docs/ documentation , if the new markdown files are included or removed, consider updating the @mkdocs.yml file

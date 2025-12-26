@@ -15,7 +15,7 @@ dataset = load_dataset("json", data_files="dataset.jsonl", split="train")
 Upload first:
 
 ```bash
-deepfabric upload dataset.jsonl --repo your-username/my-dataset
+deepfabric upload-hf dataset.jsonl --repo your-username/my-dataset
 ```
 
 Then load:

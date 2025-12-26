@@ -35,7 +35,8 @@ nav:
     - generate: cli/generate.md
     - validate: cli/validate.md
     - visualize: cli/visualize.md
-    - upload: cli/upload.md
+    - upload-hf: cli/upload-hf.md
+    - upload-kaggle: cli/upload-kaggle.md
     - format: cli/format.md
   - API Reference:
     - Overview: api/index.md
