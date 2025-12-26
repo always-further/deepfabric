@@ -47,7 +47,7 @@ export OPENAI_API_KEY="your-key"
 
 deepfabric generate \
   --topic-prompt "DevOps and Platform Engineering" \
-  --generation-system-prompt "You are an expert in DevOps and Platform Engineering" \
+  --generation-system-prompt "You are an expert in DevOps and Platform Engineering generate examples of issue resolution and best practices" \
   --mode graph \
   --depth 2 \
   --degree 2 \
@@ -57,16 +57,51 @@ deepfabric generate \
   --batch-size 1 \
   --conversation-type chain_of_thought \
   --reasoning-style freetext \
-  --output-save-as dataset.jsonl \
+  --output-save-as dataset.jsonl
 ```
 
-## What DeepFabric Does
+## What Just Happened?
 
-1. **Generates topic hierarchies** from a root prompt
-2. **Creates training samples** for each topic
-3. **Outputs JSONL** compatible with HuggingFace and training frameworks
+The key steps in this example were as follows:
+
+1. **Topic Graph Generation**: A topic hierarchy was created starting from "DevOps and Platform Engineering". Topic graphs take a root prompt and recursively expand subtopics to form a DAG (Direct Acyclic Graph) structure. Here, we used a depth of 2 and degree of 2 to ensure coverage of subtopics.
+2. **Dataset Generation**: For each node topic in the graph, a synthetic dataset sample was generated using a chain-of-thought conversation style. Each example includes reasoning traces to illustrate the thought process behind the answers. With the above example, 2 samples were generated per topic as per the `--num-samples` flag.
+3. **Conversation and Reasoning Style**: The `chain_of_thought` conversation type with `freetext` reasoning style. This encourages the model to provide detailed explanations along with answers, enhancing the quality of the training data.
+
+So lets' break down this down visually:
+
+```
+Topic Graph:
+- DevOps and Platform Engineering
+  - CI/CD Pipelines
+    - Best Practices for CI/CD
+    - Common CI/CD Tools
+  - Infrastructure as Code
+    - IaC Benefits
+    - Popular IaC Tools
+```
+
+So as you can see we have a depth of 2 (root + 2 levels) and a degree of 2 (2 subtopics per topic). 
+
+Each of these topics would then be used to generate a corresponding dataset samples.
+
+**"Best Practices for CI/CD"** Sample:
+```json
+{
+  "question": "What are some best practices for implementing CI/CD pipelines?",
+  "answer": "Some best practices include automating testing, using version control, and ensuring fast feedback loops.",
+  "reasoning_trace": [
+    "The user is asking about best practices for CI/CD pipelines.",
+    "I know that automation is key in CI/CD to ensure consistency and reliability.",
+    "Version control allows tracking changes and collaboration among team members.",
+    "Fast feedback loops help catch issues early in the development process."
+  ]
+}
+```
 
 ## Dataset Types
+
+DeepFabric supports multiple dataset types to suit different training needs:
 
 | Type | Description | Use Case |
 |------|-------------|----------|
@@ -74,21 +109,4 @@ deepfabric generate \
 | [Reasoning](dataset-generation/reasoning.md) | Chain-of-thought traces | Step-by-step problem solving |
 | [Agent](dataset-generation/agent.md) | Tool-calling with real execution | Building agents |
 
-## Key Features
 
-**Topic-driven generation** ensures diverse, non-redundant samples. Each training example maps to a specific subtopic, avoiding the repetition common in naive generation.
-
-**Real tool execution** via [Spin](tools/index.md). Agent datasets include actual tool results from isolated WebAssembly sandboxes, not simulated outputs.
-
-**Training integration** with [TRL, Unsloth](training/index.md), and HuggingFace. Use `apply_chat_template` to format for any model.
-
-**Built-in evaluation** for [testing fine-tuned models](evaluation/index.md) on tool-calling tasks with metrics for accuracy and correctness.
-
-## Documentation
-
-- [Getting Started](getting-started/index.md) - Installation and first dataset
-- [Dataset Generation](dataset-generation/index.md) - Types and configuration
-- [Tools](tools/index.md) - Spin components and MCP integration
-- [Training](training/index.md) - Loading datasets and formatting
-- [Evaluation](evaluation/index.md) - Testing fine-tuned models
-- [CLI Reference](cli/index.md) - Command documentation
