@@ -120,16 +120,17 @@ generation:
   # Tool configuration (required for agent modes)
   tools:
     spin_endpoint: "http://localhost:3000"  # Spin service for tool execution
-    available:                  # Filter to specific tools (empty = all VFS tools)
-      - read_file
-      - write_file
-      - list_files
+    components:                 # Map component name to tool names
+      builtin:                  # Routes to /vfs/execute
+        - read_file
+        - write_file
+        - list_files
     max_per_query: 3            # Maximum tools per query
     max_agent_steps: 5          # Max ReAct reasoning iterations
 
-    max_retries: 3                # Retries for failed generations
-    sample_retries: 2             # Retries for validation failures
-    max_tokens: 2000              # Max tokens per generation
+  max_retries: 3                # Retries for failed generations
+  sample_retries: 2             # Retries for validation failures
+  max_tokens: 2000              # Max tokens per generation
 
   # Optional: Override shared LLM settings
   llm:
@@ -374,10 +375,6 @@ evaluator = Evaluator(config)
 results = evaluator.evaluate(dataset=eval_dataset)
 ```
 
-## Training Metrics
-
-DeepFabric provides a training callback that automatically logs metrics to the DeepFabric cloud during model training. This enables real-time monitoring and tracking of training runs.
-
 ### Basic Usage with HuggingFace Trainer
 
 ```python
@@ -590,10 +587,11 @@ generation:
 
   tools:
     spin_endpoint: "http://localhost:3000"  # Spin service URL
-    available:                              # Filter to specific tools
-      - read_file
-      - write_file
-      - list_files
+    components:                             # Map component to tool names
+      builtin:                              # Routes to /vfs/execute
+        - read_file
+        - write_file
+        - list_files
     max_agent_steps: 5                      # Max ReAct iterations
 
     # Optional: Seed initial state for scenarios

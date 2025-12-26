@@ -23,7 +23,7 @@ deepfabric generate config.yaml \
   --provider anthropic \
   --model claude-sonnet-4-5 \
   --temperature 0.8 \
-  --num-steps 100 \
+  --num-samples 100 \
   --batch-size 5
 ```
 
@@ -35,9 +35,8 @@ Control where intermediate and final outputs are saved:
 
 ```bash
 deepfabric generate config.yaml \
-  --save-tree custom_topics.jsonl \
-  --dataset-save-as custom_dataset.jsonl \
-  --save-graph topic_structure.json
+  --topics-save-as custom_topics.jsonl \
+  --output-save-as custom_dataset.jsonl
 ```
 
 These options override the file paths specified in your configuration, useful for organizing outputs by experiment or preventing accidental overwrites during iterative development.
@@ -47,11 +46,8 @@ These options override the file paths specified in your configuration, useful fo
 Skip topic generation by loading previously generated topic trees or graphs:
 
 ```bash
-# Load existing topic tree
-deepfabric generate config.yaml --load-tree existing_topics.jsonl
-
-# Load existing topic graph
-deepfabric generate config.yaml --load-graph existing_graph.json
+# Load existing topics (JSONL for tree, JSON for graph)
+deepfabric generate config.yaml --topics-load existing_topics.jsonl
 ```
 
 This approach accelerates iteration when experimenting with dataset generation parameters while keeping the topic structure constant.
@@ -89,12 +85,43 @@ Adjust dataset creation parameters for different scales and quality requirements
 
 ```bash
 deepfabric generate config.yaml \
-  --num-steps 500 \
+  --num-samples 500 \
   --batch-size 10 \
-  --sys-msg false
+  --no-system-message
 ```
 
-The `num-steps` parameter controls dataset size, `batch-size` affects generation speed and resource usage, and `sys-msg` determines whether system prompts are included in the final training examples.
+The `--num-samples` parameter controls dataset size, `--batch-size` affects generation speed and resource usage, and `--include-system-message/--no-system-message` determines whether system prompts are included in the final training examples.
+
+## Conversation Type Options
+
+Control the type of conversations generated:
+
+```bash
+deepfabric generate config.yaml \
+  --conversation-type chain_of_thought \
+  --reasoning-style freetext
+```
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `--conversation-type` | `basic`, `chain_of_thought` | Base conversation type |
+| `--reasoning-style` | `freetext`, `agent` | Reasoning style for chain_of_thought |
+| `--agent-mode` | `single_turn`, `multi_turn` | Agent mode (requires tools) |
+| `--min-turns` | INT | Minimum turns for multi_turn mode |
+| `--max-turns` | INT | Maximum turns for multi_turn mode |
+| `--min-tool-calls` | INT | Minimum tool calls before conclusion |
+
+## TUI Options
+
+Control the terminal user interface:
+
+```bash
+# Rich two-pane interface (default)
+deepfabric generate config.yaml --tui rich
+
+# Simple headless-friendly output
+deepfabric generate config.yaml --tui simple
+```
 
 ## Provider and Model Selection
 
@@ -115,16 +142,16 @@ A comprehensive generation command with multiple overrides:
 
 ```bash
 deepfabric generate research-dataset.yaml \
-  --save-tree research_topics.jsonl \
-  --dataset-save-as research_examples.jsonl \
+  --topics-save-as research_topics.jsonl \
+  --output-save-as research_examples.jsonl \
   --provider anthropic \
   --model claude-sonnet-4-5 \
   --degree 4 \
   --depth 3 \
-  --num-steps 200 \
+  --num-samples 200 \
   --batch-size 8 \
   --temperature 0.8 \
-  --sys-msg true
+  --include-system-message
 ```
 
 This command creates a research dataset with comprehensive topic coverage, high-quality content generation, and systematic organization of all outputs.

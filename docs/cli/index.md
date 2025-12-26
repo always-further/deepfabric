@@ -6,11 +6,9 @@ The CLI design follows Unix philosophy principles where each command does one th
 
 ## Command Overview
 
-The DeepFabric CLI provides six core commands, each addressing a specific aspect of synthetic data generation:
+The DeepFabric CLI provides the following commands:
 
 **`generate`** transforms YAML configurations into synthetic datasets through the complete pipeline of topic modeling, dataset creation, and output formatting.
-
-**`format`** applies formatters to existing datasets, enabling transformation to different training formats without regeneration.
 
 **`validate`** checks configuration files for common issues, parameter compatibility problems, and authentication requirements before running expensive generation processes.
 
@@ -19,6 +17,8 @@ The DeepFabric CLI provides six core commands, each addressing a specific aspect
 **`upload-hf`** publishes datasets to Hugging Face Hub.
 
 **`upload-kaggle`** publishes datasets to Kaggle.
+
+**`evaluate`** evaluates fine-tuned models on tool-calling tasks using transformers or Ollama backends.
 
 **`info`** displays version information, available commands, and environment configuration status.
 
@@ -71,9 +71,9 @@ Many commands accept configuration file arguments along with parameter overrides
 ```bash
 deepfabric generate config.yaml \
   --temperature 0.9 \
-  --num-steps 50 \
+  --num-samples 50 \
   --provider anthropic \
-  --model claude-3-sonnet
+  --model claude-sonnet-4-5
 ```
 
 This pattern supports rapid iteration during development while maintaining reproducible baseline configurations.
@@ -82,11 +82,12 @@ This pattern supports rapid iteration during development while maintaining repro
 
 Detailed documentation for each command covers syntax, options, examples, and common usage patterns:
 
-[**generate**](generate.md) - Complete dataset generation from YAML configuration
-[**format**](format.md) - Apply formatters to existing datasets
-[**validate**](validate.md) - Configuration validation and problem detection
-[**visualize**](visualize.md) - Topic graph visualization and analysis
-[**upload-hf**](upload-hf.md) - Hugging Face Hub integration and publishing
-[**upload-kaggle**](upload-kaggle.md) - Kaggle integration and publishing
+- [**generate**](generate.md) - Complete dataset generation from YAML configuration
+- [**validate**](validate.md) - Configuration validation and problem detection
+- [**visualize**](visualize.md) - Topic graph visualization and analysis
+- [**upload-hf**](upload-hf.md) - Hugging Face Hub integration and publishing
+- [**upload-kaggle**](upload-kaggle.md) - Kaggle integration and publishing
+- [**evaluate**](evaluate.md) - Model evaluation on tool-calling tasks
+- [**info**](info.md) - Version and environment information
 
 Each command section includes practical examples, common usage patterns, and troubleshooting guidance for typical issues encountered during synthetic data generation workflows.

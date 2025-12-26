@@ -37,7 +37,8 @@ nav:
     - visualize: cli/visualize.md
     - upload-hf: cli/upload-hf.md
     - upload-kaggle: cli/upload-kaggle.md
-    - format: cli/format.md
+    - evaluate: cli/evaluate.md
+    - info: cli/info.md
   - API Reference:
     - Overview: api/index.md
     - Tree: api/tree.md

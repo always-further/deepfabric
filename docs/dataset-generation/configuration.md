@@ -108,9 +108,9 @@ Controls sample generation.
 | `type` | string | basic, chain_of_thought | Conversation format |
 | `reasoning_style` | string | freetext, agent | For chain_of_thought only |
 | `agent_mode` | string | single_turn, multi_turn | For agent style only |
-| `min_turns` | int | 1 | Minimum turns (multi_turn) |
-| `max_turns` | int | 5 | Maximum turns (multi_turn) |
-| `min_tool_calls` | int | 1 | Minimum tool calls (multi_turn) |
+| `min_turns` | int | 2 | Minimum turns (multi_turn) |
+| `max_turns` | int | 4 | Maximum turns (multi_turn) |
+| `min_tool_calls` | int | 2 | Minimum tool calls (multi_turn) |
 
 #### generation.tools
 

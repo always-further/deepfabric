@@ -18,7 +18,7 @@ The command analyzes your configuration structure, checks parameter values, and 
 
 The validation process examines multiple aspects of your configuration:
 
-**Structural Validation** ensures all required sections are present and properly formatted. Missing critical sections like `data_engine` or malformed YAML syntax are identified immediately.
+**Structural Validation** ensures all required sections are present and properly formatted. Missing critical sections like `topics`, `generation`, or `output`, or malformed YAML syntax are identified immediately.
 
 **Parameter Compatibility** checks that parameter values are within acceptable ranges and compatible with each other. For example, extremely high temperature values or inconsistent model provider specifications are flagged.
 
@@ -50,10 +50,10 @@ The summary provides an overview of key parameters, while warnings highlight pot
 Configuration problems are reported with clear categorization and guidance:
 
 ```bash
-❌ Configuration validation failed:
-  - data_engine section is required
-  - Invalid provider 'invalid_provider' in topic_tree
-  - Missing model specification in dataset.creation
+Configuration validation failed:
+  - topics section is required
+  - generation section is required
+  - output section is required
 ```
 
 Each error includes sufficient detail to identify the problem location and suggested corrections. Error messages reference specific configuration sections and parameter names for efficient problem resolution.
@@ -122,7 +122,7 @@ This approach is useful when maintaining multiple configuration variants for dif
 
 The validation process identifies several categories of common configuration problems:
 
-**Missing Required Sections**: Configurations lacking essential components like `data_engine` or `dataset` sections are flagged immediately.
+**Missing Required Sections**: Configurations lacking essential components like `topics`, `generation`, or `output` sections are flagged immediately.
 
 **Parameter Range Issues**: Values outside reasonable ranges, such as negative depths or extremely high temperatures, are identified with suggested corrections.
 

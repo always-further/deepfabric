@@ -153,27 +153,17 @@ Output format includes complete structural information:
 }
 ```
 
-#### load(filepath: str)
+#### from_json(filepath: str, params: dict)
 
-Reconstructs graph from previously saved JSON files:
-
-```python
-graph = Graph(
-    topic_prompt="Default prompt",
-    model_name="anthropic/claude-sonnet-4-5"
-)
-graph.load("existing_graph.json")
-```
-
-#### from_json(filepath: str, **kwargs)
-
-Class method for loading graphs with specific configuration:
+Class method for loading graphs with configuration:
 
 ```python
 graph = Graph.from_json(
     "saved_graph.json",
-    topic_prompt="Research areas",
-    model_name="anthropic/claude-sonnet-4-5"
+    {
+        "topic_prompt": "Research areas",
+        "model_name": "anthropic/claude-sonnet-4-5"
+    }
 )
 ```
 
@@ -189,7 +179,7 @@ Creates `domain_map.svg` showing nodes, hierarchical relationships, and cross-co
 
 ### Graph Analysis
 
-Access structural information through analysis methods:
+Access structural information through available methods:
 
 ```python
 # Basic statistics
@@ -200,73 +190,11 @@ edge_count = len(graph.edges)
 hierarchical_edges = [e for e in graph.edges if e["type"] == "hierarchical"]
 cross_connections = [e for e in graph.edges if e["type"] == "cross_connection"]
 
-# Path analysis
-shortest_paths = graph.find_shortest_paths()
-centrality_scores = graph.calculate_centrality()
-```
+# Get all paths from root to leaves
+all_paths = graph.get_all_paths()
 
-### Advanced Construction
-
-#### Phase-by-Phase Building
-
-Control graph construction through individual phases:
-
-```python
-graph = Graph(
-    topic_prompt="Complex domain",
-    model_name="anthropic/claude-sonnet-4-5",
-    degree=4,
-    depth=3
-)
-graph.build_hierarchical_structure()  # Create tree backbone
-graph.analyze_connections()           # Find potential cross-connections
-graph.create_cross_connections()      # Add lateral relationships
-graph.validate_structure()            # Ensure acyclic property
-```
-
-#### Custom Connection Logic
-
-Implement domain-specific connection strategies:
-
-```python
-def connection_filter(node1, node2, relationship_strength):
-    # Custom logic for determining valid connections
-    return relationship_strength > 0.7 and not creates_cycle(node1, node2)
-
-graph.set_connection_filter(connection_filter)
-consume_graph(graph)
-```
-
-#### Connection Strength Tuning
-
-Adjust parameters controlling cross-connection generation:
-
-```python
-graph.set_connection_parameters(
-    min_similarity=0.6,        # Minimum semantic similarity
-    max_connections_per_node=3, # Limit connections per node
-    prefer_distant_connections=True  # Favor connections across distant branches
-)
-```
-
-## Graph Navigation
-
-Navigate complex graph structures through specialized methods:
-
-```python
-# Find all paths between nodes
-paths = graph.find_all_paths("node1", "node2")
-
-# Get connected components
-components = graph.get_connected_components()
-
-# Analyze node relationships
-neighbors = graph.get_neighbors("node_id")
-related_concepts = graph.get_cross_connected_nodes("node_id")
-
-# Depth-based queries
-nodes_at_depth = graph.get_nodes_at_depth(2)
-max_depth = graph.get_maximum_depth()
+# Check for cycles
+has_cycle = graph.has_cycle()
 ```
 
 ## Integration with Dataset Generation
@@ -274,54 +202,48 @@ max_depth = graph.get_maximum_depth()
 Graphs integrate seamlessly with dataset generation:
 
 ```python
+import asyncio
+
 # Generate dataset from graph
 generator = DataSetGenerator(
     instructions="Create interconnected explanations",
-    model_name="anthropic/claude-sonnet-4-5",
+    provider="anthropic",
+    model_name="claude-sonnet-4-5",
     temperature=0.7
 )
-dataset = generator.create_data(
+
+dataset = asyncio.run(generator.create_data_async(
     topic_model=graph,
     num_steps=150,
     batch_size=5
-)
-
-# Graph-aware topic sampling
-sampler = graph.create_balanced_sampler()  # Ensures cross-connection coverage
-dataset = generator.create_data(
-    topic_model=graph,
-    topic_sampler=sampler,
-    num_steps=100
-)
+))
 ```
 
 ## Error Handling
 
-Graph-specific error handling addresses connectivity and structure issues:
+Graph-specific error handling:
 
 ```python
-from deepfabric import GraphError, CyclicGraphError
+from deepfabric import GraphError
 
 try:
     consume_graph(graph)
-except CyclicGraphError as e:
-    print(f"Cycle detected: {e.cycle_path}")
 except GraphError as e:
     print(f"Graph construction failed: {e}")
 ```
 
 ## Performance Considerations
 
-Graph construction is more computationally intensive than tree generation:
+Graph construction is more computationally intensive than tree generation. Use the `max_concurrent` parameter to control the rate of LLM calls:
 
 ```python
-# Monitor construction progress
-graph.enable_progress_monitoring(verbose=True)
-consume_graph(graph)
-
-# Optimize for large graphs
-graph.set_batch_size(smaller_batch)  # Reduce memory usage
-graph.enable_incremental_saves(checkpoint_frequency=50)  # Regular checkpointing
+graph = Graph(
+    topic_prompt="Complex domain",
+    model_name="anthropic/claude-sonnet-4-5",
+    degree=4,
+    depth=3,
+    max_concurrent=2  # Reduce concurrent calls to avoid rate limits
+)
 ```
 
-Graph complexity scales quadratically with node count during connection analysis, making parameter selection important for large-scale generation.
+Graph complexity scales with node count during connection analysis, making parameter selection important for large-scale generation.

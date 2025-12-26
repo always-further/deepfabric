@@ -23,7 +23,7 @@ Standard imports provide access to the core functionality:
 ```python
 from deepfabric import (
     Tree, Graph, DataSetGenerator,
-    Dataset, DeepFabricConfig
+    DeepFabricConfig
 )
 ```
 

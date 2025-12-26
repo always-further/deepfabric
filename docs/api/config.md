@@ -1,6 +1,6 @@
 # Configuration API
 
-The DeepFabricConfig class provides programmatic access to YAML configuration loading, validation, and parameter management. This API enables dynamic configuration manipulation, parameter override, and integration with external configuration systems.
+The DeepFabricConfig class provides programmatic access to YAML configuration loading and parameter management. This API enables configuration loading, validation, and parameter extraction for use with Tree, Graph, and DataSetGenerator classes.
 
 ## DeepFabricConfig Class
 
@@ -13,9 +13,51 @@ from deepfabric import DeepFabricConfig
 config = DeepFabricConfig.from_yaml("config.yaml")
 
 # Access configuration sections
-tree_args = config.get_tree_args()
-generator_args = config.get_engine_args()
-dataset_config = config.get_dataset_config()
+topics_params = config.get_topics_params()
+generation_params = config.get_generation_params()
+output_config = config.get_output_config()
+```
+
+### Configuration Structure
+
+DeepFabric uses a structured YAML configuration format:
+
+```yaml
+# Optional shared LLM defaults
+llm:
+  provider: "openai"
+  model: "gpt-4"
+  temperature: 0.7
+
+# Topic generation configuration (required)
+topics:
+  prompt: "Machine learning concepts"
+  system_prompt: "You are creating educational topic structures."
+  mode: "tree"  # or "graph"
+  depth: 3
+  degree: 4
+
+# Sample generation configuration (required)
+generation:
+  system_prompt: "You are an expert instructor."
+  instructions: "Create detailed explanations with practical examples."
+  conversation:
+    type: "basic"  # or "chain_of_thought"
+    reasoning_style: "freetext"  # or "agent"
+
+# Output configuration (required)
+output:
+  save_as: "dataset.jsonl"
+  include_system_message: true
+  num_samples: 100
+  batch_size: 5
+
+# Optional integrations
+huggingface:
+  repository: "username/dataset-name"
+
+kaggle:
+  handle: "username/dataset-name"
 ```
 
 ### Loading Configurations
@@ -28,39 +70,21 @@ Class method for loading configurations from YAML files:
 config = DeepFabricConfig.from_yaml("production_config.yaml")
 ```
 
-Supports full YAML syntax including comments, multi-line strings, and complex nested structures.
+Raises `ConfigurationError` if the file is not found, contains invalid YAML, or uses the old configuration format.
 
-#### from_dict(config_dict: Dict)
+### Parameter Extraction Methods
 
-Create configuration from Python dictionaries:
+#### get_topics_params(**overrides)
 
-```python
-config_data = {
-    "dataset_system_prompt": "Custom system prompt",
-    "topic_tree": {
-    "topic_prompt": "Programming concepts",
-    "degree": 4,
-    "depth": 2
-    }
-}
-
-config = DeepFabricConfig.from_dict(config_data)
-```
-
-Enables programmatic configuration construction and dynamic modification.
-
-### Configuration Access
-
-#### get_tree_args(**overrides)
-
-Extract tree parameters with optional overrides for direct use with Tree constructor:
+Extract topic parameters with optional overrides for use with Tree or Graph constructors:
 
 ```python
 # Basic usage
-tree_args = config.get_tree_args()
+topics_params = config.get_topics_params()
+tree = Tree(**topics_params)
 
 # With overrides
-tree_args = config.get_tree_args(
+topics_params = config.get_topics_params(
     degree=5,
     temperature=0.9,
     provider="anthropic",
@@ -68,50 +92,59 @@ tree_args = config.get_tree_args(
 )
 ```
 
-Overrides merge with base configuration, enabling parameter experimentation without modifying files.
+**Returns:** Dictionary with keys:
+- `topic_prompt`: The seed topic
+- `topic_system_prompt`: System prompt for topic generation
+- `provider`: LLM provider name
+- `model_name`: Model name
+- `temperature`: Generation temperature
+- `base_url`: Optional API base URL
+- `depth`: Tree/graph depth
+- `degree`: Branching factor
+- `max_concurrent`: Maximum concurrent LLM calls
 
-#### get_topic_graph_args(**overrides)
+#### get_generation_params(**overrides)
 
-Extract graph parameters for direct use with Graph constructor:
-
-```python
-graph_args = config.get_topic_graph_args(
-    degree=4,
-    depth=3,
-    temperature=0.8
-)
-```
-
-Returns appropriate arguments for Graph class instantiation.
-
-#### get_engine_args(**overrides)
-
-Extract generator parameters for direct use with DataSetGenerator constructor:
+Extract generator parameters for use with DataSetGenerator constructor:
 
 ```python
-generator_args = config.get_engine_args(
-    temperature=0.7,
+generation_params = config.get_generation_params(
+    temperature=0.8,
     provider="openai",
-    model="gpt-4",
-    max_retries=5
+    model="gpt-4"
 )
+generator = DataSetGenerator(**generation_params)
 ```
 
-Enables dynamic adjustment of generation parameters.
+**Returns:** Dictionary with keys including:
+- `generation_system_prompt`: System prompt for generation
+- `instructions`: Content generation instructions
+- `provider`, `model_name`, `temperature`, `base_url`: LLM settings
+- `max_retries`, `sample_retries`, `max_tokens`: Request configuration
+- `rate_limit`: Rate limiting configuration
+- `conversation_type`, `reasoning_style`, `agent_mode`: Conversation settings
+- `min_turns`, `max_turns`, `min_tool_calls`: Agent mode settings
+- `sys_msg`, `dataset_system_prompt`: Output settings
+- Tool configuration if specified
 
-#### get_dataset_config()
+#### get_output_config()
 
-Access dataset creation and output configuration:
+Access output configuration:
 
 ```python
-dataset_config = config.get_dataset_config()
+output_config = config.get_output_config()
 
-# Access specific sections
-creation_params = dataset_config["creation"]
-output_path = dataset_config["save_as"]
+save_path = output_config["save_as"]
+num_samples = output_config["num_samples"]
+batch_size = output_config["batch_size"]
 ```
 
-Returns dictionary with dataset-specific configuration including execution parameters and file paths.
+**Returns:** Dictionary with keys:
+- `system_prompt`: Output system prompt
+- `include_system_message`: Whether to include system messages
+- `num_samples`: Number of samples to generate
+- `batch_size`: Batch size for generation
+- `save_as`: Output file path
 
 #### get_huggingface_config()
 
@@ -120,164 +153,58 @@ Extract Hugging Face Hub integration settings:
 ```python
 hf_config = config.get_huggingface_config()
 
-repository = hf_config.get("repository")
-token = hf_config.get("token")
-tags = hf_config.get("tags", [])
+if hf_config:
+    repository = hf_config.get("repository")
+    token = hf_config.get("token")
 ```
 
 Returns empty dictionary if Hugging Face integration is not configured.
 
-### Placeholder System
+#### get_kaggle_config()
 
-The configuration system supports placeholder substitution for parameter reuse:
-
-#### System Prompt Placeholders
-
-System prompts should be specified directly in each section where they're needed:
+Extract Kaggle integration settings:
 
 ```python
-# Configuration with placeholder
-config_data = {
-    "dataset_system_prompt": "You are an educational content creator.",
-    "topic_tree": {
-        "args": {
-            "topic_system_prompt": "You are an educational content creator."
-        }
-    },
-    "data_engine": {
-        "args": {
-            "generation_system_prompt": "You are an educational content creator."
-        }
-    }
-}
+kaggle_config = config.get_kaggle_config()
 
-config = DeepFabricConfig.from_dict(config_data)
-
-# Placeholders are resolved automatically
-tree_params = config.get_tree_args()
-tree = Tree(**tree_params)
-assert tree.topic_system_prompt == "You are an educational content creator."
+if kaggle_config:
+    handle = kaggle_config.get("handle")
 ```
 
-#### Custom Placeholders
+Returns empty dictionary if Kaggle integration is not configured.
 
-Extend the placeholder system for custom variables:
+#### get_configured_providers()
+
+Get the set of LLM providers used in this configuration:
 
 ```python
-config.add_placeholder("model_name_placeholder", "openai/gpt-4")
-config.add_placeholder("temperature_placeholder", 0.8)
-
-# Use in configuration
-config_with_placeholders = {
-    "topic_tree": {
-        "args": {
-            "model_name": "<model_name_placeholder>",
-            "temperature": "<temperature_placeholder>"
-        }
-    }
-}
+providers = config.get_configured_providers()
+# Returns: {"openai", "anthropic"} for example
 ```
 
-### Configuration Validation
+### LLM Configuration Inheritance
 
-#### validate()
+The configuration system supports LLM setting inheritance:
 
-Comprehensive configuration validation:
+1. **Section-specific** (`topics.llm`, `generation.llm`): Highest priority
+2. **Top-level shared** (`llm`): Used if section-specific not set
+3. **Built-in defaults**: Used if neither is set
 
-```python
-validation_result = config.validate()
+```yaml
+# Shared defaults
+llm:
+  provider: "openai"
+  model: "gpt-4"
 
-if validation_result.is_valid:
-    print("Configuration is valid")
-else:
-    for error in validation_result.errors:
-        print(f"Error: {error}")
-    for warning in validation_result.warnings:
-        print(f"Warning: {warning}")
-```
+topics:
+  prompt: "..."
+  # Uses openai/gpt-4 from shared llm config
 
-Returns ValidationResult object with detailed feedback about configuration issues.
-
-#### check_required_fields()
-
-Verify presence of essential configuration sections:
-
-```python
-missing_fields = config.check_required_fields()
-if missing_fields:
-    print(f"Missing required fields: {missing_fields}")
-```
-
-#### validate_parameters()
-
-Check parameter values for common issues:
-
-```python
-parameter_issues = config.validate_parameters()
-for issue in parameter_issues:
-    print(f"Parameter issue: {issue.field} - {issue.message}")
-```
-
-### Provider Integration
-
-#### construct_model_string(provider: str, model: str)
-
-```python
-from deepfabric.config import construct_model_string
-
-model_string = construct_model_string("openai", "gpt-4")
-# Returns: "openai/gpt-4"
-
-model_string = construct_model_string("anthropic", "claude-sonnet-4-5")
-# Returns: "anthropic/claude-sonnet-4-5"
-```
-
-#### get_provider_config(provider: str)
-
-Extract provider-specific configuration:
-
-```python
-openai_config = config.get_provider_config("openai")
-anthropic_config = config.get_provider_config("anthropic")
-```
-
-Returns provider-specific settings including authentication requirements and default parameters.
-
-### Advanced Usage
-
-#### Configuration Merging
-
-Merge multiple configurations for complex scenarios:
-
-```python
-base_config = DeepFabricConfig.from_yaml("base_config.yaml")
-override_config = DeepFabricConfig.from_yaml("experiment_overrides.yaml")
-
-merged_config = base_config.merge(override_config)
-```
-
-#### Environment Variable Integration
-
-Inject environment variables into configuration:
-
-```python
-config = DeepFabricConfig.from_yaml("config.yaml")
-config.inject_environment_variables()
-
-# Automatically populates API keys and other environment-based settings
-```
-
-#### Dynamic Parameter Updates
-
-Modify configuration parameters at runtime:
-
-```python
-config.update_parameter("topic_tree.args.degree", 5)
-config.update_parameter("data_engine.args.temperature", 0.9)
-
-# Updated parameters reflected in subsequent parameter extraction
-updated_params = config.get_tree_args()
-updated_tree = Tree(**updated_params)
+generation:
+  llm:
+    provider: "anthropic"
+    model: "claude-sonnet-4-5"
+  # Uses anthropic/claude-sonnet-4-5 (overrides shared)
 ```
 
 ### Error Handling
@@ -285,41 +212,69 @@ updated_tree = Tree(**updated_params)
 Configuration-specific error handling:
 
 ```python
-from deepfabric import ConfigurationError, ValidationError
+from deepfabric import ConfigurationError
 
 try:
     config = DeepFabricConfig.from_yaml("config.yaml")
-    tree = Tree(**config.get_tree_args())
 except ConfigurationError as e:
-    print(f"Configuration loading failed: {e}")
-except ValidationError as e:
-    print(f"Configuration validation failed: {e}")
+    print(f"Configuration error: {e}")
 ```
 
-### Integration Examples
+Common error scenarios:
+- File not found
+- Invalid YAML syntax
+- Old configuration format (migration required)
+- Invalid structure or missing required fields
 
-Common patterns for configuration integration:
+### Migration from Old Format
+
+If you have configuration files using the old format, DeepFabric will provide a migration message showing the mapping:
+
+| Old Format | New Format |
+|------------|------------|
+| `dataset_system_prompt` | `output.system_prompt` |
+| `topic_tree` / `topic_graph` | `topics` (with `mode: tree\|graph`) |
+| `topic_tree.topic_prompt` | `topics.prompt` |
+| `data_engine` | `generation` |
+| `data_engine.generation_system_prompt` | `generation.system_prompt` |
+| `dataset.creation.num_steps` | `output.num_samples` |
+| `dataset.save_as` | `output.save_as` |
+
+### Integration Example
+
+Complete workflow using configuration:
 
 ```python
-# CLI-style parameter overrides
-def create_generator_with_overrides(config_path, **overrides):
-    config = DeepFabricConfig.from_yaml(config_path)
-    generator_params = config.get_engine_args(**overrides)
-    return DataSetGenerator(**generator_params)
+import asyncio
+from deepfabric import DeepFabricConfig, Tree, DataSetGenerator
 
-generator = create_generator_with_overrides(
-    "base_config.yaml",
-    temperature=0.8,
-    provider="anthropic",
-    model="claude-sonnet-4-5"
-)
+# Load configuration
+config = DeepFabricConfig.from_yaml("config.yaml")
 
-# Multi-environment configuration
-def load_environment_config(environment):
-    base_config = DeepFabricConfig.from_yaml("base_config.yaml")
-    env_overrides = DeepFabricConfig.from_yaml(f"{environment}_overrides.yaml")
-    return base_config.merge(env_overrides)
+# Create topic model
+topics_params = config.get_topics_params()
+tree = Tree(**topics_params)
 
-prod_config = load_environment_config("production")
-dev_config = load_environment_config("development")
+async def build():
+    async for _ in tree.build_async():
+        pass
+
+asyncio.run(build())
+
+# Create generator
+generation_params = config.get_generation_params()
+generator = DataSetGenerator(**generation_params)
+
+# Get output settings
+output = config.get_output_config()
+
+# Generate dataset
+dataset = asyncio.run(generator.create_data_async(
+    num_steps=output["num_samples"],
+    batch_size=output["batch_size"],
+    topic_model=tree
+))
+
+# Save
+dataset.save(output["save_as"])
 ```

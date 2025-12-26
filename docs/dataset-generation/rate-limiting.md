@@ -30,18 +30,20 @@ Each provider has optimized defaults:
 Omit rate limiting config to use provider defaults:
 
 ```yaml
-data_engine:
-  provider: "gemini"
-  model: "gemini-2.0-flash-exp"
+generation:
+  llm:
+    provider: "gemini"
+    model: "gemini-2.0-flash-exp"
   # Rate limiting uses defaults automatically
 ```
 
 ### Custom Configuration
 
 ```yaml
-data_engine:
-  provider: "gemini"
-  model: "gemini-2.0-flash-exp"
+generation:
+  llm:
+    provider: "gemini"
+    model: "gemini-2.0-flash-exp"
 
   rate_limit:
     max_retries: 7
@@ -171,12 +173,11 @@ rate_limit:
 ### Combined with Batch Size
 
 ```yaml
-dataset:
-  creation:
-    batch_size: 2    # Smaller batches reduce rate limit pressure
-    num_steps: 20
+output:
+  batch_size: 2    # Smaller batches reduce rate limit pressure
+  num_samples: 20
 
-data_engine:
+generation:
   rate_limit:
     max_retries: 5
     base_delay: 2.0

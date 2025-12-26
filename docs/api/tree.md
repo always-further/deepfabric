@@ -134,20 +134,6 @@ Each line in the output file represents a complete path from root to leaf topic:
 {"path": ["Root", "Category", "Subtopic"]}
 ```
 
-#### load(filepath: str)
-
-Recreates tree structure from previously saved JSONL files:
-
-```python
-tree = Tree(
-    topic_prompt="Default prompt",
-    model_name="openai/gpt-4"
-)
-tree.load("existing_topics.jsonl")
-```
-
-This enables reuse of topic structures across multiple dataset generation sessions.
-
 #### from_dict_list(dict_list: List[Dict])
 
 Constructs tree from programmatically created topic lists:
@@ -178,53 +164,6 @@ children = tree.get_children(node_id)
 # Tree statistics
 depth = tree.get_max_depth()
 breadth = tree.get_average_breadth()
-```
-
-### Advanced Usage
-
-#### Incremental Building
-
-Build trees incrementally for large structures:
-
-```python
-tree = Tree(
-    topic_prompt="Complex domain",
-    model_name="openai/gpt-4",
-    degree=4,
-    depth=3
-)
-tree.build_level(0)  # Build root level
-# Inspect and modify if needed
-tree.build_level(1)  # Build next level
-tree.build_remaining()  # Complete construction
-```
-
-#### Custom Node Processing
-
-Apply custom processing to nodes during or after construction:
-
-```python
-def process_node(node):
-    # Custom node validation or modification
-    return modified_node
-
-tree.apply_node_processor(process_node)
-```
-
-#### Quality Control
-
-Implement quality checks during tree construction:
-
-```python
-def quality_filter(topic_text, parent_context):
-    # Return True to accept topic, False to regenerate
-    return len(topic_text) > 10 and "inappropriate" not in topic_text.lower()
-
-tree.set_quality_filter(quality_filter)
-
-import asyncio
-
-consume_tree(tree)
 ```
 
 ## Error Handling

@@ -44,7 +44,7 @@ generator = DataSetGenerator(
 
 **conversation_type** (str, optional): Type of conversation format. One of: `basic`, `chain_of_thought`. Default: `basic`.
 
-**reasoning_style** (str, optional): Style of reasoning for CoT formats. One of: `mathematical`, `logical`, `general`. Default: `general`.
+**reasoning_style** (str, optional): Style of reasoning for chain_of_thought type. One of: `freetext` (natural language reasoning), `agent` (structured for tool-calling). Default: None.
 
 **sys_msg** (bool, optional): Whether to include system messages in the dataset. Default: True.
 
@@ -122,7 +122,7 @@ Enables custom topic selection and incremental dataset building.
 
 ### Conversation Types and Templates
 
-The generator uses different conversation types to control the structure and format of generated content. Each type uses a specialized internal template optimized for that format.
+The generator uses different conversation types to control the structure and format of generated content.
 
 #### Available Conversation Types
 
@@ -140,41 +140,49 @@ generator = DataSetGenerator(
     conversation_type="basic"  # Default
 )
 
-# Chain of Thought formats
+# Chain of Thought with reasoning
 generator = DataSetGenerator(
     instructions="Create reasoning examples",
     generation_system_prompt="You are a reasoning expert",
     provider="openai",
     model_name="gpt-4",
-    conversation_type="cot_freetext",  # Free-text reasoning
-    reasoning_style="mathematical"  # Optional: mathematical, logical, general
+    conversation_type="chain_of_thought",
+    reasoning_style="freetext"  # freetext or agent
 )
 ```
 
 **Supported conversation types:**
-- **basic**: Standard conversational format
-- **cot_freetext**: Chain of Thought with free-text reasoning
-- **cot_structured**: Chain of Thought with structured reasoning steps
-- **cot_hybrid**: Hybrid format combining structured and free-text reasoning
-- **agent_cot_tools**: Agent interactions with tool calling
-- **agent_cot_hybrid**: Agent with hybrid reasoning and tools
-- **agent_cot_multi_turn**: Multi-turn agent conversations
-- **xlam_multi_turn**: XLAM format multi-turn conversations
+- **basic**: Standard conversational format (question/answer pairs)
+- **chain_of_thought**: Includes reasoning traces in responses
 
 #### Reasoning Styles
 
-For Chain of Thought conversation types, specify the reasoning style:
+For `chain_of_thought` conversation type, specify the reasoning style:
 
 ```python
 generator = DataSetGenerator(
-    instructions="Create math problem solutions",
-    generation_system_prompt="You are a math tutor",
+    instructions="Create problem solutions with reasoning",
+    generation_system_prompt="You are an expert problem solver",
     provider="openai",
     model_name="gpt-4",
-    conversation_type="cot_structured",
-    reasoning_style="mathematical"  # mathematical, logical, or general
+    conversation_type="chain_of_thought",
+    reasoning_style="freetext"  # Natural language reasoning
+)
+
+# For agent/tool-calling scenarios
+generator = DataSetGenerator(
+    instructions="Create tool-calling examples",
+    generation_system_prompt="You are an AI assistant with tools",
+    provider="openai",
+    model_name="gpt-4",
+    conversation_type="chain_of_thought",
+    reasoning_style="agent"  # Structured step-by-step for tool-calling
 )
 ```
+
+**Supported reasoning styles:**
+- **freetext**: Natural language reasoning traces
+- **agent**: Structured step-by-step reasoning for tool-calling scenarios
 
 #### Customizing Content Generation
 
@@ -219,13 +227,12 @@ generator = DataSetGenerator(
 
 **3. Example Data for Few-Shot Learning:**
 
-Provide examples to guide the generation style:
+Provide examples to guide the generation style using a HuggingFace Dataset:
 
 ```python
-from deepfabric import Dataset
+from datasets import load_dataset
 
-example_dataset = Dataset()
-example_dataset.load("examples.jsonl")
+example_dataset = load_dataset("json", data_files="examples.jsonl")["train"]
 
 generator = DataSetGenerator(
     instructions="Follow the style of the provided examples",
