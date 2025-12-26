@@ -38,7 +38,7 @@ deepfabric upload-hf dataset.jsonl --repo username/dataset-name
 
 ## Repository Management
 
-The upload command handles repository creation and updates automatically:
+The `upload-hf` command handles repository creation and updates automatically:
 
 **New Repositories** are created automatically when uploading to non-existent repositories, using the dataset filename as the initial commit message.
 

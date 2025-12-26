@@ -485,7 +485,7 @@ def test_upload_command(mock_uploader, cli_runner):
         # Set HF_TOKEN environment variable for test
         os.environ["HF_TOKEN"] = "test_token"  # noqa: S105 # nosec
 
-        result = cli_runner.invoke(cli, ["upload", temp_path, "--repo", "test/repo"])
+        result = cli_runner.invoke(cli, ["upload-hf", temp_path, "--repo", "test/repo"])
 
         assert result.exit_code == 0
         assert "Dataset uploaded successfully" in result.output

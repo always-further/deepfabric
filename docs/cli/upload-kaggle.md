@@ -12,7 +12,7 @@ deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name
 
 ## Authentication Methods
 
-The upload command supports multiple authentication approaches:
+The `upload-kaggle` command supports multiple authentication approaches:
 
 **Environment Variables** provide the most secure approach for production environments:
 
