@@ -213,6 +213,14 @@ deepfabric generate config.yaml
 
 DeepFabric returns standard HuggingFace datasets, making it easy to integrate with any training framework.
 
+### Colab Notebooks:
+
+A quick way of seeing DeepFabric in action is via our notebooks in the [notebooks/](./notebooks/) folder or on Google Colab:
+
+**Qwen4b Blender MCP**:
+
+[![Qwen4b Blender MCP](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1EG1V40v5xkJKLf6Ra6W4378vYqlZNVWqb)
+
 ### 1. Generate Dataset
 
 ```bash
