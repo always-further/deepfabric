@@ -846,8 +846,10 @@ def info() -> None:
             ("generate", "Generate training data from configuration"),
             ("validate", "Validate a configuration file"),
             ("visualize", "Create SVG visualization of a topic graph"),
-            ("upload", "Upload dataset to Hugging Face Hub"),
+            ("upload-hf", "Upload dataset to Hugging Face Hub"),
             ("upload-kaggle", "Upload dataset to Kaggle"),
+            ("evaluate", "Evaluate a fine-tuned model on tool-calling tasks"),
+            ("import-tools", "Import tool definitions from external sources"),
             ("info", "Show this information"),
         ]
         for cmd, desc in commands:
@@ -863,7 +865,7 @@ def info() -> None:
             tui.console.print(f"  [yellow]{var}[/yellow] - {desc}")
 
         tui.console.print(
-            "\nFor more information, visit: [link]https://github.com/RedDotRocket/deepfabric[/link]"
+            "\nFor more information, visit: [link]https://github.com/always-further/deepfabric[/link]"
         )
 
     except Exception as e:
