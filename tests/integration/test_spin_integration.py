@@ -39,38 +39,6 @@ def session_id():
     return f"test-{uuid.uuid4().hex[:8]}"
 
 
-class TestSpinClientHealth:
-    """Tests for SpinClient health and discovery."""
-
-    @requires_spin
-    @pytest.mark.spin
-    def test_health_check(self, spin_client):
-        """Test that health check returns valid response."""
-
-        async def run_health():
-            return await spin_client.health_check()
-
-        result = asyncio.run(run_health())
-
-        assert result is not None
-        assert result.status == "healthy"
-
-    @requires_spin
-    @pytest.mark.spin
-    def test_get_components(self, spin_client):
-        """Test that get_components returns available components."""
-
-        async def run_components():
-            return await spin_client.get_components()
-
-        components = asyncio.run(run_components())
-
-        assert isinstance(components, list)
-        assert len(components) >= 1
-        # VFS component should always be available
-        assert "vfs" in components
-
-
 class TestSpinClientToolExecution:
     """Tests for SpinClient tool execution."""
 

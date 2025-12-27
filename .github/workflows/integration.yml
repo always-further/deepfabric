@@ -37,29 +37,18 @@ jobs:
       - name: Wait for Spin service
         run: |
           echo "Waiting for Spin service to be ready..."
-          echo "Testing connectivity to localhost:3000..."
           for i in {1..30}; do
-            # Try a simple TCP connection first
-            if nc -z localhost 3000 2>/dev/null; then
-              echo "Port 3000 is open, testing HTTP..."
-              # Try the VFS endpoint
-              response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/vfs/execute -X POST \
-                -H "Content-Type: application/json" \
-                -d '{"session_id":"healthcheck","tool":"list_files","args":{"directory":"/"}}' 2>/dev/null || echo "000")
-              echo "HTTP response code: $response"
-              if [ "$response" != "000" ] && [ "$response" != "" ]; then
-                echo "Spin service is ready (HTTP $response)"
-                exit 0
-              fi
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/vfs/execute -X POST \
+              -H "Content-Type: application/json" \
+              -d '{"session_id":"healthcheck","tool":"list_files","args":{"directory":"/"}}' 2>/dev/null || echo "000")
+            if [ "$response" = "200" ]; then
+              echo "Spin service is ready"
+              exit 0
             fi
-            echo "Attempt $i: Spin not ready yet, waiting..."
+            echo "Attempt $i: waiting... (HTTP $response)"
             sleep 2
           done
           echo "Spin service failed to become ready"
-          echo "Final diagnostic:"
-          curl -v http://localhost:3000/vfs/execute -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"session_id":"healthcheck","tool":"list_files","args":{"directory":"/"}}' 2>&1 || true
           exit 1
 
       - name: Set up Python
