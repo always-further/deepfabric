@@ -12,9 +12,9 @@ hide:
 </style>
 <div align="center">
     <p align="center">
-        <img src="images/logo-light.png" alt="DeepFabric Logo" width="500"/>
+        <img src="images/logo-light.png" alt="DeepFabric Logo" width="400"/>
     </p>
-  <h3>Synthetic Training Data for Agents</h3>
+  <h3>Focused Training for more Grounded and Efficient Models</h3>
 
   <p>
     <a href="https://github.com/always-further/deepfabric/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">
@@ -37,6 +37,22 @@ hide:
       <img src="https://img.shields.io/badge/Reddit-r%2Fdeepfabric-FF4500?logo=reddit&logoColor=white" alt="Reddit"/>
     </a>
   </p>
+</div>
+
+<div class="grid cards" markdown>
+
+-   :material-graph-outline: **Diverse Data**
+
+    Topic graph algorithms ensure coverage without redundancy - no overfit from repetitive samples.
+
+-   :material-play-box-outline: **Real Execution**
+
+    Tools run in sandboxed environments, not simulated. Training data reflects actual behavior.
+
+-   :material-check-decagram-outline: **Validated Output**
+
+    Constrained decoding and strict validation ensure correct syntax and structure every time.
+
 </div>
 
 ## Quick Start
