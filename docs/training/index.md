@@ -18,7 +18,7 @@ graph LR
 3. **Load in training** - `load_dataset("user/dataset")`
 4. **Prepare dataset** - `prepare_dataset_for_training()` (optional but recommended)
 5. **Format with template** - `tokenizer.apply_chat_template()`
-6. **Train** - SFTTrainer or Unsloth
+6. **Train** - SFTTrainer, Unsloth etc.
 
 ## Quick Example
 

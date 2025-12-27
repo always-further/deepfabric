@@ -1,3 +1,9 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 <style>
   .md-typeset h1,
   .md-content__button {
@@ -47,7 +53,55 @@
     uv add deepfabric
     ```
 
-Then set your API key and generate your first dataset:
+=== "Development"
+
+    ```bash
+    git clone https://github.com/always-further/deepfabric.git
+    cd deepfabric
+    uv sync --all-extras
+    ```
+
+## Provider Setup
+
+Set your API key for your chosen provider:
+
+=== "OpenAI"
+
+    ```bash
+    export OPENAI_API_KEY="sk-..."
+    ```
+
+=== "Anthropic"
+
+    ```bash
+    export ANTHROPIC_API_KEY="sk-ant-..."
+    ```
+
+=== "Google Gemini"
+
+    ```bash
+    export GEMINI_API_KEY="..."
+    ```
+
+=== "Ollama (Local)"
+
+    ```bash
+    curl -fsSL https://ollama.com/install.sh | sh
+    ollama pull mistral
+    ollama serve
+    ```
+
+    !!! info "No API Key Required"
+        Ollama runs locally, so no API key is needed.
+
+## Verify Installation
+
+```bash
+deepfabric --help
+deepfabric info
+```
+
+Now generate your first dataset:
 
 ```bash title="Generate a dataset"
 export OPENAI_API_KEY="your-key"
@@ -105,6 +159,41 @@ Each of these topics would then be used to generate a corresponding dataset samp
       ]
     }
     ```
+
+## Using Config Files
+
+For more control over dataset generation, create a configuration file:
+
+```yaml title="config.yaml"
+topics:
+  prompt: "Machine learning fundamentals"
+  mode: tree
+  depth: 2
+  degree: 3
+
+generation:
+  system_prompt: "Generate educational Q&A pairs."
+  conversation:
+    type: basic
+  llm:
+    provider: openai
+    model: gpt-4o
+
+output:
+  system_prompt: "You are a helpful ML tutor."
+  num_samples: 5
+  batch_size: 1
+  save_as: "ml-dataset.jsonl"
+```
+
+Then run:
+
+```bash
+deepfabric generate config.yaml
+```
+
+!!! tip "Config vs CLI"
+    Use configuration files for reproducible dataset generation. CLI flags are great for quick experiments.
 
 ## Dataset Types
 

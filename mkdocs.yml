@@ -6,33 +6,32 @@ repo_name: always-further/deepfabric
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started/index.md
   - Dataset Generation:
-    - Overview: dataset-generation/index.md
+    - dataset-generation/index.md
     - Basic Datasets: dataset-generation/basic.md
     - Reasoning Datasets: dataset-generation/reasoning.md
     - Agent Datasets: dataset-generation/agent.md
     - Configuration: dataset-generation/configuration.md
     - Rate Limiting: dataset-generation/rate-limiting.md
   - Tools:
-    - Overview: tools/index.md
+    - tools/index.md
     - Spin Framework: tools/spin.md
     - VFS Component: tools/vfs.md
     - Mock Component: tools/mock.md
     - MCP Integration: tools/mcp.md
     - Custom Tools: tools/custom.md
   - Training:
-    - Overview: training/index.md
+    - training/index.md
     - Dataset Preparation: training/dataset-preparation.md
     - Loading Datasets: training/loading.md
     - Chat Templates: training/chat-templates.md
     - Training Frameworks: training/frameworks.md
   - Evaluation:
-    - Overview: evaluation/index.md
+    - evaluation/index.md
     - Running Evaluation: evaluation/running.md
     - Metrics: evaluation/metrics.md
   - CLI Reference:
-    - Overview: cli/index.md
+    - cli/index.md
     - generate: cli/generate.md
     - validate: cli/validate.md
     - visualize: cli/visualize.md
@@ -41,21 +40,17 @@ nav:
     - import-tools: cli/import-tools.md
     - evaluate: cli/evaluate.md
     - info: cli/info.md
-  - API Reference:
-    - Overview: api/index.md
-    - Tree: api/tree.md
-    - Graph: api/graph.md
-    - DataSetGenerator: api/generator.md
-    - Configuration: api/config.md
 
 theme:
   name: material
+  icon:
+    logo: material/robot-outline
   font:
     text: Nunito
     code: Fira Code
   palette:
     - scheme: default
-      primary: black
+      primary: indigo
       accent: indigo
       toggle:
         icon: material/brightness-7
@@ -67,7 +62,15 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.top
     - navigation.footer
+    - navigation.indexes
     - toc.follow
     - search.highlight
     - search.share
@@ -115,6 +118,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lukehinds/deepfabric
+      link: https://github.com/always-further/deepfabric
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/deepfabric/
+
