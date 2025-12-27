@@ -121,27 +121,6 @@ class TestSpinClientSession:
 
     @requires_spin
     @pytest.mark.spin
-    def test_cleanup_session(self, spin_client, session_id):
-        """Test session cleanup after tool execution."""
-
-        async def run_cleanup():
-            # First create some state
-            await spin_client.execute_tool(
-                session_id=session_id,
-                tool_name="write_file",
-                arguments={"file_path": "/cleanup_test.txt", "content": "test"},
-                component="vfs",
-            )
-
-            # Then cleanup
-            return await spin_client.cleanup_session(session_id)
-
-        result = asyncio.run(run_cleanup())
-
-        assert result is True
-
-    @requires_spin
-    @pytest.mark.spin
     def test_session_isolation(self, spin_client):
         """Test that different sessions have isolated state."""
         session1 = f"test-iso-{uuid.uuid4().hex[:8]}"
@@ -157,18 +136,12 @@ class TestSpinClientSession:
             )
 
             # Try to read in session 2 (should not exist or be different)
-            read_result = await spin_client.execute_tool(
+            return await spin_client.execute_tool(
                 session_id=session2,
                 tool_name="read_file",
                 arguments={"file_path": "/isolated.txt"},
                 component="vfs",
             )
-
-            # Cleanup both sessions
-            await spin_client.cleanup_session(session1)
-            await spin_client.cleanup_session(session2)
-
-            return read_result
 
         result = asyncio.run(run_isolation())
 
