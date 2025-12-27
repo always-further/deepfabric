@@ -27,7 +27,7 @@
     <a href="https://discord.gg/pPcjYzGvbS">
       <img src="https://img.shields.io/discord/1384081906773131274?color=7289da&label=Discord&logo=discord&logoColor=white" alt="Discord"/>
     </a>
-        <a href="https://www.reddit.com/r/deepfabric/">
+      <a href="https://www.reddit.com/r/deepfabric/">
       <img src="https://img.shields.io/badge/Reddit-r%2Fdeepfabric-FF4500?logo=reddit&logoColor=white" alt="Reddit"/>
     </a>
   </p>
