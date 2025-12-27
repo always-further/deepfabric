@@ -60,9 +60,9 @@ This will now be accessible at `http://localhost:3000`.
 
 Follow the [Spin installation guide](https://spinframework.dev/v3/install) for your OS.
 
-# Build and run
+and from the `tools-sdk/` directory:
+
 ```bash
-cd tools-sdk
 spin build
 spin up
 ```

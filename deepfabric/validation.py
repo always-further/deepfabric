@@ -79,7 +79,7 @@ def validate_path_requirements(
             for steps, batch in optimal_combinations[:3]:  # Show top 3
                 total_samples = steps * batch
                 recommendations.append(
-                    f"    --num-steps {steps} --batch-size {batch}  (generates {total_samples} samples)"
+                    f"    --num-samples {steps} --batch-size {batch}  (generates {total_samples} samples)"
                 )
 
         recommendations.extend(

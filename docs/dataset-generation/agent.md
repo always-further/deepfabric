@@ -1,6 +1,6 @@
 # Agent Datasets
 
-Agent datasets train models to use tools. DeepFabric supports two modes: single-turn (one-shot tool calls) and multi-turn (extended conversations with multiple tool interactions). If you're unsure which to use, start with single-turn, multui-turn is more brittle and requires careful configuration and is not needed for most training scenarios.
+Agent datasets train models to use tools. DeepFabric supports two modes: single-turn (one-shot tool calls) and multi-turn (extended conversations with multiple tool interactions). If you're unsure which to use, start with single-turn, multi-turn is more brittle and requires careful configuration and is not needed for most training scenarios.
 
 **Prerequisites**: Agent datasets require the Spin tool service. See [Tools](../tools/index.md) for setup instructions, or just use docker:
 
@@ -158,21 +158,6 @@ Multi-turn datasets include:
             "role": "user"
         },
         {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
             "content": "To assist you in creating a new version control configuration file for your CI/CD pipeline, let's follow these steps:\n\n### Step 1: Determine the Requirements\n- **Version Control System (VCS):** Identify the VCS you are integrating with (e.g., Git, SVN).\n- **CI/CD Platform:** Specify the CI/CD platform you are using (e.g., Jenkins, GitLab CI, GitHub Actions).\n- **Pipeline Stages:** Define the stages of your pipeline (e.g., build, test, deploy).\n\n### Step 2: Create a Basic Configuration File\nLet's create a basic configuration file template. I'll guide you through writing a YAML file, which is commonly used for CI/CD configurations.\n\n#### Example YAML Configuration for GitLab CI\n```yaml\n# .gitlab-ci.yml\nstages:\n  - build\n  - test\n  - deploy\n\nbuild_job:\n  stage: build\n  script:\n    - echo \"Building the project...\"\n    - make build\n\nunit_tests:\n  stage: test\n  script:\n    - echo \"Running unit tests...\"\n    - make test\n\ndeploy_job:\n  stage: deploy\n  script:\n    - echo \"Deploying the project...\"\n    - make deploy\n```\n\n### Step 3: Write the Configuration File\nLet's write this configuration to a file. Please provide the desired file path, or I can use a default path for you.\n\n```python\n# Execute the write_file tool\nwrite_file(\n    file_path=\"./.gitlab-ci.yml\",\n    content=\"\"\"\n    stages:\n      - build\n      - test\n      - deploy\n    \n    build_job:\n      stage: build\n      script:\n        - echo \\\"Building the project...\\\"\n        - make build\n    \n    unit_tests:\n      stage: test\n      script:\n        - echo \\\"Running unit tests...\\\"\n        - make test\n    \n    deploy_job:\n      stage: deploy\n      script:\n        - echo \\\"Deploying the project...\\\"\n        - make deploy\n    \"\"\"\n)\n```\n\n### Step 4: Verify and Customize\n- **Verify:** Ensure the configuration file is correctly placed in your repository.\n- **Customize:** Modify the script commands to match your project's build, test, and deploy commands.\n\n### Step 5: Test the Configuration\n- **Commit and Push:** Add the configuration file to your version control and push it to trigger the CI/CD pipeline.\n- **Monitor:** Check the CI/CD platform for any errors and adjust the configuration as needed.\n\nIf you need further customization or encounter any issues, feel free to ask for more detailed guidance!",
             "role": "assistant"
         },
@@ -198,26 +183,6 @@ Multi-turn datasets include:
             "content": "Error (FileNotFound): File not found: ./.gitlab-ci.yml",
             "role": "tool",
             "tool_call_id": "hEsYuJs4x"
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
-        },
-        {
-            "content": "",
-            "role": "assistant",
-            "tool_calls": []
         },
         {
             "content": "It seems there was an error when trying to read the configuration file, indicating that the file might not have been created or saved correctly. Let's address this step-by-step:\n\n### Step 1: Verify File Creation\n- **Check File Path:** Ensure that the file path `./.gitlab-ci.yml` is correct and that the file was created in the intended directory.\n- **Recreate the File:** If the file is missing, we can recreate it using the `write_file` tool.\n\n### Step 2: Recreate the Configuration File\nLet's recreate the configuration file using the template provided earlier. I'll execute the `write_file` tool for you:\n\n```python\nwrite_file(\n    file_path=\"./.gitlab-ci.yml\",\n    content=\"\"\"\n    stages:\n      - build\n      - test\n      - deploy\n    \n    build_job:\n      stage: build\n      script:\n        - echo \\\"Building the project...\\\"\n        - make build\n    \n    unit_tests:\n      stage: test\n      script:\n        - echo \\\"Running unit tests...\\\"\n        - make test\n    \n    deploy_job:\n      stage: deploy\n      script:\n        - echo \\\"Deploying the project...\\\"\n        - make deploy\n    \"\"\"\n)\n```\n\n### Step 3: Verify File Creation\n- **List Files:** Use the `list_files` tool to ensure the file is now present in the session.\n\n### Step 4: Integrate and Test\n- **Commit the File:** Add the `.gitlab-ci.yml` file to your version control system and push it to the repository.\n- **Trigger the Pipeline:** This should automatically trigger the CI/CD pipeline if it's set up to run on changes.\n- **Monitor the Pipeline:** Check your CI/CD platform for any errors or issues during the pipeline execution.\n\n### Step 5: Troubleshoot and Adjust\n- **Review Logs:** If there are errors, review the logs to identify any issues.\n- **Adjust Configuration:** Modify the configuration file as needed based on the feedback from the pipeline execution.\n\nIf you encounter any issues or need further assistance, feel free to ask!",
