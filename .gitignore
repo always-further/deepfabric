@@ -134,3 +134,6 @@ formats/*
 .coverage.*
 tools-sdk/.spin/*
 notebooks/lora-output/*
+
+# docs
+site/

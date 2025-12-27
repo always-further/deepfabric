@@ -10,40 +10,40 @@ The Mock component executes tools with configurable responses. Load any tool sch
 
 ## Loading Tool Schemas
 
-### From JSON/YAML
+=== "From JSON/YAML"
 
-```bash
-curl -X POST http://localhost:3000/mock/load-schema \
-  -H "Content-Type: application/json" \
-  -d '[
-    {
-      "name": "get_weather",
-      "description": "Get weather for a location",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "location": {"type": "string"}
-        },
-        "required": ["location"]
-      },
-      "mock_response": {"temperature": 72, "condition": "sunny"}
-    }
-  ]'
-```
+    ```bash title="Load schema"
+    curl -X POST http://localhost:3000/mock/load-schema \
+      -H "Content-Type: application/json" \
+      -d '[
+        {
+          "name": "get_weather",
+          "description": "Get weather for a location",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "location": {"type": "string"}
+            },
+            "required": ["location"]
+          },
+          "mock_response": {"temperature": 72, "condition": "sunny"}
+        }
+      ]'
+    ```
 
-### From MCP Server
+=== "From MCP Server"
 
-Pull tools from a Model Context Protocol server:
+    Pull tools from a Model Context Protocol server:
 
-```bash
-curl -X POST http://localhost:3000/mock/pull \
-  -H "Content-Type: application/json" \
-  -d '{"url": "http://localhost:8000/mcp"}'
-```
+    ```bash title="Pull from MCP"
+    curl -X POST http://localhost:3000/mock/pull \
+      -H "Content-Type: application/json" \
+      -d '{"url": "http://localhost:8000/mcp"}'
+    ```
 
 ## Configuration
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -54,7 +54,8 @@ generation:
         - search_code
 ```
 
-The `mock` component routes to `/mock/execute`. Tool definitions are loaded from `tools_endpoint` and filtered by the tool names listed under `components.mock`.
+!!! info "Tool Loading"
+    The `mock` component routes to `/mock/execute`. Tool definitions are loaded from `tools_endpoint` and filtered by the tool names listed under `components.mock`.
 
 ## Mock Responses
 
@@ -62,7 +63,7 @@ The `mock` component routes to `/mock/execute`. Tool definitions are loaded from
 
 Without a `mock_response`, the component echoes the tool call:
 
-```json
+```json title="Default echo response"
 {
   "tool": "get_weather",
   "arguments": {"location": "Seattle"},
@@ -74,7 +75,7 @@ Without a `mock_response`, the component echoes the tool call:
 
 Define a static response in the schema:
 
-```json
+```json title="Static mock response"
 {
   "name": "get_weather",
   "mock_response": {
@@ -88,7 +89,7 @@ Define a static response in the schema:
 
 Use `{{argument_name}}` to include call arguments in responses:
 
-```json
+```json title="Template response"
 {
   "name": "get_weather",
   "mock_response": {
@@ -99,6 +100,7 @@ Use `{{argument_name}}` to include call arguments in responses:
 ```
 
 Calling `get_weather(location="Seattle")` returns:
+
 ```json
 {"location": "Seattle", "temperature": 72}
 ```
@@ -107,7 +109,7 @@ Calling `get_weather(location="Seattle")` returns:
 
 Fixtures return specific responses based on argument matching:
 
-```bash
+```bash title="Add fixture"
 curl -X POST http://localhost:3000/mock/add-fixture \
   -H "Content-Type: application/json" \
   -d '{
@@ -117,13 +119,14 @@ curl -X POST http://localhost:3000/mock/add-fixture \
   }'
 ```
 
-Now `get_weather(location="Seattle")` returns the rainy fixture, while other locations use the default mock response.
+!!! tip "Fixture Priority"
+    Now `get_weather(location="Seattle")` returns the rainy fixture, while other locations use the default mock response.
 
 ### Multiple Fixtures
 
 Add fixtures for different argument combinations:
 
-```bash
+```bash title="Multiple fixtures"
 # Seattle fixture
 curl -X POST .../add-fixture -d '{
   "name": "search_code",
@@ -153,18 +156,19 @@ curl -X POST .../add-fixture -d '{
 
 ### Execute Request
 
-```json
+```json title="Execute format"
 {
   "name": "tool_name",
   "arguments": {"arg1": "value1"}
 }
 ```
 
-Note: Mock execute uses `name` and `arguments`, unlike VFS which uses `tool` and `args`.
+!!! warning "Different Format"
+    Mock execute uses `name` and `arguments`, unlike VFS which uses `tool` and `args`.
 
 ## Example: GitHub Tools
 
-```yaml
+```yaml title="config.yaml"
 # Load GitHub tool schemas via mock component
 generation:
   tools:
@@ -179,7 +183,7 @@ generation:
 
 Then load schemas and fixtures:
 
-```bash
+```bash title="Load and configure"
 # Load GitHub tools
 curl -X POST http://localhost:3000/mock/load-schema \
   -d '[{"name": "create_issue", "description": "Create GitHub issue", ...}]'

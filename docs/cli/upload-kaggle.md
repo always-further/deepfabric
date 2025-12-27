@@ -6,7 +6,7 @@ The `upload-kaggle` command publishes datasets to Kaggle.
 
 Upload a dataset file to Kaggle:
 
-```bash
+```bash title="Basic upload"
 deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name
 ```
 
@@ -14,27 +14,31 @@ deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name
 
 The `upload-kaggle` command supports multiple authentication approaches:
 
-**Environment Variables** provide the most secure approach for production environments:
+=== "Environment Variables"
 
-```bash
-export KAGGLE_USERNAME="your-kaggle-username"
-export KAGGLE_KEY="your-kaggle-api-key"
-deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name
-```
+    Most secure approach for production environments:
 
-**Command Line Options** enable credential specification directly in the command:
+    ```bash
+    export KAGGLE_USERNAME="your-kaggle-username"
+    export KAGGLE_KEY="your-kaggle-api-key"
+    deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name
+    ```
 
-```bash
-deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name --username your-username --key your-api-key
-```
+=== "Command Line"
+
+    Credential specification directly in the command:
+
+    ```bash
+    deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name --username your-username --key your-api-key
+    ```
 
 ## Options
 
 | Option | Description |
 |--------|-------------|
-| `--handle` | Kaggle dataset handle (e.g., username/dataset-name) - required |
-| `--username` | Kaggle username (or set KAGGLE_USERNAME env var) |
-| `--key` | Kaggle API key (or set KAGGLE_KEY env var) |
+| `--handle` | Kaggle dataset handle (required) |
+| `--username` | Kaggle username (or set `KAGGLE_USERNAME` env var) |
+| `--key` | Kaggle API key (or set `KAGGLE_KEY` env var) |
 | `--tags` | Tags for the dataset (can be specified multiple times) |
 | `--version-notes` | Version notes for the dataset update |
 | `--description` | Description for the dataset |
@@ -43,7 +47,7 @@ deepfabric upload-kaggle dataset.jsonl --handle username/dataset-name --username
 
 Customize dataset discoverability through tag specification:
 
-```bash
+```bash title="Add tags"
 deepfabric upload-kaggle dataset.jsonl \
   --handle username/educational-content \
   --tags educational \
@@ -55,7 +59,7 @@ deepfabric upload-kaggle dataset.jsonl \
 
 When updating an existing dataset, provide version notes to document changes:
 
-```bash
+```bash title="Version notes"
 deepfabric upload-kaggle dataset.jsonl \
   --handle username/my-dataset \
   --version-notes "Added 500 new samples for edge cases"
@@ -65,7 +69,7 @@ deepfabric upload-kaggle dataset.jsonl \
 
 Provide a description for new datasets:
 
-```bash
+```bash title="With description"
 deepfabric upload-kaggle dataset.jsonl \
   --handle username/new-dataset \
   --description "Synthetic dataset for training code generation models"
@@ -75,7 +79,7 @@ deepfabric upload-kaggle dataset.jsonl \
 
 Upload multiple related datasets:
 
-```bash
+```bash title="Multiple uploads"
 # Upload training and validation sets
 deepfabric upload-kaggle train_dataset.jsonl --handle myorg/comprehensive-dataset --tags training
 deepfabric upload-kaggle val_dataset.jsonl --handle myorg/comprehensive-dataset --tags validation

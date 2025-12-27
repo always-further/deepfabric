@@ -339,7 +339,6 @@ config = EvaluatorConfig(
         model_path="Qwen/Qwen2.5-7B-Instruct",    # Base model
         adapter_path="./output/lora-adapter",     # LoRA adapter path
         backend="transformers",
-        use_unsloth=True,      # Use Unsloth for adapters trained with Unsloth
         load_in_4bit=True,     # 4-bit quantization
         max_seq_length=2048,
     ),

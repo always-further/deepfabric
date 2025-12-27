@@ -2,23 +2,30 @@
 
 The `generate` command executes the complete synthetic data generation pipeline from YAML configuration to finished dataset. This command represents the primary interface for transforming domain concepts into structured training data through topic modeling and content generation.
 
-The generation process operates through multiple stages that can be monitored in real-time, providing visibility into topic expansion, content creation, and quality control measures. Each stage builds upon previous work, enabling sophisticated workflows where different components use optimized parameters for their specific functions.
+```mermaid
+graph LR
+    A[YAML Config] --> B[Topic Generation]
+    B --> C[Dataset Creation]
+    C --> D[Output Files]
+```
+
+The generation process operates through multiple stages that can be monitored in real-time, providing visibility into topic expansion, content creation, and quality control measures.
 
 ## Basic Usage
 
 Generate a complete dataset from a configuration file:
 
-```bash
+```bash title="Basic generation"
 deepfabric generate config.yaml
 ```
 
-This command reads your configuration, generates the topic structure, creates training examples, and saves all outputs to the specified locations. The process displays real-time progress information and completion statistics.
+This command reads your configuration, generates the topic structure, creates training examples, and saves all outputs to the specified locations.
 
 ## Configuration Override
 
 Override specific configuration parameters without modifying the configuration file:
 
-```bash
+```bash title="Override parameters"
 deepfabric generate config.yaml \
   --provider anthropic \
   --model claude-sonnet-4-5 \
@@ -27,76 +34,91 @@ deepfabric generate config.yaml \
   --batch-size 5
 ```
 
-Configuration overrides apply to all stages that use the specified parameters, enabling experimentation with different settings while maintaining the base configuration.
+!!! tip "Experimentation"
+    Configuration overrides apply to all stages, enabling experimentation with different settings while maintaining the base configuration.
 
 ## File Management Options
 
 Control where intermediate and final outputs are saved:
 
-```bash
+```bash title="Custom output paths"
 deepfabric generate config.yaml \
   --topics-save-as custom_topics.jsonl \
   --output-save-as custom_dataset.jsonl
 ```
 
-These options override the file paths specified in your configuration, useful for organizing outputs by experiment or preventing accidental overwrites during iterative development.
+!!! note "Output Organization"
+    These options override the file paths specified in your configuration, useful for organizing outputs by experiment or preventing accidental overwrites.
 
 ## Loading Existing Topic Structures
 
 Skip topic generation by loading previously generated topic trees or graphs:
 
-```bash
-# Load existing topics (JSONL for tree, JSON for graph)
+```bash title="Load existing topics"
 deepfabric generate config.yaml --topics-load existing_topics.jsonl
 ```
 
-This approach accelerates iteration when experimenting with dataset generation parameters while keeping the topic structure constant.
+!!! tip "Faster Iteration"
+    This approach accelerates iteration when experimenting with dataset generation parameters while keeping the topic structure constant.
 
 ## Topic-Only Generation
 
 Generate and save only the topic structure without proceeding to dataset creation:
 
-```bash
-# Generate topic tree only
-deepfabric generate config.yaml --topic-only
+=== "Tree Mode"
 
-# Generate topic graph only
-deepfabric generate config.yaml --mode graph --topic-only
-```
+    ```bash
+    deepfabric generate config.yaml --topic-only
+    ```
 
-The `--topic-only` flag stops the pipeline after topic generation and saves the topic structure to the configured location. This enables rapid iteration on topic modeling parameters, review of topic structures before committing computational resources to dataset generation, and separation of topic exploration from content creation workflows.
+=== "Graph Mode"
+
+    ```bash
+    deepfabric generate config.yaml --mode graph --topic-only
+    ```
+
+The `--topic-only` flag stops the pipeline after topic generation and saves the topic structure to the configured location.
 
 ## Topic Modeling Parameters
 
 Fine-tune topic generation behavior through command-line parameters:
 
-```bash
+```bash title="Topic parameters"
 deepfabric generate config.yaml \
   --degree 5 \
   --depth 4 \
   --temperature 0.7
 ```
 
-These parameters control the breadth and depth of topic exploration. Higher degree values create more subtopics per node, while greater depth values enable more detailed exploration of each subtopic area.
+| Parameter | Effect |
+|-----------|--------|
+| `--degree` | More subtopics per node (broader exploration) |
+| `--depth` | More levels of detail (deeper exploration) |
+| `--temperature` | Higher values create more diverse topics |
 
 ## Dataset Generation Controls
 
 Adjust dataset creation parameters for different scales and quality requirements:
 
-```bash
+```bash title="Generation controls"
 deepfabric generate config.yaml \
   --num-samples 500 \
   --batch-size 10 \
   --no-system-message
 ```
 
-The `--num-samples` parameter controls dataset size, `--batch-size` affects generation speed and resource usage, and `--include-system-message/--no-system-message` determines whether system prompts are included in the final training examples.
+| Parameter | Description |
+|-----------|-------------|
+| `--num-samples` | Controls dataset size |
+| `--batch-size` | Affects generation speed and resource usage |
+| `--include-system-message` | Include system prompts in training examples |
+| `--no-system-message` | Exclude system prompts from training examples |
 
 ## Conversation Type Options
 
 Control the type of conversations generated:
 
-```bash
+```bash title="Conversation options"
 deepfabric generate config.yaml \
   --conversation-type chain_of_thought \
   --reasoning-style freetext
@@ -115,70 +137,78 @@ deepfabric generate config.yaml \
 
 Control the terminal user interface:
 
-```bash
-# Rich two-pane interface (default)
-deepfabric generate config.yaml --tui rich
+=== "Rich TUI"
 
-# Simple headless-friendly output
-deepfabric generate config.yaml --tui simple
-```
+    ```bash
+    deepfabric generate config.yaml --tui rich
+    ```
+
+    Two-pane interface with real-time progress (default).
+
+=== "Simple Output"
+
+    ```bash
+    deepfabric generate config.yaml --tui simple
+    ```
+
+    Headless-friendly plain text output.
 
 ## Provider and Model Selection
 
 Use different providers or models for different components:
 
-```bash
+```bash title="Provider selection"
 deepfabric generate config.yaml \
   --provider openai \
   --model gpt-4 \
   --temperature 0.9
 ```
 
-Provider changes apply to all components unless overridden in the configuration file. This enables quick experiments with different model capabilities or cost structures.
+!!! info "Provider Scope"
+    Provider changes apply to all components unless overridden in the configuration file.
 
 ## Complete Example
 
-A comprehensive generation command with multiple overrides:
+??? example "Comprehensive generation command"
 
-```bash
-deepfabric generate research-dataset.yaml \
-  --topics-save-as research_topics.jsonl \
-  --output-save-as research_examples.jsonl \
-  --provider anthropic \
-  --model claude-sonnet-4-5 \
-  --degree 4 \
-  --depth 3 \
-  --num-samples 200 \
-  --batch-size 8 \
-  --temperature 0.8 \
-  --include-system-message
-```
+    ```bash title="Full example"
+    deepfabric generate research-dataset.yaml \
+      --topics-save-as research_topics.jsonl \
+      --output-save-as research_examples.jsonl \
+      --provider anthropic \
+      --model claude-sonnet-4-5 \
+      --degree 4 \
+      --depth 3 \
+      --num-samples 200 \
+      --batch-size 8 \
+      --temperature 0.8 \
+      --include-system-message
+    ```
 
-This command creates a research dataset with comprehensive topic coverage, high-quality content generation, and systematic organization of all outputs.
+    This creates a research dataset with comprehensive topic coverage and high-quality content generation.
 
 ## Progress Monitoring
 
-The generation process provides real-time feedback including:
+The generation process provides real-time feedback:
 
-- Topic tree construction progress with node counts
-- Dataset generation status with completion percentages  
-- Error reporting with retry attempts and failure categorization
-- Final statistics including success rates and output file locations
-
-Monitor the process to understand generation bottlenecks and optimize parameters for your specific use case and infrastructure constraints.
+- :material-file-tree: Topic tree construction progress with node counts
+- :material-percent: Dataset generation status with completion percentages
+- :material-alert: Error reporting with retry attempts and failure categorization
+- :material-chart-bar: Final statistics including success rates and output file locations
 
 ## Error Recovery
 
-When generation fails partway through, the system saves intermediate results where possible. Topic trees are saved incrementally, enabling recovery by loading partial results and continuing from the dataset generation stage.
+!!! warning "Partial Failures"
+    When generation fails partway through, the system saves intermediate results where possible. Topic trees are saved incrementally, enabling recovery by loading partial results and continuing from the dataset generation stage.
 
 ??? tip "Optimizing Generation Performance"
-    Balance `batch-size` with your API rate limits and system resources. Larger batches increase throughput but consume more memory and may trigger rate limiting. Start with smaller batches and increase based on your provider's capabilities and your system's performance characteristics.
+    Balance `batch-size` with your API rate limits and system resources. Larger batches increase throughput but consume more memory and may trigger rate limiting. Start with smaller batches and increase based on your provider's capabilities.
 
 ## Output Validation
 
 After generation completes, verify your outputs:
 
-```bash
+```bash title="Validation commands"
 # Check dataset format
 head -n 5 your_dataset.jsonl
 
@@ -188,5 +218,3 @@ python -m json.tool your_dataset.jsonl > /dev/null
 # Count generated examples
 wc -l your_dataset.jsonl
 ```
-
-This validation ensures the generation process completed successfully and produced properly formatted output ready for use in training or evaluation pipelines.

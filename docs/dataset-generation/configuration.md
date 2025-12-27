@@ -4,7 +4,7 @@ DeepFabric uses YAML configuration with four main sections: `llm`, `topics`, `ge
 
 ## Complete Example
 
-```yaml
+```yaml title="config.yaml"
 # Shared LLM defaults (optional)
 llm:
   provider: "openai"
@@ -58,8 +58,8 @@ huggingface:
   tags: ["python", "agents"]
 ```
 
-> [!NOTE]  
-> The huggingface section is optional and used to upload the dataset after generation. It will require a token be exported in your environment as `HF_TOKEN` or use of the `huggingface-cli` tool, pre-run.
+!!! note "HuggingFace Upload"
+    The `huggingface` section is optional and used to upload the dataset after generation. It requires a token exported as `HF_TOKEN` or pre-authentication via `huggingface-cli`.
 
 ## Section Reference
 
@@ -131,7 +131,7 @@ Controls sample generation.
 
 The `components` field maps component names to lists of tool names. Each component routes to `/{component}/execute`:
 
-```yaml
+```yaml title="Component routing"
 components:
   builtin:              # Routes to /vfs/execute (built-in tools)
     - read_file
@@ -142,8 +142,9 @@ components:
     - list_issues
 ```
 
-- `builtin`: Uses built-in VFS tools (read_file, write_file, list_files, delete_file)
-- Other components: Load tool definitions from `tools_endpoint`
+!!! info "Component Types"
+    - `builtin`: Uses built-in VFS tools (read_file, write_file, list_files, delete_file)
+    - Other components: Load tool definitions from `tools_endpoint`
 
 ### output
 
@@ -168,7 +169,7 @@ Controls final dataset.
 
 Most config options can be overridden via CLI:
 
-```bash
+```bash title="CLI overrides"
 deepfabric generate config.yaml \
   --provider anthropic \
   --model claude-3-5-sonnet-20241022 \
@@ -177,4 +178,5 @@ deepfabric generate config.yaml \
   --temperature 0.5
 ```
 
-Run `deepfabric generate --help` for all options.
+!!! tip "Full Options"
+    Run `deepfabric generate --help` for all available options.

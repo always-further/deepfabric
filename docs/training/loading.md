@@ -4,7 +4,7 @@ DeepFabric outputs standard JSONL files compatible with HuggingFace datasets.
 
 ## From Local File
 
-```python
+```python title="Load from local JSONL"
 from datasets import load_dataset
 
 dataset = load_dataset("json", data_files="dataset.jsonl", split="train")
@@ -14,13 +14,13 @@ dataset = load_dataset("json", data_files="dataset.jsonl", split="train")
 
 Upload first:
 
-```bash
+```bash title="Upload to HuggingFace"
 deepfabric upload-hf dataset.jsonl --repo your-username/my-dataset
 ```
 
 Then load:
 
-```python
+```python title="Load from Hub"
 dataset = load_dataset("your-username/my-dataset", split="train")
 ```
 
@@ -28,24 +28,33 @@ dataset = load_dataset("your-username/my-dataset", split="train")
 
 For proper evaluation, split into three sets:
 
-```python
-# Two-way split (simple)
-splits = dataset.train_test_split(test_size=0.1, seed=42)
-train_ds = splits["train"]
-eval_ds = splits["test"]
+=== "Simple Split"
 
-# Three-way split (recommended for tool-calling evaluation)
-train_temp = dataset.train_test_split(test_size=0.2, seed=42)
-train_ds = train_temp["train"]  # 80% for training
+    ```python title="Two-way split"
+    splits = dataset.train_test_split(test_size=0.1, seed=42)
+    train_ds = splits["train"]
+    eval_ds = splits["test"]
+    ```
 
-val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
-val_ds = val_test["train"]   # 10% for validation during training
-test_ds = val_test["test"]   # 10% for final evaluation (hold out!)
-```
+=== "Three-Way Split"
+
+    ```python title="Train/val/test split (recommended)"
+    # First split: 80% train, 20% temp
+    train_temp = dataset.train_test_split(test_size=0.2, seed=42)
+    train_ds = train_temp["train"]  # 80% for training
+
+    # Second split: 50/50 of the 20% temp
+    val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
+    val_ds = val_test["train"]   # 10% for validation during training
+    test_ds = val_test["test"]   # 10% for final evaluation (hold out!)
+    ```
+
+!!! tip "Three-Way Split Recommended"
+    For tool-calling evaluation, use a three-way split to have a held-out test set for final evaluation.
 
 ## Accessing Fields
 
-```python
+```python title="Access sample fields"
 for sample in dataset:
     messages = sample["messages"]
     reasoning = sample.get("reasoning")
@@ -62,13 +71,13 @@ for sample in dataset:
 
 Keep only samples with tool calls:
 
-```python
+```python title="Filter by tools"
 with_tools = dataset.filter(lambda x: x.get("tools") is not None)
 ```
 
 Filter by reasoning style:
 
-```python
+```python title="Filter by reasoning style"
 agent_samples = dataset.filter(
     lambda x: x.get("reasoning", {}).get("style") == "agent"
 )
@@ -76,9 +85,12 @@ agent_samples = dataset.filter(
 
 ## Optimizing Tool-Calling Datasets
 
-Tool-calling datasets can have large sequence lengths due to tool schemas. Use `prepare_dataset_for_training` to reduce overhead:
+!!! warning "Large Sequence Lengths"
+    Tool-calling datasets can have large sequence lengths due to tool schemas.
 
-```python
+Use `prepare_dataset_for_training` to reduce overhead:
+
+```python title="Optimize tool datasets"
 from deepfabric.training import prepare_dataset_for_training
 
 # Filter to only tools actually used in each conversation
@@ -101,7 +113,7 @@ shuffled = dataset.shuffle(seed=42)
 
 For datasets that don't fit in memory:
 
-```python
+```python title="Stream large datasets"
 dataset = load_dataset(
     "your-username/large-dataset",
     split="train",
@@ -117,7 +129,7 @@ for sample in dataset:
 
 Merge multiple DeepFabric datasets:
 
-```python
+```python title="Combine datasets"
 from datasets import concatenate_datasets
 
 basic = load_dataset("user/basic-ds", split="train")
@@ -129,7 +141,7 @@ combined = combined.shuffle(seed=42)
 
 ## Inspection
 
-```python
+```python title="Inspect dataset"
 # Dataset info
 print(dataset)
 # Dataset({features: ['messages', 'reasoning', 'tools', ...], num_rows: 1000})

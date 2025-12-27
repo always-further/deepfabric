@@ -29,7 +29,7 @@ Each provider has optimized defaults:
 
 Omit rate limiting config to use provider defaults:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   llm:
     provider: "gemini"
@@ -39,7 +39,7 @@ generation:
 
 ### Custom Configuration
 
-```yaml
+```yaml title="config.yaml"
 generation:
   llm:
     provider: "gemini"
@@ -69,60 +69,63 @@ generation:
 
 ### Backoff Strategies
 
-- **exponential_jitter** (recommended): `delay = base * (exp_base ^ attempt) ± 25%`
-- **exponential**: `delay = base * (exp_base ^ attempt)`
-- **linear**: `delay = base * attempt`
-- **constant**: Always use `base_delay`
+| Strategy | Formula | Use Case |
+|----------|---------|----------|
+| `exponential_jitter` | `delay = base * (exp_base ^ attempt) +/- 25%` | Recommended default |
+| `exponential` | `delay = base * (exp_base ^ attempt)` | Predictable timing |
+| `linear` | `delay = base * attempt` | Gentle increase |
+| `constant` | Always use `base_delay` | Fixed intervals |
 
 ## Provider-Specific Behavior
 
-### OpenAI
+=== "OpenAI"
 
-Monitors `x-ratelimit-*` headers and respects `retry-after`:
+    Monitors `x-ratelimit-*` headers and respects `retry-after`:
 
-```yaml
-rate_limit:
-  max_retries: 5
-  respect_retry_after: true
-```
+    ```yaml title="config.yaml"
+    rate_limit:
+      max_retries: 5
+      respect_retry_after: true
+    ```
 
-### Anthropic
+=== "Anthropic"
 
-Uses token bucket algorithm with RPM/ITPM/OTPM limits:
+    Uses token bucket algorithm with RPM/ITPM/OTPM limits:
 
-```yaml
-rate_limit:
-  max_retries: 5
-  base_delay: 1.0
-```
+    ```yaml title="config.yaml"
+    rate_limit:
+      max_retries: 5
+      base_delay: 1.0
+    ```
 
-### Gemini
+=== "Gemini"
 
-No retry-after header. Detects daily quota exhaustion and fails fast:
+    No retry-after header. Detects daily quota exhaustion and fails fast:
 
-```yaml
-rate_limit:
-  max_retries: 5
-  base_delay: 2.0      # Higher default
-  max_delay: 120.0     # Longer for daily quota
-```
+    ```yaml title="config.yaml"
+    rate_limit:
+      max_retries: 5
+      base_delay: 2.0      # Higher default
+      max_delay: 120.0     # Longer for daily quota
+    ```
 
-**Daily Quota**: When Gemini's RPD (requests per day) limit is hit, the system fails fast rather than retrying since quota resets at midnight Pacific time.
+    !!! warning "Daily Quota"
+        When Gemini's RPD (requests per day) limit is hit, the system fails fast rather than retrying since quota resets at midnight Pacific time.
 
-### Ollama
+=== "Ollama"
 
-Minimal retries for local deployment:
+    Minimal retries for local deployment:
 
-```yaml
-rate_limit:
-  max_retries: 2
-  base_delay: 0.5
-  max_delay: 5.0
-```
+    ```yaml title="config.yaml"
+    rate_limit:
+      max_retries: 2
+      base_delay: 0.5
+      max_delay: 5.0
+    ```
 
 ## Python API
 
-```python
+```python title="rate_limit_example.py"
 from deepfabric import DataSetGenerator
 
 generator = DataSetGenerator(
@@ -140,56 +143,57 @@ generator = DataSetGenerator(
 
 ## Retry Behavior
 
-**Retries on**:
-- `429` (rate limit)
-- `500`, `502`, `503`, `504` (server errors)
-- Timeout, connection, network errors
+!!! success "Retries On"
+    - `429` (rate limit)
+    - `500`, `502`, `503`, `504` (server errors)
+    - Timeout, connection, network errors
 
-**Does NOT retry**:
-- `4xx` errors (except 429)
-- Authentication failures
-- Daily quota exhaustion (Gemini)
+!!! failure "Does NOT Retry"
+    - `4xx` errors (except 429)
+    - Authentication failures
+    - Daily quota exhaustion (Gemini)
 
 ## Best Practices
 
-### High Volume (Paid Tier)
+=== "High Volume (Paid Tier)"
 
-```yaml
-rate_limit:
-  max_retries: 3
-  base_delay: 0.5
-  max_delay: 10.0
-```
+    ```yaml title="Paid tier config"
+    rate_limit:
+      max_retries: 3
+      base_delay: 0.5
+      max_delay: 10.0
+    ```
 
-### Free Tier (Aggressive Limits)
+=== "Free Tier (Aggressive Limits)"
 
-```yaml
-rate_limit:
-  max_retries: 10
-  base_delay: 5.0
-  max_delay: 300.0
-```
+    ```yaml title="Free tier config"
+    rate_limit:
+      max_retries: 10
+      base_delay: 5.0
+      max_delay: 300.0
+    ```
 
-### Combined with Batch Size
+=== "Combined with Batch Size"
 
-```yaml
-output:
-  batch_size: 2    # Smaller batches reduce rate limit pressure
-  num_samples: 20
+    ```yaml title="Batch size optimization"
+    output:
+      batch_size: 2    # Smaller batches reduce rate limit pressure
+      num_samples: 20
 
-generation:
-  rate_limit:
-    max_retries: 5
-    base_delay: 2.0
-```
+    generation:
+      rate_limit:
+        max_retries: 5
+        base_delay: 2.0
+    ```
 
 ## Troubleshooting
 
 ### Still Hitting Rate Limits
 
-1. Reduce `batch_size` in dataset creation
-2. Increase `base_delay`
-3. Check your provider tier/quota
+!!! tip "Solutions"
+    1. Reduce `batch_size` in dataset creation
+    2. Increase `base_delay`
+    3. Check your provider tier/quota
 
 ### Daily Quota Exhausted (Gemini)
 
@@ -199,10 +203,10 @@ The system detects this and fails immediately:
 ERROR - Failing fast for gemini: 429 RESOURCE_EXHAUSTED (daily_quota_exhausted=True)
 ```
 
-Options:
-- Wait until midnight Pacific time
-- Upgrade Gemini tier
-- Switch providers temporarily
+!!! info "Options"
+    - Wait until midnight Pacific time
+    - Upgrade Gemini tier
+    - Switch providers temporarily
 
 ### Too Many Retries
 

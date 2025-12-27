@@ -11,7 +11,7 @@ Basic datasets generate simple question-answer pairs without reasoning traces or
 
 ## Configuration
 
-```yaml
+```yaml title="config.yaml"
 topics:
   prompt: "Python programming fundamentals"
   mode: tree
@@ -37,13 +37,14 @@ output:
   save_as: "dataset.jsonl"
 ```
 
-The key setting is `conversation.type: basic`.
+!!! note "Key Setting"
+    The key setting is `conversation.type: basic`.
 
 ## Output Format
 
 Basic datasets produce standard chat-format JSONL:
 
-```json
+```json title="dataset.jsonl"
 {
   "messages": [
     {
@@ -72,7 +73,7 @@ deepfabric generate config.yaml
 
 Or with inline options:
 
-```bash
+```bash title="CLI generation"
 deepfabric generate \
   --topic-prompt "Machine learning basics" \
   --conversation-type basic \
@@ -85,20 +86,25 @@ deepfabric generate \
 
 ## Tips
 
-**Topic depth and degree** control dataset diversity. A tree with `depth: 3` and `degree: 3` produces 27 unique paths (`3^3 = 27` leaf nodes).
+!!! tip "Topic Depth and Degree"
+    Topic depth and degree control dataset diversity. A tree with `depth: 3` and `degree: 3` produces 27 unique paths (`3^3 = 27` leaf nodes).
 
-**System prompts** differ between generation and output:
-- `generation.system_prompt` - Instructions for the LLM generating examples
-- `output.system_prompt` - The system message included in training data
+!!! warning "System Prompt Confusion"
+    System prompts differ between generation and output:
 
-**Sample size** controls the number of generation steps.
-- `num_samples` is the number of generation steps to run.
-- `batch_size` is how many samples to generate per step.
-- Total samples = `num_samples` × `batch_size`.
+    - `generation.system_prompt` - Instructions for the LLM generating examples
+    - `output.system_prompt` - The system message included in training data
 
-For example, `num_samples: 5` with `batch_size: 2` runs 5 steps, generating 2 samples each, for a total of 10 samples.
+!!! info "Sample Size"
+    Sample size controls the number of generation steps:
 
-## Graph to sample ratio
+    - `num_samples` is the number of generation steps to run
+    - `batch_size` is how many samples to generate per step
+    - Total samples = `num_samples` x `batch_size`
+
+    For example, `num_samples: 5` with `batch_size: 2` runs 5 steps, generating 2 samples each, for a total of 10 samples.
+
+## Graph to Sample Ratio
 
 When configuring topic generation with a tree or graph, the total number of unique topics is determined by the structure:
 
@@ -107,22 +113,20 @@ When configuring topic generation with a tree or graph, the total number of uniq
 
 For example, a tree with `depth: 2` and `degree: 2` yields 4 unique paths (`2^2 = 4`).
 
-The number of samples generated is dependent on the total unique paths and the `num_samples` setting. If the number of samples exceeds the number of unique paths, DeepFabric will warn and flag the discrepancy.
+!!! warning "Path Validation"
+    If the number of samples exceeds the number of unique paths, DeepFabric will warn and flag the discrepancy:
 
-For example, with a tree of `depth: 2` and `degree: 2`, there are 4 unique paths. If `num_samples` is set to 5, DeepFabric will generate a warning:
+    ```
+    Path validation failed - stopping before topic generation
+    Error: Insufficient expected paths for dataset generation:
+      - Expected tree paths: ~4 (depth=2, degree=2)
+      - Requested samples: 5 (5 steps x 1 batch size)
+      - Shortfall: ~1 samples
 
-```bash
-Path validation failed - stopping before topic generation
-Error: Insufficient expected paths for dataset generation:
-  - Expected tree paths: ~4 (depth=2, degree=2)
-  - Requested samples: 5 (5 steps x 1 batch size)
-  - Shortfall: ~1 samples
-
-Recommendations:
-  - Use one of these combinations to utilize the 4 paths:
-    --num-samples 1 --batch-size 4  (generates 4 samples)
-    --num-samples 2 --batch-size 2  (generates 4 samples)
-    --num-samples 4 --batch-size 1  (generates 4 samples)
-  - Or increase --depth (currently 2) or --degree (currently 2)
-```
-  
+    Recommendations:
+      - Use one of these combinations to utilize the 4 paths:
+        --num-samples 1 --batch-size 4  (generates 4 samples)
+        --num-samples 2 --batch-size 2  (generates 4 samples)
+        --num-samples 4 --batch-size 1  (generates 4 samples)
+      - Or increase --depth (currently 2) or --degree (currently 2)
+    ```

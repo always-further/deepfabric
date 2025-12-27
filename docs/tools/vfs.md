@@ -13,7 +13,7 @@ The Virtual Filesystem (VFS) component provides file operations in an isolated, 
 
 ## Configuration
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -24,29 +24,32 @@ generation:
         - list_files
 ```
 
-The `builtin` component maps to VFS tools and routes to `/vfs/execute`. List specific tools or omit the list to include all builtin tools.
+!!! info "Builtin Component"
+    The `builtin` component maps to VFS tools and routes to `/vfs/execute`. List specific tools or omit the list to include all builtin tools.
 
 ## Session Isolation
 
 Files are scoped by `session_id`. This prevents cross-contamination between samples:
 
+```mermaid
+graph LR
+    subgraph "Session abc123"
+        A[config.json]
+        B[main.py]
+    end
+    subgraph "Session xyz789"
+        C[readme.md]
+    end
 ```
-Session abc123:
-  - config.json
-  - main.py
 
-Session xyz789:
-  - readme.md
-  (no access to abc123's files)
-```
-
-DeepFabric automatically creates and cleans up sessions for each sample.
+!!! note "Automatic Management"
+    DeepFabric automatically creates and cleans up sessions for each sample.
 
 ## Seeding Initial State
 
 Pre-populate files for scenarios:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -67,7 +70,7 @@ The agent can then read and modify these files during generation.
 
 ### Execute Tool
 
-```bash
+```bash title="Execute request"
 POST /vfs/execute
 Content-Type: application/json
 
@@ -80,7 +83,7 @@ Content-Type: application/json
 
 ### Response Format
 
-```json
+```json title="Success response"
 {
   "success": true,
   "result": "{\"debug\": true}",
@@ -88,10 +91,13 @@ Content-Type: application/json
 }
 ```
 
-Error types:
-- `FileNotFound` - File doesn't exist
-- `InvalidArguments` - Missing required parameter
-- `IOError` - Storage error
+### Error Types
+
+| Error | Description |
+|-------|-------------|
+| `FileNotFound` | File doesn't exist |
+| `InvalidArguments` | Missing required parameter |
+| `IOError` | Storage error |
 
 ### Cleanup Session
 
@@ -103,16 +109,18 @@ Returns count of deleted files.
 
 ## Example Workflow
 
-```
-1. Agent receives: "Create a config file with debug enabled"
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent
+    participant VFS
 
-2. Agent calls: write_file("config.json", '{"debug": true}')
-   → Result: "Successfully wrote 16 bytes to config.json"
-
-3. Agent calls: read_file("config.json")
-   → Result: '{"debug": true}'
-
-4. Agent responds: "I've created config.json with debug mode enabled."
+    User->>Agent: Create a config file with debug enabled
+    Agent->>VFS: write_file("config.json", '{"debug": true}')
+    VFS-->>Agent: Successfully wrote 16 bytes
+    Agent->>VFS: read_file("config.json")
+    VFS-->>Agent: '{"debug": true}'
+    Agent->>User: I've created config.json with debug mode enabled
 ```
 
 This produces training data where the agent's decisions follow real observations.

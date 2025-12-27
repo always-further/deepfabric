@@ -10,16 +10,18 @@ Tool-calling datasets often include all available tool definitions in every samp
 - **Memory issues** - Long sequences require more GPU memory (scales with sequence_length^2)
 - **Slower training** - More tokens to process per sample
 
-For example, a dataset with 21 tools might have:
-- ~22,500 characters of tool JSON per sample
-- Average sequence length of 7,000+ tokens
-- Only 1-3 tools actually used per conversation
+!!! example "Real Example"
+    A dataset with 21 tools might have:
+
+    - ~22,500 characters of tool JSON per sample
+    - Average sequence length of 7,000+ tokens
+    - Only 1-3 tools actually used per conversation
 
 ## Using prepare_dataset_for_training
 
 The `prepare_dataset_for_training` function optimizes your dataset:
 
-```python
+```python title="Prepare dataset"
 from datasets import load_dataset
 from deepfabric.training import prepare_dataset_for_training
 
@@ -47,14 +49,16 @@ print(f"Samples: {len(prepared)}")
 
 ### Parameters
 
-- `tool_strategy` - How to filter tools (default: `"used_only"`)
-- `clean_tool_schemas` - Remove null values from schemas (default: `True`)
-- `min_tools` - Minimum tools to keep per sample (default: `1`)
-- `num_proc` - Number of processes for parallel processing
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `tool_strategy` | `"used_only"` | How to filter tools |
+| `clean_tool_schemas` | `True` | Remove null values from schemas |
+| `min_tools` | `1` | Minimum tools to keep per sample |
+| `num_proc` | - | Number of processes for parallel processing |
 
 ## Complete Training Pipeline
 
-```python
+```python title="Full training pipeline"
 from datasets import load_dataset
 from deepfabric.training import prepare_dataset_for_training
 from transformers import AutoTokenizer
@@ -118,13 +122,13 @@ trainer.train()
 
 ## Low-Level Utilities
 
-For more control, use the individual functions:
+For more control, we provide the following low-level functions, to help you refine datasets as needed. This is especially useful for memory optimization.
 
 ### filter_tools_for_sample
 
 Filter tools in a single sample:
 
-```python
+```python title="Filter single sample"
 from deepfabric.training import filter_tools_for_sample
 
 sample = dataset[0]
@@ -141,7 +145,7 @@ print(f"Tools: {len(sample['tools'])} -> {len(filtered['tools'])}")
 
 Extract tool names that are actually called:
 
-```python
+```python title="Get used tools"
 from deepfabric.training import get_used_tool_names
 
 messages = sample["messages"]
@@ -154,7 +158,7 @@ print(f"Tools used: {used}")
 
 Remove null values from tool schemas:
 
-```python
+```python title="Clean schema"
 from deepfabric.training import clean_tool_schema
 
 tool = sample["tools"][0]
@@ -164,30 +168,36 @@ cleaned = clean_tool_schema(tool)
 
 ## Memory Optimization Tips
 
-If you're still running out of memory after filtering tools:
+If you're getting CUDA out-of-memory errors during training, consider these strategies:
 
-1. **Reduce max sequence length**
-   ```python
-   args=SFTConfig(max_seq_length=2048)
-   ```
+!!! tip "If You're Still Running Out of Memory"
 
-2. **Filter long samples**
-   ```python
-   prepared = prepared.filter(lambda x: len(x["text"]) < 4096)
-   ```
+    === "Reduce Sequence Length"
 
-3. **Reduce batch size, increase gradient accumulation**
-   ```python
-   args=SFTConfig(
-       per_device_train_batch_size=1,
-       gradient_accumulation_steps=8,
-   )
-   ```
+        ```python
+        args=SFTConfig(max_seq_length=2048)
+        ```
 
-4. **Enable gradient checkpointing**
-   ```python
-   args=SFTConfig(
-       gradient_checkpointing=True,
-       gradient_checkpointing_kwargs={"use_reentrant": False},
-   )
-   ```
+    === "Filter Long Samples"
+
+        ```python
+        prepared = prepared.filter(lambda x: len(x["text"]) < 4096)
+        ```
+
+    === "Smaller Batches"
+
+        ```python
+        args=SFTConfig(
+            per_device_train_batch_size=1,
+            gradient_accumulation_steps=8,
+        )
+        ```
+
+    === "Gradient Checkpointing"
+
+        ```python
+        args=SFTConfig(
+            gradient_checkpointing=True,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
+        )
+        ```

@@ -1,22 +1,37 @@
 # Graph API
 
-The Graph class provides programmatic access to graph-based topic modeling, enabling complex domain representation through networks of interconnected concepts. This experimental API supports both hierarchical relationships and cross-connections between topics in different branches.
+The Graph class provides programmatic access to graph-based topic modeling, enabling complex domain representation through networks of interconnected concepts.
 
-```python
-import asyncio
-
-def consume_graph(graph):
-    async def _run():
-        async for _ in graph.build_async():
-            pass
-    asyncio.run(_run())
+```mermaid
+graph LR
+    A[Root] --> B[Topic 1]
+    A --> C[Topic 2]
+    B --> D[Subtopic 1.1]
+    C --> E[Subtopic 2.1]
+    B -.-> E
+    D -.-> C
 ```
+
+!!! info "Experimental API"
+    This API supports both hierarchical relationships and cross-connections between topics in different branches.
+
+??? example "Helper function for consuming graph builds"
+
+    ```python title="Utility function"
+    import asyncio
+
+    def consume_graph(graph):
+        async def _run():
+            async for _ in graph.build_async():
+                pass
+        asyncio.run(_run())
+    ```
 
 ## Graph Configuration
 
-Graph configuration is passed directly to the Graph constructor with parameters similar to trees but extended for graph-specific features:
+Graph configuration is passed directly to the Graph constructor:
 
-```python
+```python title="Basic graph configuration"
 from deepfabric import Graph
 
 graph = Graph(
@@ -32,27 +47,22 @@ graph = Graph(
 
 ### Parameters
 
-**topic_prompt** (str): Central concept from which the graph expands. Should support rich interconnections.
-
-**model** (str): model specification in `provider/model` format.
-
-**provider** (str): provider name , e.g `openai`, `anthropic`.
-
-**topic_system_prompt** (str): System prompt guiding both hierarchical and lateral relationship generation.
-
-**degree** (int): Maximum connections per node, including both children and cross-connections.
-
-**depth** (int): Maximum shortest-path distance from root to any node.
-
-**temperature** (float): Controls creativity in connection generation. Higher values encourage more diverse relationships.
-
-**max_concurrent** (int): Maximum number of concurrent LLM calls during graph expansion. Lower values help avoid rate limits but increase build time. Default is 4. Range: 1-20.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic_prompt` | str | Central concept from which the graph expands |
+| `model` | str | Model specification in `provider/model` format |
+| `provider` | str | Provider name, e.g., `openai`, `anthropic` |
+| `topic_system_prompt` | str | System prompt guiding hierarchical and lateral relationships |
+| `degree` | int | Maximum connections per node (children + cross-connections) |
+| `depth` | int | Maximum shortest-path distance from root to any node |
+| `temperature` | float | Controls creativity in connection generation |
+| `max_concurrent` | int | Maximum concurrent LLM calls (default: 4, range: 1-20) |
 
 ## Graph Class
 
-The Graph class manages construction and manipulation of topic graph structures:
+The Graph class manages construction and manipulation of topic graph structures.
 
-```python
+```python title="Complete graph workflow"
 import asyncio
 from deepfabric import Graph
 
@@ -84,80 +94,86 @@ graph.visualize("research_structure")
 
 #### build_async()
 
-Constructs the complete graph structure through multi-phase generation using a generator pattern:
+Constructs the complete graph structure through multi-phase generation using a generator pattern.
 
-```python
-import asyncio
+=== "With Progress Monitoring"
 
-async def consume_events() -> None:
-    async for event in graph.build_async():
-        if event['event'] == 'depth_start':
-            print(f"Starting depth {event['depth']} with {event['leaf_count']} nodes")
-        elif event['event'] == 'node_expanded':
-            print(
-                f"Expanded '{event['node_topic']}' -> {event['subtopics_added']} subtopics,"
-                f" {event['connections_added']} connections"
-            )
-        elif event['event'] == 'build_complete':
-            print(
-                f"Graph complete! {event['nodes_count']} nodes,"
-                f" {event.get('failed_generations', 0)} failures"
-            )
+    ```python title="Monitor build progress"
+    import asyncio
 
-asyncio.run(consume_events())
-```
+    async def consume_events() -> None:
+        async for event in graph.build_async():
+            if event['event'] == 'depth_start':
+                print(f"Starting depth {event['depth']} with {event['leaf_count']} nodes")
+            elif event['event'] == 'node_expanded':
+                print(
+                    f"Expanded '{event['node_topic']}' -> {event['subtopics_added']} subtopics,"
+                    f" {event['connections_added']} connections"
+                )
+            elif event['event'] == 'build_complete':
+                print(
+                    f"Graph complete! {event['nodes_count']} nodes,"
+                    f" {event.get('failed_generations', 0)} failures"
+                )
 
-To run the build without handling progress events:
+    asyncio.run(consume_events())
+    ```
 
-```python
-async def build_silently() -> None:
-    async for _ in graph.build_async():
-        pass
+=== "Silent Build"
 
-asyncio.run(build_silently())
-```
+    ```python title="Build without monitoring"
+    async def build_silently() -> None:
+        async for _ in graph.build_async():
+            pass
+
+    asyncio.run(build_silently())
+    ```
 
 **Yields**: Progress events with the following types:
-- `depth_start`: Beginning depth level processing
-- `node_expanded`: Node expansion completed
-- `depth_complete`: Depth level finished
-- `build_complete`: Graph construction finished
-- `error`: Build error occurred
 
-The build process includes hierarchical construction followed by cross-connection analysis. The async generator pattern provides real-time progress monitoring or silent consumption.
+| Event Type | Description |
+|------------|-------------|
+| `depth_start` | Beginning depth level processing |
+| `node_expanded` | Node expansion completed |
+| `depth_complete` | Depth level finished |
+| `build_complete` | Graph construction finished |
+| `error` | Build error occurred |
+
+!!! info "Build Process"
+    The build process includes hierarchical construction followed by cross-connection analysis.
 
 #### save(filepath: str)
 
 Persists graph structure in JSON format preserving nodes, edges, and metadata:
 
-```python
+```python title="Save graph"
 graph.save("domain_graph.json")
 ```
 
-Output format includes complete structural information:
+??? example "Output format"
 
-```json
-{
-  "nodes": {
-    "node_id": {
-      "prompt": "Node topic",
-      "children": ["child1", "child2"],
-      "connections": ["related_node"],
-      "depth": 2
+    ```json
+    {
+      "nodes": {
+        "node_id": {
+          "prompt": "Node topic",
+          "children": ["child1", "child2"],
+          "connections": ["related_node"],
+          "depth": 2
+        }
+      },
+      "edges": [
+        {"from": "parent", "to": "child", "type": "hierarchical"},
+        {"from": "node1", "to": "node2", "type": "cross_connection"}
+      ]
     }
-  },
-  "edges": [
-    {"from": "parent", "to": "child", "type": "hierarchical"},
-    {"from": "node1", "to": "node2", "type": "cross_connection"}
-  ]
-}
-```
+    ```
 
 #### from_json(filepath: str, params: dict)
 
 Class method for loading graphs with configuration:
 
-```python
+```python title="Load from JSON"
 graph = Graph.from_json(
     "saved_graph.json",
     {
@@ -171,17 +187,18 @@ graph = Graph.from_json(
 
 Generates SVG visualization of the graph structure:
 
-```python
+```python title="Visualize graph"
 graph.visualize("analysis/domain_map")
 ```
 
-Creates `domain_map.svg` showing nodes, hierarchical relationships, and cross-connections with distinct visual styling.
+!!! info "Output"
+    Creates `domain_map.svg` showing nodes, hierarchical relationships, and cross-connections with distinct visual styling.
 
 ### Graph Analysis
 
 Access structural information through available methods:
 
-```python
+```python title="Analysis methods"
 # Basic statistics
 node_count = len(graph.nodes)
 edge_count = len(graph.edges)
@@ -201,7 +218,7 @@ has_cycle = graph.has_cycle()
 
 Graphs integrate seamlessly with dataset generation:
 
-```python
+```python title="Graph to dataset"
 import asyncio
 
 # Generate dataset from graph
@@ -223,7 +240,7 @@ dataset = asyncio.run(generator.create_data_async(
 
 Graph-specific error handling:
 
-```python
+```python title="Exception handling"
 from deepfabric import GraphError
 
 try:
@@ -234,9 +251,10 @@ except GraphError as e:
 
 ## Performance Considerations
 
-Graph construction is more computationally intensive than tree generation. Use the `max_concurrent` parameter to control the rate of LLM calls:
+!!! warning "Computational Intensity"
+    Graph construction is more computationally intensive than tree generation. Use the `max_concurrent` parameter to control the rate of LLM calls.
 
-```python
+```python title="Rate limit control"
 graph = Graph(
     topic_prompt="Complex domain",
     model_name="anthropic/claude-sonnet-4-5",
@@ -246,4 +264,5 @@ graph = Graph(
 )
 ```
 
-Graph complexity scales with node count during connection analysis, making parameter selection important for large-scale generation.
+!!! tip "Scaling Considerations"
+    Graph complexity scales with node count during connection analysis, making parameter selection important for large-scale generation.

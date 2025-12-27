@@ -4,18 +4,25 @@ DeepFabric datasets integrate directly with popular training frameworks. This se
 
 ## Workflow
 
+```mermaid
+graph LR
+    A[Generate Dataset] --> B[Upload to Hub]
+    B --> C[Load in Training]
+    C --> D[Prepare Dataset]
+    D --> E[Format with Template]
+    E --> F[Train Model]
 ```
-1. Generate dataset      →  deepfabric generate config.yaml
-2. Upload to Hub         →  deepfabric upload-hf dataset.jsonl --repo user/dataset
-3. Load in training      →  load_dataset("user/dataset")
-4. Prepare dataset       →  prepare_dataset_for_training()  [optional but recommended]
-5. Format with template  →  tokenizer.apply_chat_template()
-6. Train                 →  SFTTrainer or Unsloth
-```
+
+1. **Generate dataset** - `deepfabric generate config.yaml`
+2. **Upload to Hub** - `deepfabric upload-hf dataset.jsonl --repo user/dataset`
+3. **Load in training** - `load_dataset("user/dataset")`
+4. **Prepare dataset** - `prepare_dataset_for_training()` (optional but recommended)
+5. **Format with template** - `tokenizer.apply_chat_template()`
+6. **Train** - SFTTrainer or Unsloth
 
 ## Quick Example
 
-```python
+```python title="training_example.py"
 from datasets import load_dataset
 from transformers import AutoTokenizer
 from trl import SFTTrainer, SFTConfig
@@ -53,17 +60,52 @@ trainer.train()
 
 ## Key Concepts
 
-**Chat templates** convert message arrays into model-specific formats. Each model family (Qwen, Llama, Mistral) has its own template.
+!!! info "Chat Templates"
+    Chat templates convert message arrays into model-specific formats. Each model family (Qwen, Llama, Mistral) has its own template.
 
-**Tool formatting** differs by model. Some models expect tools in the system message, others in a separate parameter.
+!!! info "Tool Formatting"
+    Tool formatting differs by model. Some models expect tools in the system message, others in a separate parameter.
 
-**Reasoning traces** can be included in training or used as auxiliary data.
+!!! info "Reasoning Traces"
+    Reasoning traces can be included in training or used as auxiliary data.
 
-**Training callbacks** integrate with the training loop for logging, early stopping, and custom behavior.
+!!! info "Training Callbacks"
+    Training callbacks integrate with the training loop for logging, early stopping, and custom behavior.
 
 ## Next Steps
 
-- [Loading Datasets](loading.md) - HuggingFace integration
-- [Dataset Preparation](dataset-preparation.md) - Optimizing datasets for training
-- [Chat Templates](chat-templates.md) - Formatting for different models
-- [Training Frameworks](frameworks.md) - TRL, Unsloth, SFTConfig, TrainerControl, and callbacks
+<div class="grid cards" markdown>
+
+-   :material-download: **Loading Datasets**
+
+    ---
+
+    HuggingFace integration and data management
+
+    [:octicons-arrow-right-24: Learn more](loading.md)
+
+-   :material-tune: **Dataset Preparation**
+
+    ---
+
+    Optimizing datasets for efficient training
+
+    [:octicons-arrow-right-24: Optimize](dataset-preparation.md)
+
+-   :material-format-text: **Chat Templates**
+
+    ---
+
+    Formatting for different model architectures
+
+    [:octicons-arrow-right-24: Configure](chat-templates.md)
+
+-   :material-school: **Training Frameworks**
+
+    ---
+
+    TRL, Unsloth, SFTConfig, and callbacks
+
+    [:octicons-arrow-right-24: Train](frameworks.md)
+
+</div>

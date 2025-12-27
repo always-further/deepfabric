@@ -1,42 +1,48 @@
 # import-tools
 
-The `import-tools` command fetches tool definitions from MCP (Model Context Protocol) servers and either saves them to a file, pushes them to a Spin server for mock execution, or both. This enables using any MCP-compatible tool server as a source for tool definitions in synthetic dataset generation.
+The `import-tools` command fetches tool definitions from MCP (Model Context Protocol) servers and either saves them to a file, pushes them to a Spin server for mock execution, or both.
 
-The command supports both MCP transport types: stdio (subprocess) for local servers and Streamable HTTP for remote servers.
+!!! info "MCP Integration"
+    This enables using any MCP-compatible tool server as a source for tool definitions in synthetic dataset generation.
+
+The command supports both MCP transport types:
+
+- :material-console: **stdio** - Subprocess for local servers
+- :material-web: **HTTP** - Streamable HTTP for remote servers
 
 ## Basic Usage
 
-Import tools from an MCP server and push to Spin:
+=== "Push to Spin"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y @modelcontextprotocol/server-filesystem /tmp" \
-  --spin http://localhost:3000
-```
+    ```bash title="Import and push to Spin"
+    deepfabric import-tools --transport stdio \
+      --command "npx -y @modelcontextprotocol/server-filesystem /tmp" \
+      --spin http://localhost:3000
+    ```
 
-Import tools and save to a file:
+=== "Save to File"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y @modelcontextprotocol/server-filesystem /tmp" \
-  --output tools.json
-```
+    ```bash title="Import and save"
+    deepfabric import-tools --transport stdio \
+      --command "npx -y @modelcontextprotocol/server-filesystem /tmp" \
+      --output tools.json
+    ```
 
-Both save to file and push to Spin:
+=== "Both"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y figma-developer-mcp --stdio" \
-  --env "FIGMA_API_KEY=your-key" \
-  --output figma-tools.json \
-  --spin http://localhost:3000
-```
+    ```bash title="Save and push"
+    deepfabric import-tools --transport stdio \
+      --command "npx -y figma-developer-mcp --stdio" \
+      --env "FIGMA_API_KEY=your-key" \
+      --output figma-tools.json \
+      --spin http://localhost:3000
+    ```
 
 ## Spin Integration
 
-The `--spin` option pushes tools directly to a running Spin server's mock component. This loads the tools into Spin's KV store where they can be executed via the `/mock/execute` endpoint.
+The `--spin` option pushes tools directly to a running Spin server's mock component.
 
-```bash
+```bash title="Push to Spin"
 deepfabric import-tools --transport stdio \
   --command "npx -y figma-developer-mcp --stdio" \
   --env "FIGMA_API_KEY=your-key" \
@@ -54,7 +60,7 @@ When pushing to Spin:
 
 After pushing tools to Spin, verify they're loaded:
 
-```bash
+```bash title="Verify tools"
 curl http://localhost:3000/mock/list-tools | jq
 ```
 
@@ -62,7 +68,7 @@ curl http://localhost:3000/mock/list-tools | jq
 
 Execute a loaded tool via Spin:
 
-```bash
+```bash title="Execute tool"
 curl -X POST http://localhost:3000/mock/execute \
   -H "Content-Type: application/json" \
   -d '{"name": "get_figma_data", "arguments": {"fileKey": "abc123"}}'
@@ -70,43 +76,43 @@ curl -X POST http://localhost:3000/mock/execute \
 
 ## Transport Types
 
-### Stdio Transport
+=== "Stdio Transport"
 
-The stdio transport launches the MCP server as a subprocess and communicates via stdin/stdout:
+    The stdio transport launches the MCP server as a subprocess and communicates via stdin/stdout:
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y figma-developer-mcp --stdio" \
-  --spin http://localhost:3000
-```
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "npx -y figma-developer-mcp --stdio" \
+      --spin http://localhost:3000
+    ```
 
-**Requirements:**
+    **Requirements:**
 
-- The command must be a valid shell command that starts an MCP server
-- The server must support stdio transport (read from stdin, write to stdout)
-- Messages are newline-delimited JSON-RPC 2.0
+    - The command must be a valid shell command that starts an MCP server
+    - The server must support stdio transport (read from stdin, write to stdout)
+    - Messages are newline-delimited JSON-RPC 2.0
 
-### HTTP Transport
+=== "HTTP Transport"
 
-The HTTP transport connects to a running MCP server via Streamable HTTP:
+    The HTTP transport connects to a running MCP server via Streamable HTTP:
 
-```bash
-deepfabric import-tools --transport http \
-  --endpoint "http://localhost:8080/mcp" \
-  --spin http://localhost:3000
-```
+    ```bash
+    deepfabric import-tools --transport http \
+      --endpoint "http://localhost:8080/mcp" \
+      --spin http://localhost:3000
+    ```
 
-**Requirements:**
+    **Requirements:**
 
-- The endpoint must be a valid HTTP URL
-- The server must support MCP's Streamable HTTP transport
-- Supports both JSON and SSE (Server-Sent Events) responses
+    - The endpoint must be a valid HTTP URL
+    - The server must support MCP's Streamable HTTP transport
+    - Supports both JSON and SSE (Server-Sent Events) responses
 
 ## Environment Variables
 
 Pass environment variables to stdio subprocess for API keys:
 
-```bash
+```bash title="Single env var"
 deepfabric import-tools --transport stdio \
   --command "npx -y figma-developer-mcp --stdio" \
   --env "FIGMA_API_KEY=your-api-key" \
@@ -115,7 +121,7 @@ deepfabric import-tools --transport stdio \
 
 Multiple environment variables can be specified:
 
-```bash
+```bash title="Multiple env vars"
 deepfabric import-tools --transport stdio \
   --command "my-mcp-server" \
   --env "API_KEY=secret" \
@@ -127,7 +133,7 @@ deepfabric import-tools --transport stdio \
 
 Add authentication headers for HTTP transport:
 
-```bash
+```bash title="With auth header"
 deepfabric import-tools --transport http \
   --endpoint "https://api.example.com/mcp" \
   --header "Authorization=Bearer your-token" \
@@ -138,166 +144,170 @@ deepfabric import-tools --transport http \
 
 When saving to a file with `--output`, you can choose the format:
 
-### DeepFabric Format (default)
+=== "DeepFabric Format"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "your-mcp-server" \
-  --output tools.json \
-  --format deepfabric
-```
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "your-mcp-server" \
+      --output tools.json \
+      --format deepfabric
+    ```
 
-Output structure:
+    ??? example "Output structure"
 
-```json
-{
-  "tools": [
-    {
-      "name": "get_figma_data",
-      "description": "Get comprehensive Figma file data",
-      "parameters": [
+        ```json
         {
-          "name": "fileKey",
-          "type": "str",
-          "description": "The key of the Figma file to fetch",
-          "required": true,
-          "default": null
-        }
-      ],
-      "returns": "",
-      "category": "general",
-      "component": null
-    }
-  ]
-}
-```
-
-### OpenAI Format
-
-Compatible with TRL (Transformer Reinforcement Learning) and other training frameworks:
-
-```bash
-deepfabric import-tools --transport stdio \
-  --command "your-mcp-server" \
-  --output tools.json \
-  --format openai
-```
-
-Output structure:
-
-```json
-{
-  "tools": [
-    {
-      "type": "function",
-      "function": {
-        "name": "get_figma_data",
-        "description": "Get comprehensive Figma file data",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "fileKey": {
-              "type": "string",
-              "description": "The key of the Figma file to fetch"
+          "tools": [
+            {
+              "name": "get_figma_data",
+              "description": "Get comprehensive Figma file data",
+              "parameters": [
+                {
+                  "name": "fileKey",
+                  "type": "str",
+                  "description": "The key of the Figma file to fetch",
+                  "required": true,
+                  "default": null
+                }
+              ],
+              "returns": "",
+              "category": "general",
+              "component": null
             }
-          },
-          "required": ["fileKey"]
+          ]
         }
-      }
-    }
-  ]
-}
-```
+        ```
+
+=== "OpenAI Format"
+
+    Compatible with TRL and other training frameworks:
+
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "your-mcp-server" \
+      --output tools.json \
+      --format openai
+    ```
+
+    ??? example "Output structure"
+
+        ```json
+        {
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "get_figma_data",
+                "description": "Get comprehensive Figma file data",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "fileKey": {
+                      "type": "string",
+                      "description": "The key of the Figma file to fetch"
+                    }
+                  },
+                  "required": ["fileKey"]
+                }
+              }
+            }
+          ]
+        }
+        ```
 
 ## Timeout Configuration
 
 Adjust the timeout for slow-starting servers:
 
-```bash
+```bash title="Custom timeout"
 deepfabric import-tools --transport stdio \
   --command "slow-starting-server" \
   --timeout 60.0 \
   --spin http://localhost:3000
 ```
 
-The default timeout is 30 seconds.
+!!! info "Default Timeout"
+    The default timeout is 30 seconds.
 
 ## MCP Protocol Details
 
 The import process follows the MCP specification (2025-11-25):
 
-1. **Initialize**: Send `initialize` request with protocol version and client info
-2. **Initialized**: Send `notifications/initialized` notification
-3. **List Tools**: Send `tools/list` request to fetch available tools
-4. **Cleanup**: Terminate connection (process for stdio, session for HTTP)
+```mermaid
+sequenceDiagram
+    participant CLI as import-tools
+    participant MCP as MCP Server
+    CLI->>MCP: initialize
+    MCP-->>CLI: InitializeResult
+    CLI->>MCP: notifications/initialized
+    CLI->>MCP: tools/list
+    MCP-->>CLI: Tools
+    CLI->>MCP: Cleanup
+```
 
 ## Error Handling
 
 The command provides detailed error messages for common issues:
 
-**Spin Connection Failed:**
+!!! failure "Spin Connection Failed"
+    ```
+    Error: Cannot connect to Spin server at http://localhost:3000. Is it running?
+    ```
 
-```
-Error: Cannot connect to Spin server at http://localhost:3000. Is it running?
-```
+!!! failure "MCP Server Not Found"
+    ```
+    Error: MCP server command not found: nonexistent-server
+    ```
 
-**MCP Server Not Found:**
+!!! failure "Timeout"
+    ```
+    Error: Timeout waiting for MCP server response after 30.0s
+    ```
 
-```
-Error: MCP server command not found: nonexistent-server
-```
-
-**Timeout:**
-
-```
-Error: Timeout waiting for MCP server response after 30.0s
-```
-
-**No Output Specified:**
-
-```
-Error: At least one of --output or --spin is required
-```
+!!! failure "No Output Specified"
+    ```
+    Error: At least one of --output or --spin is required
+    ```
 
 ## Complete Examples
 
-### Figma MCP Server to Spin
+??? example "Figma MCP Server to Spin"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y figma-developer-mcp --stdio" \
-  --env "FIGMA_API_KEY=$FIGMA_API_KEY" \
-  --spin http://localhost:3000
-```
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "npx -y figma-developer-mcp --stdio" \
+      --env "FIGMA_API_KEY=$FIGMA_API_KEY" \
+      --spin http://localhost:3000
+    ```
 
-### Filesystem MCP Server with File Output
+??? example "Filesystem MCP Server with File Output"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y @modelcontextprotocol/server-filesystem /home/user/projects" \
-  --output fs-tools.json
-```
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "npx -y @modelcontextprotocol/server-filesystem /home/user/projects" \
+      --output fs-tools.json
+    ```
 
-### Remote HTTP Server to Spin with Authentication
+??? example "Remote HTTP Server to Spin with Authentication"
 
-```bash
-deepfabric import-tools --transport http \
-  --endpoint "https://mcp.example.com/api" \
-  --header "Authorization=Bearer $API_TOKEN" \
-  --timeout 60.0 \
-  --spin http://localhost:3000
-```
+    ```bash
+    deepfabric import-tools --transport http \
+      --endpoint "https://mcp.example.com/api" \
+      --header "Authorization=Bearer $API_TOKEN" \
+      --timeout 60.0 \
+      --spin http://localhost:3000
+    ```
 
-### Full Pipeline: Import, Save, and Push
+??? example "Full Pipeline: Import, Save, and Push"
 
-```bash
-deepfabric import-tools --transport stdio \
-  --command "npx -y figma-developer-mcp --stdio" \
-  --env "FIGMA_API_KEY=$FIGMA_API_KEY" \
-  --output figma-tools.yaml \
-  --spin http://localhost:3000 \
-  --format deepfabric
-```
+    ```bash
+    deepfabric import-tools --transport stdio \
+      --command "npx -y figma-developer-mcp --stdio" \
+      --env "FIGMA_API_KEY=$FIGMA_API_KEY" \
+      --output figma-tools.yaml \
+      --spin http://localhost:3000 \
+      --format deepfabric
+    ```
 
 ## Command Reference
 
@@ -320,4 +330,5 @@ Options:
   --help                        Show this message and exit.
 ```
 
-At least one of `--output` or `--spin` is required.
+!!! warning "Required Output"
+    At least one of `--output` or `--spin` is required.

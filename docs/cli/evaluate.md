@@ -4,14 +4,16 @@ The `evaluate` command evaluates a fine-tuned model on tool-calling tasks using 
 
 ## Usage
 
-```bash
+```bash title="Basic syntax"
 deepfabric evaluate MODEL_PATH DATASET_PATH [OPTIONS]
 ```
 
 ## Arguments
 
-- `MODEL_PATH` - Path to base model or fine-tuned model (local directory or HuggingFace Hub ID)
-- `DATASET_PATH` - Path to evaluation dataset (JSONL format)
+| Argument | Description |
+|----------|-------------|
+| `MODEL_PATH` | Path to base model or fine-tuned model (local directory or HuggingFace Hub ID) |
+| `DATASET_PATH` | Path to evaluation dataset (JSONL format) |
 
 ## Options
 
@@ -30,30 +32,33 @@ deepfabric evaluate MODEL_PATH DATASET_PATH [OPTIONS]
 
 ## Examples
 
-### Evaluate a checkpoint
+=== "Checkpoint Evaluation"
 
-```bash
-deepfabric evaluate ./checkpoints/final ./eval.jsonl --output results.json
-```
+    ```bash title="Evaluate a checkpoint"
+    deepfabric evaluate ./checkpoints/final ./eval.jsonl --output results.json
+    ```
 
-### Evaluate with LoRA adapter
+=== "With LoRA Adapter"
 
-```bash
-deepfabric evaluate unsloth/Qwen3-4B-Instruct ./eval.jsonl \
-    --adapter-path ./lora_model \
-    --output results.json
-```
+    ```bash title="Evaluate with LoRA"
+    deepfabric evaluate unsloth/Qwen3-4B-Instruct ./eval.jsonl \
+        --adapter-path ./lora_model \
+        --output results.json
+    ```
 
-### Quick evaluation during development
+=== "Quick Dev Evaluation"
 
-```bash
-deepfabric evaluate ./my-model ./eval.jsonl --max-samples 50
-```
+    ```bash title="Quick evaluation"
+    deepfabric evaluate ./my-model ./eval.jsonl --max-samples 50
+    ```
 
-### Evaluate HuggingFace model
+=== "HuggingFace Model"
 
-```bash
-deepfabric evaluate username/model-name ./eval.jsonl \
-    --temperature 0.5 \
-    --device cuda
-```
+    ```bash title="Evaluate HF model"
+    deepfabric evaluate username/model-name ./eval.jsonl \
+        --temperature 0.5 \
+        --device cuda
+    ```
+
+!!! tip "Quick Iteration"
+    Use `--max-samples 50` during development for faster feedback loops.

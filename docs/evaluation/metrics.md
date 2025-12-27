@@ -17,47 +17,50 @@ Measures whether the model selected the correct tool.
 
 **Calculation**: `(correct selections) / (total samples)`
 
-**Example**:
-- Expected: `read_file`
-- Predicted: `read_file`
-- Result: Correct (1.0)
+??? example "Example"
+    - Expected: `read_file`
+    - Predicted: `read_file`
+    - Result: Correct (1.0)
 
-**Common issues**:
-- Model selects wrong tool for task
-- Model doesn't make a tool call when expected
-- Model hallucinates non-existent tools
+!!! warning "Common Issues"
+    - Model selects wrong tool for task
+    - Model doesn't make a tool call when expected
+    - Model hallucinates non-existent tools
 
 ## Parameter Accuracy
 
 Measures whether the model provided correct parameter types.
 
 **Calculation**: Validates that:
+
 1. All required parameters are present
 2. Parameter types match the schema
 
-**Example**:
-```python
-# Tool schema
-{
-    "name": "read_file",
-    "parameters": [
-        {"name": "file_path", "type": "str", "required": True}
-    ]
-}
+??? example "Example"
+    ```python
+    # Tool schema
+    {
+        "name": "read_file",
+        "parameters": [
+            {"name": "file_path", "type": "str", "required": True}
+        ]
+    }
 
-# Predicted call
-{"file_path": "config.json"}  # Correct - string provided
+    # Predicted call
+    {"file_path": "config.json"}  # Correct - string provided
 
-{"file_path": 123}  # Wrong - integer instead of string
-```
+    {"file_path": 123}  # Wrong - integer instead of string
+    ```
 
-**Note**: Values aren't compared exactly. The evaluation checks types, not whether the specific value matches.
+!!! note "Type Checking Only"
+    Values aren't compared exactly. The evaluation checks types, not whether the specific value matches.
 
 ## Execution Success Rate
 
 Measures whether the tool call could execute successfully.
 
 A call is valid if:
+
 - Correct tool is selected
 - All required parameters are present
 - Parameter types are correct
@@ -66,7 +69,7 @@ A call is valid if:
 
 Weighted combination of metrics:
 
-```python
+```python title="Score calculation"
 overall = (
     tool_selection * 0.40 +
     parameter_accuracy * 0.35 +
@@ -76,7 +79,7 @@ overall = (
 
 ### Custom Weights
 
-```python
+```python title="Custom metric weights"
 config = EvaluatorConfig(
     ...,
     metric_weights={
@@ -101,30 +104,30 @@ config = EvaluatorConfig(
 
 ### Low Tool Selection
 
-Check if:
-- Training data has clear tool usage patterns
-- Tools have distinct use cases
-- System prompt explains when to use each tool
+!!! tip "Check These"
+    - Training data has clear tool usage patterns
+    - Tools have distinct use cases
+    - System prompt explains when to use each tool
 
 ### Low Parameter Accuracy
 
-Check if:
-- Training examples show correct parameter formats
-- Required vs optional parameters are clear
-- Complex parameter types (lists, dicts) are handled
+!!! tip "Check These"
+    - Training examples show correct parameter formats
+    - Required vs optional parameters are clear
+    - Complex parameter types (lists, dicts) are handled
 
 ### High Processing Errors
 
-Check if:
-- Model output format matches expected chat format
-- Model is generating valid JSON for tool calls
-- Inference configuration (temperature, max_tokens) is appropriate
+!!! tip "Check These"
+    - Model output format matches expected chat format
+    - Model is generating valid JSON for tool calls
+    - Inference configuration (temperature, max_tokens) is appropriate
 
 ## Sample Evaluation Details
 
 Access individual sample results:
 
-```python
+```python title="Inspect failures"
 for pred in results.predictions:
     if not pred.tool_selection_correct:
         print(f"Sample {pred.sample_id}:")

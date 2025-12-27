@@ -5,6 +5,7 @@ DeepFabric supports the [Model Context Protocol (MCP)](https://modelcontextproto
 ## What is MCP?
 
 MCP is a standard for defining tools that AI models can use. It specifies:
+
 - Tool names and descriptions
 - Input schemas (JSON Schema format)
 - Annotations for tool behavior (read-only, destructive, etc.)
@@ -13,17 +14,18 @@ MCP is a standard for defining tools that AI models can use. It specifies:
 
 Pull tools directly from an MCP server:
 
-```bash
+```bash title="Pull tools"
 curl -X POST http://localhost:3000/mock/pull \
   -H "Content-Type: application/json" \
   -d '{"url": "http://your-mcp-server:8000"}'
 ```
 
-The Mock component sends a `tools/list` JSON-RPC request and loads the returned tools.
+!!! info "JSON-RPC"
+    The Mock component sends a `tools/list` JSON-RPC request and loads the returned tools.
 
 ## MCP Tool Format
 
-```json
+```json title="MCP tool schema"
 {
   "name": "search_code",
   "description": "Search code in a repository",
@@ -62,7 +64,7 @@ MCP annotations describe tool behavior:
 
 DeepFabric also uses its own format internally:
 
-```yaml
+```yaml title="DeepFabric format"
 - name: search_code
   description: Search code in a repository
   parameters:
@@ -77,11 +79,11 @@ DeepFabric also uses its own format internally:
   returns: "List of matching files and line numbers"
 ```
 
-### Conversion
+!!! tip "Automatic Conversion"
+    DeepFabric automatically converts between formats:
 
-DeepFabric automatically converts between formats:
-- MCP schemas are converted for internal use
-- Output datasets use OpenAI tool format
+    - MCP schemas are converted for internal use
+    - Output datasets use OpenAI tool format
 
 ## Configuration
 
@@ -89,7 +91,7 @@ DeepFabric automatically converts between formats:
 
 Load tools from an HTTP endpoint returning MCP format:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -101,7 +103,7 @@ generation:
 
 Define tools directly in YAML:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     custom:
@@ -122,6 +124,23 @@ generation:
 
 ## Example Workflow
 
+```mermaid
+sequenceDiagram
+    participant MCP as MCP Server
+    participant Mock as Mock Component
+    participant DF as DeepFabric
+    participant LLM
+
+    DF->>Mock: POST /mock/pull
+    Mock->>MCP: tools/list (JSON-RPC)
+    MCP-->>Mock: Tool definitions
+    Mock-->>DF: OK
+    DF->>LLM: Generate with tools
+    LLM-->>DF: Tool call
+    DF->>Mock: Execute tool
+    Mock-->>DF: Mock response
+```
+
 1. **Start MCP server** with your tool definitions
 2. **Load into Mock component**:
    ```bash
@@ -140,7 +159,7 @@ generation:
 
 Generated datasets include OpenAI-format tool definitions:
 
-```json
+```json title="Output tool format"
 {
   "tools": [
     {
@@ -162,4 +181,5 @@ Generated datasets include OpenAI-format tool definitions:
 }
 ```
 
-This format is compatible with OpenAI, TRL, and most training frameworks.
+!!! success "Framework Compatibility"
+    This format is compatible with OpenAI, TRL, and most training frameworks.

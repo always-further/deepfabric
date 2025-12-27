@@ -4,16 +4,53 @@ DeepFabric generates four types of synthetic training datasets, each designed fo
 
 ## Dataset Types
 
-| Type | Purpose | Use Case |
-|------|---------|----------|
-| **Basic** | Simple Q&A pairs | General instruction following |
-| **Reasoning** | Chain-of-thought traces | Step-by-step problem solving |
-| **Agent (Single-Turn)** | Tool calls in one response | Simple tool use |
-| **Agent (Multi-Turn)** | Extended tool conversations | Complex multi-step tasks |
+<div class="grid cards" markdown>
+
+-   :material-chat-question-outline: **Basic**
+
+    ---
+
+    Simple Q&A pairs for general instruction following
+
+    [:octicons-arrow-right-24: Learn more](basic.md)
+
+-   :material-head-cog-outline: **Reasoning**
+
+    ---
+
+    Chain-of-thought traces for step-by-step problem solving
+
+    [:octicons-arrow-right-24: Learn more](reasoning.md)
+
+-   :material-robot-outline: **Agent (Single-Turn)**
+
+    ---
+
+    Tool calls in one response for simple tool use
+
+    [:octicons-arrow-right-24: Learn more](agent.md)
+
+-   :material-robot-happy-outline: **Agent (Multi-Turn)**
+
+    ---
+
+    Extended tool conversations for complex multi-step tasks
+
+    [:octicons-arrow-right-24: Learn more](agent.md#multi-turn-agent)
+
+</div>
 
 ## Generation Pipeline
 
 All dataset types follow the same three-stage pipeline:
+
+```mermaid
+graph LR
+    A[Topic Generation] --> B[Sample Generation] --> C[Output]
+    A --> |"Tree or Graph"| A1[Subtopics]
+    B --> |"Per Topic"| B1[Training Examples]
+    C --> |"JSONL"| C1[HuggingFace Upload]
+```
 
 1. **Topic Generation** - Creates a tree or graph of subtopics from your root prompt
 2. **Sample Generation** - Produces training examples for each topic
@@ -21,30 +58,53 @@ All dataset types follow the same three-stage pipeline:
 
 ## Quick Comparison
 
-```yaml
-# Basic: Simple Q&A
-conversation:
-  type: basic
+=== "Basic"
 
-# Reasoning: Chain-of-thought
-conversation:
-  type: chain_of_thought
-  reasoning_style: freetext
+    ```yaml title="config.yaml"
+    conversation:
+      type: basic
+    ```
 
-# Agent Single-Turn: One-shot tool use
-conversation:
-  type: chain_of_thought
-  reasoning_style: agent
-  agent_mode: single_turn
+    Simple Q&A without explicit reasoning.
 
-# Agent Multi-Turn: Extended tool conversations
-conversation:
-  type: chain_of_thought
-  reasoning_style: agent
-  agent_mode: multi_turn
-```
+=== "Reasoning"
+
+    ```yaml title="config.yaml"
+    conversation:
+      type: chain_of_thought
+      reasoning_style: freetext
+    ```
+
+    Includes step-by-step reasoning traces.
+
+=== "Agent Single-Turn"
+
+    ```yaml title="config.yaml"
+    conversation:
+      type: chain_of_thought
+      reasoning_style: agent
+      agent_mode: single_turn
+    ```
+
+    One-shot tool use in a single response.
+
+=== "Agent Multi-Turn"
+
+    ```yaml title="config.yaml"
+    conversation:
+      type: chain_of_thought
+      reasoning_style: agent
+      agent_mode: multi_turn
+    ```
+
+    Extended conversations with multiple tool calls.
 
 ## Choosing a Dataset Type
+
+!!! tip "Quick Selection Guide"
+    - **Basic**: General instruction-following without explicit reasoning
+    - **Reasoning**: Models that need to explain their logic
+    - **Agent**: Tool-calling capabilities (single or multi-turn)
 
 **Basic datasets** work for general instruction-following tasks. The model learns to answer questions directly without explicit reasoning.
 

@@ -1,28 +1,76 @@
 # CLI Reference
 
-DeepFabric's command-line interface provides a modular set of tools that support complex workflows through focused, single-purpose commands. Each command handles a specific aspect of the synthetic data generation pipeline, enabling both simple one-shot operations and sophisticated multi-stage workflows.
-
-The CLI design follows Unix philosophy principles where each command does one thing well and commands compose together naturally. This approach supports iterative development, error recovery, and pipeline optimization through selective execution of generation stages.
+DeepFabric's command-line interface provides a modular set of tools that support complex workflows through focused, single-purpose commands.
 
 ## Command Overview
 
-The DeepFabric CLI provides the following commands:
+<div class="grid cards" markdown>
 
-**`generate`** transforms YAML configurations into synthetic datasets through the complete pipeline of topic modeling, dataset creation, and output formatting.
+-   :material-database-plus: **generate**
 
-**`validate`** checks configuration files for common issues, parameter compatibility problems, and authentication requirements before running expensive generation processes.
+    ---
 
-**`visualize`** creates SVG representations of topic graphs, enabling visual exploration of domain structures and relationship patterns.
+    Complete dataset generation from YAML configuration
 
-**`upload-hf`** publishes datasets to Hugging Face Hub.
+    [:octicons-arrow-right-24: Reference](generate.md)
 
-**`upload-kaggle`** publishes datasets to Kaggle.
+-   :material-check-circle: **validate**
 
-**`import-tools`** fetches tool definitions from MCP servers and saves or pushes them to a Spin server.
+    ---
 
-**`evaluate`** evaluates fine-tuned models on tool-calling tasks using transformers or Ollama backends.
+    Configuration validation and problem detection
 
-**`info`** displays version information, available commands, and environment configuration status.
+    [:octicons-arrow-right-24: Reference](validate.md)
+
+-   :material-graph: **visualize**
+
+    ---
+
+    Topic graph visualization and analysis
+
+    [:octicons-arrow-right-24: Reference](visualize.md)
+
+-   :material-cloud-upload: **upload-hf**
+
+    ---
+
+    Hugging Face Hub integration and publishing
+
+    [:octicons-arrow-right-24: Reference](upload-hf.md)
+
+-   :material-upload: **upload-kaggle**
+
+    ---
+
+    Kaggle integration and publishing
+
+    [:octicons-arrow-right-24: Reference](upload-kaggle.md)
+
+-   :material-import: **import-tools**
+
+    ---
+
+    Import tool definitions from MCP servers
+
+    [:octicons-arrow-right-24: Reference](import-tools.md)
+
+-   :material-test-tube: **evaluate**
+
+    ---
+
+    Model evaluation on tool-calling tasks
+
+    [:octicons-arrow-right-24: Reference](evaluate.md)
+
+-   :material-information: **info**
+
+    ---
+
+    Version and environment information
+
+    [:octicons-arrow-right-24: Reference](info.md)
+
+</div>
 
 ## Global Options
 
@@ -33,7 +81,7 @@ deepfabric --help     # Show command overview
 deepfabric --version  # Display version information
 ```
 
-Individual commands provide detailed help through the standard help flag:
+Individual commands provide detailed help:
 
 ```bash
 deepfabric generate --help
@@ -42,9 +90,10 @@ deepfabric validate --help
 
 ## Command Composition
 
-The modular design enables sophisticated workflows through command composition. For example, a complete dataset development cycle might involve:
+!!! tip "Modular Workflow"
+    The modular design enables sophisticated workflows through command composition:
 
-```bash
+```bash title="Complete workflow"
 # Validate configuration
 deepfabric validate config.yaml
 
@@ -62,15 +111,21 @@ Each command operates independently, allowing selective re-execution when iterat
 
 ## Error Handling
 
-All commands provide detailed error messages with actionable guidance for resolution. Error categories include configuration problems, authentication issues, API failures, and file system problems.
+All commands provide detailed error messages with actionable guidance for resolution. Error categories include:
 
-The commands use consistent exit codes where success returns 0 and various error conditions return non-zero values, enabling reliable scripting and automated workflows.
+- Configuration problems
+- Authentication issues
+- API failures
+- File system problems
+
+!!! info "Exit Codes"
+    Commands use consistent exit codes where success returns 0 and various error conditions return non-zero values, enabling reliable scripting and automated workflows.
 
 ## Configuration Override Patterns
 
-Many commands accept configuration file arguments along with parameter overrides, enabling experimentation without modifying configuration files:
+Many commands accept configuration file arguments along with parameter overrides:
 
-```bash
+```bash title="Override config options"
 deepfabric generate config.yaml \
   --temperature 0.9 \
   --num-samples 50 \
@@ -79,18 +134,3 @@ deepfabric generate config.yaml \
 ```
 
 This pattern supports rapid iteration during development while maintaining reproducible baseline configurations.
-
-## Command Sections
-
-Detailed documentation for each command covers syntax, options, examples, and common usage patterns:
-
-- [**generate**](generate.md) - Complete dataset generation from YAML configuration
-- [**validate**](validate.md) - Configuration validation and problem detection
-- [**visualize**](visualize.md) - Topic graph visualization and analysis
-- [**upload-hf**](upload-hf.md) - Hugging Face Hub integration and publishing
-- [**upload-kaggle**](upload-kaggle.md) - Kaggle integration and publishing
-- [**import-tools**](import-tools.md) - Import tool definitions from MCP servers
-- [**evaluate**](evaluate.md) - Model evaluation on tool-calling tasks
-- [**info**](info.md) - Version and environment information
-
-Each command section includes practical examples, common usage patterns, and troubleshooting guidance for typical issues encountered during synthetic data generation workflows.

@@ -11,7 +11,7 @@ Reasoning datasets include chain-of-thought traces that show how the model arriv
 
 ## Configuration
 
-```yaml
+```yaml title="config.yaml"
 topics:
   prompt: "Mathematical problem solving"
   mode: tree
@@ -38,38 +38,40 @@ output:
   save_as: "reasoning-dataset.jsonl"
 ```
 
-Key settings:
-- `conversation.type: chain_of_thought`
-- `conversation.reasoning_style: freetext`
+!!! note "Key Settings"
+    - `conversation.type: chain_of_thought`
+    - `conversation.reasoning_style: freetext`
 
 ## Output Format
 
 Reasoning datasets include a `reasoning` field alongside messages:
 
-```json
-{
-    "messages": [
-        {
-            "content": "You are an AI that explains its reasoning step-by-step.\n",
-            "role": "system"
+??? example "Sample Output"
+
+    ```json title="reasoning-dataset.jsonl"
+    {
+        "messages": [
+            {
+                "content": "You are an AI that explains its reasoning step-by-step.\n",
+                "role": "system"
+            },
+            {
+                "content": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
+                "role": "user"
+            },
+            {
+                "content": "Sure, let's dive into a problem that requires a bit of logical reasoning and mathematical problem-solving.\n\n**Problem:**\n\nImagine you have a basket containing a mix of apples and oranges. The total number of fruits in the basket is 30. If the number of apples is twice the number of oranges, how many apples and oranges are there in the basket?\n\n**Reasoning:**\n\nHmm, let's think about this. We know the total number of fruits is 30...",
+                "role": "assistant"
+            }
+        ],
+        "reasoning": {
+            "content": "Hmm, let's think about this. We know the total number of fruits is 30. So, if we let the number of oranges be x, then the number of apples would be 2x...",
+            "style": "freetext"
         },
-        {
-            "content": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
-            "role": "user"
-        },
-        {
-            "content": "Sure, let's dive into a problem that requires a bit of logical reasoning and mathematical problem-solving.\n\n**Problem:**\n\nImagine you have a basket containing a mix of apples and oranges. The total number of fruits in the basket is 30. If the number of apples is twice the number of oranges, how many apples and oranges are there in the basket?\n\n**Reasoning:**\n\nHmm, let's think about this. We know the total number of fruits is 30. So, if we let the number of oranges be \\( x \\), then the number of apples would be \\( 2x \\) because the problem states that the number of apples is twice the number of oranges.\n\nNow, if we add the number of apples and oranges together, it should equal the total number of fruits in the basket. So, we can set up the equation:\n\n\\[ x + 2x = 30 \\]\n\nThis simplifies to:\n\n\\[ 3x = 30 \\]\n\nHmm, let's solve for \\( x \\). If we divide both sides of the equation by 3, we get:\n\n\\[ x = \\frac{30}{3} \\]\n\n\\[ x = 10 \\]\n\nOkay, so there are 10 oranges in the basket. Since the number of apples is twice the number of oranges, we multiply 10 by 2 to find the number of apples:\n\n\\[ 2 \\times 10 = 20 \\]\n\nSo, there are 20 apples in the basket.\n\n**Final Answer:**\n\nThere are 20 apples and 10 oranges in the basket.",
-            "role": "assistant"
-        }
-    ],
-    "reasoning": {
-        "content": "Hmm, let's think about this. We know the total number of fruits is 30. So, if we let the number of oranges be \\( x \\), then the number of apples would be \\( 2x \\) because the problem states that the number of apples is twice the number of oranges.\n\nNow, if we add the number of apples and oranges together, it should equal the total number of fruits in the basket. So, we can set up the equation:\n\n\\[ x + 2x = 30 \\]\n\nThis simplifies to:\n\n\\[ 3x = 30 \\]\n\nHmm, let's solve for \\( x \\). If we divide both sides of the equation by 3, we get:\n\n\\[ x = \\frac{30}{3} \\]\n\n\\[ x = 10 \\]\n\nOkay, so there are 10 oranges in the basket. Since the number of apples is twice the number of oranges, we multiply 10 by 2 to find the number of apples:\n\n\\[ 2 \\times 10 = 20 \\]\n\nSo, there are 20 apples in the basket.",
-        "style": "freetext"
-    },
-    "question": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
-    "final_answer": "There are 20 apples and 10 oranges in the basket."
-}
-```
+        "question": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
+        "final_answer": "There are 20 apples and 10 oranges in the basket."
+    }
+    ```
 
 ## Reasoning Styles
 
@@ -83,7 +85,7 @@ The `freetext` style produces readable, conversational reasoning traces.
 
 ## CLI Usage
 
-```bash
+```bash title="Generate reasoning dataset"
 deepfabric generate \
   --topic-prompt "Logic puzzles" \
   --conversation-type chain_of_thought \
@@ -97,8 +99,9 @@ deepfabric generate \
 
 ## Training Considerations
 
-**Reasoning placement**: The `reasoning` field is stored separately from messages. During training, you can:
-- Include reasoning in the assistant's response (visible to users)
-- Use it as auxiliary training signal only
-- Format it as a special token section (e.g., `<thinking>...</thinking>`)
+!!! tip "Reasoning Placement"
+    The `reasoning` field is stored separately from messages. During training, you can:
 
+    - Include reasoning in the assistant's response (visible to users)
+    - Use it as auxiliary training signal only
+    - Format it as a special token section (e.g., `<thinking>...</thinking>`)

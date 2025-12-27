@@ -6,7 +6,7 @@ Integration patterns for TRL and Unsloth, including training configuration, call
 
 ### Basic SFT
 
-```python
+```python title="Basic SFT training"
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, SFTConfig
@@ -47,7 +47,7 @@ trainer.train()
 
 Include tools in the chat template:
 
-```python
+```python title="Tool calling format"
 def format_with_tools(example):
     messages = [{k: v for k, v in m.items() if v is not None}
                 for m in example["messages"]]
@@ -68,7 +68,7 @@ Unsloth provides faster training with lower memory usage.
 
 ### Basic Setup
 
-```python
+```python title="Unsloth setup"
 from unsloth import FastLanguageModel
 
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -90,7 +90,7 @@ model = FastLanguageModel.get_peft_model(
 
 ### Training
 
-```python
+```python title="Unsloth training"
 from trl import SFTTrainer, SFTConfig
 
 trainer = SFTTrainer(
@@ -113,7 +113,7 @@ trainer.train()
 
 ### Saving
 
-```python
+```python title="Save models"
 # Save LoRA adapter
 model.save_pretrained("./lora-adapter")
 
@@ -123,11 +123,11 @@ model.save_pretrained_merged("./merged-model", tokenizer)
 
 ## SFTConfig Reference
 
-`SFTConfig` (from TRL) extends HuggingFace's `TrainingArguments` with SFT-specific options. Here are the most important parameters:
+`SFTConfig` (from TRL) extends HuggingFace's `TrainingArguments` with SFT-specific options.
 
 ### Core Training Parameters
 
-```python
+```python title="Core parameters"
 from trl import SFTConfig
 
 config = SFTConfig(
@@ -152,9 +152,6 @@ config = SFTConfig(
     # Optimizer
     optim="adamw_torch",                # adamw_torch, adamw_8bit, paged_adamw_8bit
     weight_decay=0.01,                  # L2 regularization
-    adam_beta1=0.9,
-    adam_beta2=0.999,
-    adam_epsilon=1e-8,
     max_grad_norm=1.0,                  # Gradient clipping
 
     # Precision
@@ -163,13 +160,11 @@ config = SFTConfig(
 
     # Logging
     logging_steps=10,                   # Log metrics every N steps
-    logging_first_step=True,            # Log first step metrics
     report_to="none",                   # tensorboard, wandb, or none
 
     # Checkpointing
     save_steps=500,                     # Save checkpoint every N steps
     save_total_limit=3,                 # Keep only N most recent checkpoints
-    save_strategy="steps",              # steps, epoch, or no
 
     # Evaluation
     eval_strategy="steps",              # steps, epoch, or no
@@ -177,13 +172,12 @@ config = SFTConfig(
 
     # Memory optimization
     gradient_checkpointing=True,        # Trade compute for memory
-    dataloader_num_workers=4,           # Parallel data loading
 )
 ```
 
 ### SFT-Specific Parameters
 
-```python
+```python title="SFT-specific parameters"
 config = SFTConfig(
     ...,
     # Sequence length
@@ -199,27 +193,29 @@ config = SFTConfig(
 
 ### Memory-Efficient Configurations
 
-For limited GPU memory:
+=== "24GB GPU (RTX 3090/4090)"
 
-```python
-# 24GB GPU (RTX 3090/4090)
-config = SFTConfig(
-    per_device_train_batch_size=2,
-    gradient_accumulation_steps=8,
-    gradient_checkpointing=True,
-    bf16=True,
-    optim="adamw_8bit",
-)
+    ```python title="24GB config"
+    config = SFTConfig(
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=8,
+        gradient_checkpointing=True,
+        bf16=True,
+        optim="adamw_8bit",
+    )
+    ```
 
-# 16GB GPU (RTX 4080/A4000)
-config = SFTConfig(
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=16,
-    gradient_checkpointing=True,
-    bf16=True,
-    optim="paged_adamw_8bit",
-)
-```
+=== "16GB GPU (RTX 4080/A4000)"
+
+    ```python title="16GB config"
+    config = SFTConfig(
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=16,
+        gradient_checkpointing=True,
+        bf16=True,
+        optim="paged_adamw_8bit",
+    )
+    ```
 
 ## TrainerState and TrainerControl
 
@@ -229,12 +225,11 @@ The HuggingFace Trainer uses `TrainerState` and `TrainerControl` to manage train
 
 `TrainerState` contains the current training state, passed to all callbacks:
 
-```python
+```python title="TrainerState fields"
 state.global_step      # Current training step
 state.epoch            # Current epoch (float, e.g., 1.5)
 state.max_steps        # Total training steps
 state.num_train_epochs # Total epochs
-state.total_flos       # Total floating point operations
 state.log_history      # List of logged metrics
 state.best_metric      # Best evaluation metric
 state.best_model_checkpoint  # Path to best checkpoint
@@ -245,7 +240,7 @@ state.is_world_process_zero  # True on main process (for distributed)
 
 `TrainerControl` lets callbacks control training behavior:
 
-```python
+```python title="TrainerControl example"
 from transformers import TrainerCallback, TrainerControl
 
 class MyCallback(TrainerCallback):
@@ -266,7 +261,7 @@ class MyCallback(TrainerCallback):
         return control
 ```
 
-Control flags:
+### Control Flags
 
 | Flag | Effect |
 |------|--------|
@@ -278,10 +273,9 @@ Control flags:
 
 ### Early Stopping Example
 
-```python
-from transformers import TrainerCallback, EarlyStoppingCallback
+```python title="Early stopping"
+from transformers import EarlyStoppingCallback
 
-# Built-in early stopping
 trainer = SFTTrainer(
     ...,
     callbacks=[
@@ -307,7 +301,7 @@ DeepFabric provides a callback for logging training metrics to the DeepFabric pl
 
 ### Basic Usage
 
-```python
+```python title="DeepFabric callback"
 from deepfabric.training import DeepFabricCallback
 from trl import SFTTrainer, SFTConfig
 
@@ -325,7 +319,7 @@ trainer.train()
 
 ### Configuration
 
-```python
+```python title="Callback configuration"
 callback = DeepFabricCallback(
     trainer=trainer,              # Optional: Trainer instance for model info
     api_key="your-api-key",       # Or set DEEPFABRIC_API_KEY env var
@@ -336,8 +330,6 @@ callback = DeepFabricCallback(
 
 ### What Gets Logged
 
-The callback automatically logs:
-
 | Event | Metrics |
 |-------|---------|
 | `on_train_begin` | Model name, training config, max_steps, epochs |
@@ -345,63 +337,6 @@ The callback automatically logs:
 | `on_evaluate` | eval_loss, eval metrics |
 | `on_save` | Checkpoint step |
 | `on_train_end` | Final step, total_flos, best_metric, best_checkpoint |
-
-### Callback Methods
-
-```python
-class DeepFabricCallback:
-    def on_train_begin(self, args, state, control, **kwargs):
-        """Called at the beginning of training.
-        Sends run start event with training configuration.
-
-        Args:
-            args: TrainingArguments (SFTConfig)
-            state: TrainerState with max_steps, num_train_epochs
-            control: TrainerControl (not modified)
-        """
-
-    def on_log(self, args, state, control, logs=None, **kwargs):
-        """Called when metrics are logged.
-        Sends all logged metrics (loss, learning_rate, etc.).
-
-        Args:
-            args: TrainingArguments
-            state: TrainerState with global_step, epoch
-            control: TrainerControl
-            logs: Dict of metrics (loss, learning_rate, etc.)
-        """
-
-    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
-        """Called after evaluation.
-        Sends evaluation metrics.
-
-        Args:
-            args: TrainingArguments
-            state: TrainerState
-            control: TrainerControl
-            metrics: Dict of evaluation metrics (eval_loss, etc.)
-        """
-
-    def on_train_end(self, args, state, control, **kwargs):
-        """Called at the end of training.
-        Sends run end event and flushes pending metrics.
-
-        Args:
-            args: TrainingArguments
-            state: TrainerState with final metrics
-            control: TrainerControl
-        """
-
-    def on_save(self, args, state, control, **kwargs):
-        """Called when a checkpoint is saved.
-        Logs checkpoint event.
-
-        Args:
-            args: TrainingArguments
-            state: TrainerState with global_step
-            control: TrainerControl
-        """
-```
 
 ### Environment Variables
 
@@ -414,7 +349,7 @@ class DeepFabricCallback:
 
 Create custom callbacks by extending `TrainerCallback`:
 
-```python
+```python title="Custom callback"
 from transformers import TrainerCallback
 
 class CustomCallback(TrainerCallback):
@@ -454,27 +389,30 @@ trainer = SFTTrainer(
 | `on_epoch_end` | End of each epoch |
 | `on_step_begin` | Before each training step |
 | `on_step_end` | After each training step |
-| `on_substep_end` | After each gradient accumulation substep |
 | `on_log` | When metrics are logged |
 | `on_evaluate` | After evaluation |
 | `on_save` | When checkpoint is saved |
-| `on_prediction_step` | During prediction loop |
 
 ## Training Tips
 
-**Batch size**: Start small (2-4) and increase if memory allows. Use gradient accumulation for effective larger batches.
+!!! tip "Batch Size"
+    Start small (2-4) and increase if memory allows. Use gradient accumulation for effective larger batches.
 
-**Learning rate**: 2e-5 for full fine-tuning, 2e-4 for LoRA.
+!!! tip "Learning Rate"
+    2e-5 for full fine-tuning, 2e-4 for LoRA.
 
-**Epochs**: 1-3 epochs is usually sufficient. More can cause overfitting on small datasets.
+!!! tip "Epochs"
+    1-3 epochs is usually sufficient. More can cause overfitting on small datasets.
 
-**Evaluation**: Hold out 10% of data for validation. Monitor loss to detect overfitting.
+!!! tip "Evaluation"
+    Hold out 10% of data for validation. Monitor loss to detect overfitting.
 
-**Mixed precision**: Use bf16 if supported, otherwise fp16.
+!!! tip "Mixed Precision"
+    Use bf16 if supported, otherwise fp16.
 
 ## Evaluation During Training
 
-```python
+```python title="Evaluation config"
 trainer = SFTTrainer(
     ...,
     eval_dataset=eval_ds,

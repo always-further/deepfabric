@@ -4,16 +4,23 @@ DeepFabric includes an evaluation system for testing fine-tuned models on tool-c
 
 ## Workflow
 
+```mermaid
+graph LR
+    A[Generate Dataset] --> B[Train Model]
+    B --> C[Evaluate]
+    C --> D[Review Metrics]
+    D --> E[Improve]
+    E --> A
 ```
+
 1. Generate dataset with train/eval split
 2. Train model on training split
 3. Evaluate on held-out eval split
 4. Review metrics and improve
-```
 
 ## Quick Example
 
-```python
+```python title="evaluation_example.py"
 from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
 
 config = EvaluatorConfig(
@@ -33,22 +40,25 @@ print(f"Overall Score: {results.metrics.overall_score:.2%}")
 
 ## Using In-Memory Models
 
-After training, pass the model directly without reloading from disk:
+!!! tip "Avoid OOM Errors"
+    After training, pass the model directly without reloading from disk:
 
-```python
-# After training with SFTTrainer...
-FastLanguageModel.for_inference(model)
+    ```python
+    # After training with SFTTrainer...
+    FastLanguageModel.for_inference(model)
 
-config = EvaluatorConfig(
-    inference_config=InferenceConfig(
-        model=model,          # Pass model object directly
-        tokenizer=tokenizer,  # Required with in-memory model
-    ),
-)
-results = evaluator.evaluate(dataset=eval_dataset)
-```
+    config = EvaluatorConfig(
+        inference_config=InferenceConfig(
+            model=model,          # Pass model object directly
+            tokenizer=tokenizer,  # Required with in-memory model
+        ),
+    )
+    results = evaluator.evaluate(dataset=eval_dataset)
+    ```
 
-This avoids OOM errors and speeds up the train-evaluate workflow. See [Running Evaluation](running.md#using-in-memory-models) for details.
+    This avoids OOM errors and speeds up the train-evaluate workflow.
+
+See [Running Evaluation](running.md#using-in-memory-models) for details.
 
 ## What Gets Evaluated
 
@@ -69,5 +79,22 @@ For each sample in the evaluation dataset:
 
 ## Next Steps
 
-- [Running Evaluation](running.md) - Configuration and usage
-- [Metrics](metrics.md) - Understanding the metrics
+<div class="grid cards" markdown>
+
+-   :material-play-circle: **Running Evaluation**
+
+    ---
+
+    Configuration and usage for model evaluation
+
+    [:octicons-arrow-right-24: Run evaluation](running.md)
+
+-   :material-chart-bar: **Metrics**
+
+    ---
+
+    Understanding evaluation metrics in depth
+
+    [:octicons-arrow-right-24: Understand metrics](metrics.md)
+
+</div>

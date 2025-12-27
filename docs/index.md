@@ -35,8 +35,21 @@
 
 ## Quick Start
 
-```bash
-pip install deepfabric
+=== "pip"
+
+    ```bash
+    pip install deepfabric
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add deepfabric
+    ```
+
+Then set your API key and generate your first dataset:
+
+```bash title="Generate a dataset"
 export OPENAI_API_KEY="your-key"
 
 deepfabric generate \
@@ -64,43 +77,65 @@ The key steps in this example were as follows:
 
 So lets' break down this down visually:
 
-```
-Topic Graph:
-- DevOps and Platform Engineering
-  - CI/CD Pipelines
-    - Best Practices for CI/CD
-    - Common CI/CD Tools
-  - Infrastructure as Code
-    - IaC Benefits
-    - Popular IaC Tools
+```mermaid
+graph TD
+    A[DevOps and Platform Engineering] --> B[CI/CD Pipelines]
+    A --> C[Infrastructure as Code]
+    B --> D[Best Practices for CI/CD]
+    B --> E[Common CI/CD Tools]
+    C --> F[IaC Benefits]
+    C --> G[Popular IaC Tools]
 ```
 
 So as you can see we have a depth of 2 (root + 2 levels) and a degree of 2 (2 subtopics per topic). 
 
 Each of these topics would then be used to generate a corresponding dataset samples.
 
-**"Best Practices for CI/CD"** Sample:
-```json
-{
-  "question": "What are some best practices for implementing CI/CD pipelines?",
-  "answer": "Some best practices include automating testing, using version control, and ensuring fast feedback loops.",
-  "reasoning_trace": [
-    "The user is asking about best practices for CI/CD pipelines.",
-    "I know that automation is key in CI/CD to ensure consistency and reliability.",
-    "Version control allows tracking changes and collaboration among team members.",
-    "Fast feedback loops help catch issues early in the development process."
-  ]
-}
-```
+??? example "Best Practices for CI/CD - Sample Output"
+
+    ```json title="dataset.jsonl"
+    {
+      "question": "What are some best practices for implementing CI/CD pipelines?",
+      "answer": "Some best practices include automating testing, using version control, and ensuring fast feedback loops.",
+      "reasoning_trace": [
+        "The user is asking about best practices for CI/CD pipelines.",
+        "I know that automation is key in CI/CD to ensure consistency and reliability.",
+        "Version control allows tracking changes and collaboration among team members.",
+        "Fast feedback loops help catch issues early in the development process."
+      ]
+    }
+    ```
 
 ## Dataset Types
 
 DeepFabric supports multiple dataset types to suit different training needs:
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| [Basic](dataset-generation/basic.md) | Simple Q&A pairs | Instruction following |
-| [Reasoning](dataset-generation/reasoning.md) | Chain-of-thought traces | Step-by-step problem solving |
-| [Agent](dataset-generation/agent.md) | Tool-calling with real execution | Building agents |
+<div class="grid cards" markdown>
+
+-   :material-chat-question-outline: **Basic Datasets**
+
+    ---
+
+    Simple Q&A pairs for instruction following tasks
+
+    [:octicons-arrow-right-24: Learn more](dataset-generation/basic.md)
+
+-   :material-head-cog-outline: **Reasoning Datasets**
+
+    ---
+
+    Chain-of-thought traces for step-by-step problem solving
+
+    [:octicons-arrow-right-24: Learn more](dataset-generation/reasoning.md)
+
+-   :material-robot-outline: **Agent Datasets**
+
+    ---
+
+    Tool-calling with real execution for building agents
+
+    [:octicons-arrow-right-24: Learn more](dataset-generation/agent.md)
+
+</div>
 
 

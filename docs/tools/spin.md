@@ -4,18 +4,24 @@
 
 ## Installation
 
-### macOS
+=== "macOS"
 
-```bash
-brew install fermyon/tap/spin
-```
+    ```bash
+    brew install fermyon/tap/spin
+    ```
 
-### Linux
+=== "Linux"
 
-```bash
-curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash
-sudo mv spin /usr/local/bin/
-```
+    ```bash
+    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash
+    sudo mv spin /usr/local/bin/
+    ```
+
+=== "Docker"
+
+    ```bash
+    docker run -d -p 3000:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
+    ```
 
 ### Verify
 
@@ -33,6 +39,7 @@ spin build
 ```
 
 This compiles all Rust components to WebAssembly. Build output:
+
 - `components/vfs/target/wasm32-wasip1/release/vfs.wasm`
 - `components/mock/target/wasm32-wasip1/release/mock.wasm`
 
@@ -72,14 +79,14 @@ spin up --background
 
 Verify the service is running:
 
-```bash
+```bash title="Health check"
 curl http://localhost:3000/vfs/health
 # {"status":"healthy","components":["vfs"]}
 ```
 
 Execute a tool:
 
-```bash
+```bash title="Write a file"
 curl -X POST http://localhost:3000/vfs/execute \
   -H "Content-Type: application/json" \
   -d '{
@@ -94,7 +101,7 @@ curl -X POST http://localhost:3000/vfs/execute \
 
 The `spin.toml` file defines components and routes:
 
-```toml
+```toml title="spin.toml"
 spin_manifest_version = 2
 
 [application]
@@ -112,24 +119,24 @@ key_value_stores = ["default"]
 
 ## Troubleshooting
 
-**Port already in use**
-```bash
-# Find process
-lsof -i :3000
-# Kill it
-kill -9 <PID>
-```
+!!! warning "Port Already in Use"
+    ```bash
+    # Find process
+    lsof -i :3000
+    # Kill it
+    kill -9 <PID>
+    ```
 
-**Build failures**
-```bash
-# Ensure Rust WASM target is installed
-rustup target add wasm32-wasip1
-```
+!!! warning "Build Failures"
+    ```bash
+    # Ensure Rust WASM target is installed
+    rustup target add wasm32-wasip1
+    ```
 
-**Permission errors**
-```bash
-# Check spin binary location
-which spin
-# Ensure it's executable
-chmod +x $(which spin)
-```
+!!! warning "Permission Errors"
+    ```bash
+    # Check spin binary location
+    which spin
+    # Ensure it's executable
+    chmod +x $(which spin)
+    ```

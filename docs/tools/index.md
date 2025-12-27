@@ -20,18 +20,12 @@ Result: Written 42 bytes  # Real operation
 
 ## Architecture
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│   DeepFabric    │────▶│   Spin Service  │
-│   (Python)      │     │   (WASM Host)   │
-└─────────────────┘     └────────┬────────┘
-                                 │
-              ┌──────────────────┼──────────────────┐
-              ▼                  ▼                  ▼
-        ┌──────────┐      ┌──────────┐      ┌──────────┐
-        │   VFS    │      │   Mock   │      │  GitHub  │
-        │Component │      │Component │      │Component │
-        └──────────┘      └──────────┘      └──────────┘
+```mermaid
+graph TB
+    A[DeepFabric<br/>Python] --> B[Spin Service<br/>WASM Host]
+    B --> C[VFS<br/>Component]
+    B --> D[Mock<br/>Component]
+    B --> E[GitHub<br/>Component]
 ```
 
 Components are WebAssembly modules that handle specific tool categories:
@@ -46,32 +40,43 @@ Components are WebAssembly modules that handle specific tool categories:
 
 ### Install Spin
 
-#### Docker
+=== "Docker"
 
-We provide a prepacked Docker image:
+    We provide a prepacked Docker image:
 
-```bash
-docker run -d -p 3000:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
-```
+    ```bash
+    docker run -d -p 3000:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
+    ```
 
-This will now be accessible at `http://localhost:3000`.
+    This will now be accessible at `http://localhost:3000`.
 
-#### Local Installation
+=== "macOS"
 
-Follow the [Spin installation guide](https://spinframework.dev/v3/install) for your OS.
+    ```bash
+    brew install fermyon/tap/spin
+    ```
 
-and from the `tools-sdk/` directory:
+=== "Linux"
 
-```bash
-spin build
-spin up
-```
+    ```bash
+    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash
+    sudo mv spin /usr/local/bin/
+    ```
 
-The service runs at `http://localhost:3000`.
+=== "Local Build"
+
+    From the `tools-sdk/` directory:
+
+    ```bash
+    spin build
+    spin up
+    ```
+
+    The service runs at `http://localhost:3000`.
 
 Configure DeepFabric to use it:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -95,10 +100,51 @@ Each dataset sample gets an isolated session. Files created during one sample do
 # After sample generation, session is cleaned up
 ```
 
+!!! info "Automatic Cleanup"
+    DeepFabric automatically creates and cleans up sessions for each sample, ensuring isolation between training examples.
+
 ## Next Steps
 
-- [Spin Setup](spin.md) - Installation and running
-- [VFS Component](vfs.md) - Virtual filesystem tools
-- [Mock Component](mock.md) - Dynamic tool mocking
-- [MCP Integration](mcp.md) - Loading tools from MCP servers
-- [Custom Tools](custom.md) - Creating your own components
+<div class="grid cards" markdown>
+
+-   :material-cog: **Spin Setup**
+
+    ---
+
+    Installation and running the tool service
+
+    [:octicons-arrow-right-24: Setup guide](spin.md)
+
+-   :material-folder-outline: **VFS Component**
+
+    ---
+
+    Virtual filesystem tools for file operations
+
+    [:octicons-arrow-right-24: Learn more](vfs.md)
+
+-   :material-test-tube: **Mock Component**
+
+    ---
+
+    Dynamic tool mocking for external APIs
+
+    [:octicons-arrow-right-24: Configure mocks](mock.md)
+
+-   :material-connection: **MCP Integration**
+
+    ---
+
+    Loading tools from MCP servers
+
+    [:octicons-arrow-right-24: MCP setup](mcp.md)
+
+-   :material-wrench: **Custom Tools**
+
+    ---
+
+    Creating your own Spin components
+
+    [:octicons-arrow-right-24: Build tools](custom.md)
+
+</div>

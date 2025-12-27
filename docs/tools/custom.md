@@ -23,7 +23,7 @@ cargo init --lib
 
 ### 2. Configure Cargo.toml
 
-```toml
+```toml title="Cargo.toml"
 [package]
 name = "my-tools"
 version = "0.1.0"
@@ -41,8 +41,7 @@ spin-sdk = "3.0"
 
 ### 3. Implement the Handler
 
-```rust
-// src/lib.rs
+```rust title="src/lib.rs"
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use spin_sdk::{
@@ -127,7 +126,7 @@ fn not_found() -> Result<Response> {
 
 Add to `tools-sdk/spin.toml`:
 
-```toml
+```toml title="spin.toml"
 [[trigger.http]]
 route = "/my-tools/..."
 component = "my-tools"
@@ -150,7 +149,7 @@ spin up
 
 Test your component:
 
-```bash
+```bash title="Test custom tool"
 curl -X POST http://localhost:3000/my-tools/execute \
   -H "Content-Type: application/json" \
   -d '{
@@ -166,7 +165,7 @@ curl -X POST http://localhost:3000/my-tools/execute \
 
 Add to your DeepFabric config:
 
-```yaml
+```yaml title="config.yaml"
 generation:
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -181,20 +180,21 @@ generation:
         component: my-tools
 ```
 
-The `component` field specifies which Spin component handles this tool.
+!!! info "Component Routing"
+    The `component` field specifies which Spin component handles this tool.
 
 ## External APIs
 
 To call external APIs, add allowed hosts:
 
-```toml
+```toml title="spin.toml"
 [component.my-tools]
 allowed_outbound_hosts = ["https://api.example.com"]
 ```
 
 Then use HTTP in your handler:
 
-```rust
+```rust title="External API call"
 use spin_sdk::http::{send, Method, Request as OutRequest};
 
 fn call_external_api() -> Result<String> {
@@ -210,14 +210,19 @@ fn call_external_api() -> Result<String> {
 
 ## Python Components
 
-Spin also supports Python via `componentize-py`. See the GitHub component in `tools-sdk/components/github/` for an example.
+!!! tip "Python Support"
+    Spin also supports Python via `componentize-py`. See the GitHub component in `tools-sdk/components/github/` for an example.
 
 ## Best Practices
 
-**Session isolation**: Use `session_id` to scope any state your tool maintains.
+!!! tip "Session Isolation"
+    Use `session_id` to scope any state your tool maintains.
 
-**Error handling**: Return structured errors with `error_type` for debugging.
+!!! tip "Error Handling"
+    Return structured errors with `error_type` for debugging.
 
-**Idempotency**: Design tools to be safely retryable when possible.
+!!! tip "Idempotency"
+    Design tools to be safely retryable when possible.
 
-**Documentation**: Include clear descriptions in tool definitions for better LLM reasoning.
+!!! tip "Documentation"
+    Include clear descriptions in tool definitions for better LLM reasoning.
