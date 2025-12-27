@@ -1,6 +1,7 @@
 .PHONY: clean install format lint test-unit test-integration test-integration-verbose security build all
 .PHONY: test-integration-openai test-integration-gemini test-integration-llm
 .PHONY: test-integration-hubs test-integration-spin test-integration-quick
+.PHONY: test-integration-graph test-integration-generator
 
 # Base command for integration tests
 PYTEST_INTEGRATION = uv run pytest tests/integration --tb=short -v
@@ -48,6 +49,12 @@ test-integration-spin:
 
 test-integration-quick:
 	$(PYTEST_INTEGRATION) -m "not huggingface"
+
+test-integration-graph:
+	$(PYTEST_INTEGRATION) tests/integration/test_graph_integration.py
+
+test-integration-generator:
+	$(PYTEST_INTEGRATION) tests/integration/test_generator_integration.py
 
 security:
 	uv run bandit -r deepfabric/

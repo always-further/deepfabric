@@ -2,7 +2,7 @@
 
 import asyncio
 
-import pytest
+import pytest  # pyright: ignore[reportMissingImports]
 
 from deepfabric.llm.client import LLMClient
 from deepfabric.schemas import ChatMessage, ChatTranscript, TopicList
@@ -68,9 +68,7 @@ class TestLLMClientOpenAI:
             final_result = None
 
             # generate_async_stream yields tuples: (chunk, None) or (None, result)
-            async for chunk, result in openai_client.generate_async_stream(
-                prompt, ChatTranscript
-            ):
+            async for chunk, result in openai_client.generate_async_stream(prompt, ChatTranscript):
                 if chunk is not None:
                     chunks.append(chunk)
                 if result is not None:

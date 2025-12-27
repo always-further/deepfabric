@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-import pytest
+import pytest  # pyright: ignore[reportMissingImports]
 
 from deepfabric import Tree, topic_manager
 from deepfabric.utils import read_topic_tree_from_jsonl
