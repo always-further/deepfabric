@@ -37,6 +37,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
+    "pytest-httpx>=0.30.0",
     "requests-mock>=1.11.0",
     "ruff>=0.1.0",
     "bandit>=1.7.10",
@@ -72,6 +73,10 @@ filterwarnings = [
 ]
 markers = [
     "asyncio: mark tests that require an asyncio event loop",
+    "openai: mark tests requiring OpenAI API access",
+    "gemini: mark tests requiring Gemini API access",
+    "huggingface: mark tests requiring HuggingFace Hub access",
+    "spin: mark tests for Spin service (mocked HTTP)",
 ]
 
 [tool.ruff]

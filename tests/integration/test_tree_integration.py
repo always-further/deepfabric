@@ -1,15 +1,12 @@
 import asyncio
 import json
-import os
 
-import pytest  # type: ignore
+import pytest
 
 from deepfabric import Tree, topic_manager
 from deepfabric.utils import read_topic_tree_from_jsonl
 
-requires_openai = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set; skipping real LLM test"
-)
+from .conftest import requires_openai
 
 
 class TestTreeIntegration:
@@ -48,6 +45,7 @@ class TestTreeIntegration:
         return [event async for event in tree.build_async()]
 
     @requires_openai
+    @pytest.mark.openai
     def test_tree_builds_basic(self, tree_builder):
         degree = 2
         depth = 1
@@ -68,6 +66,7 @@ class TestTreeIntegration:
         assert all(p[0] == topic for p in paths)
 
     @requires_openai
+    @pytest.mark.openai
     def test_tree_builds_with_deeper_recursion(self, tree_builder):
         # Single branch but deeper depth to exercise recursion with real LLM
         degree = 1
@@ -86,6 +85,7 @@ class TestTreeIntegration:
         assert all(len(p) == depth + 1 for p in paths)
 
     @requires_openai
+    @pytest.mark.openai
     def test_tree_generates_and_saves_jsonl_structure(self, tmp_path, tree_builder):
         # Generate a small tree, save to JSONL, and validate file structure
         degree = 2
@@ -112,6 +112,7 @@ class TestTreeIntegration:
         assert all(list(obj.keys()) == ["path"] for obj in items)
 
     @requires_openai
+    @pytest.mark.openai
     def test_tree_save_and_load_round_trip(self, tmp_path, tree_builder):
         degree = 2
         depth = 1
@@ -138,6 +139,7 @@ class TestTreeIntegration:
         assert all(p[0] == root for p in rebuilt.get_all_paths())
 
     @requires_openai
+    @pytest.mark.openai
     def test_tree_tui_streaming_and_events(self, monkeypatch, tree_builder):
         # Use topic_manager + TUI to drive build and capture streaming chunks
 
