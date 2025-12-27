@@ -23,6 +23,7 @@ nav:
     - Custom Tools: tools/custom.md
   - Training:
     - Overview: training/index.md
+    - Dataset Preparation: training/dataset-preparation.md
     - Loading Datasets: training/loading.md
     - Chat Templates: training/chat-templates.md
     - Training Frameworks: training/frameworks.md
@@ -37,6 +38,7 @@ nav:
     - visualize: cli/visualize.md
     - upload-hf: cli/upload-hf.md
     - upload-kaggle: cli/upload-kaggle.md
+    - import-tools: cli/import-tools.md
     - evaluate: cli/evaluate.md
     - info: cli/info.md
   - API Reference:

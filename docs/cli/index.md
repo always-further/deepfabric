@@ -18,6 +18,8 @@ The DeepFabric CLI provides the following commands:
 
 **`upload-kaggle`** publishes datasets to Kaggle.
 
+**`import-tools`** fetches tool definitions from MCP servers and saves or pushes them to a Spin server.
+
 **`evaluate`** evaluates fine-tuned models on tool-calling tasks using transformers or Ollama backends.
 
 **`info`** displays version information, available commands, and environment configuration status.
@@ -87,6 +89,7 @@ Detailed documentation for each command covers syntax, options, examples, and co
 - [**visualize**](visualize.md) - Topic graph visualization and analysis
 - [**upload-hf**](upload-hf.md) - Hugging Face Hub integration and publishing
 - [**upload-kaggle**](upload-kaggle.md) - Kaggle integration and publishing
+- [**import-tools**](import-tools.md) - Import tool definitions from MCP servers
 - [**evaluate**](evaluate.md) - Model evaluation on tool-calling tasks
 - [**info**](info.md) - Version and environment information
 
