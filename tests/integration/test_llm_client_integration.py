@@ -140,4 +140,4 @@ class TestLLMClientGemini:
         result = asyncio.run(run_async())
 
         assert isinstance(result, TopicList)
-        assert len(result.subtopics) >= 2
+        assert len(result.subtopics) >= 2  # noqa: PLR2004
