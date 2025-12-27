@@ -27,7 +27,7 @@ def openai_config():
     """Common OpenAI provider configuration for integration tests."""
     return {
         "provider": "openai",
-        "model_name": "gpt-4o-mini",
+        "model_name": os.getenv("OPENAI_TEST_MODEL", "gpt-4o-mini"),
         "temperature": 0.2,
     }
 
@@ -37,6 +37,6 @@ def gemini_config():
     """Common Gemini provider configuration for integration tests."""
     return {
         "provider": "gemini",
-        "model_name": "gemini-2.0-flash",
+        "model_name": os.getenv("GEMINI_TEST_MODEL", "gemini-2.0-flash"),
         "temperature": 0.2,
     }

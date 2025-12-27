@@ -2,6 +2,9 @@
 .PHONY: test-integration-openai test-integration-gemini test-integration-llm
 .PHONY: test-integration-hubs test-integration-spin test-integration-quick
 
+# Base command for integration tests
+PYTEST_INTEGRATION = uv run pytest tests/integration --tb=short -v
+
 clean:
 	rm -rf build/
 	rm -rf dist/
@@ -23,29 +26,28 @@ test-unit:
 	uv run pytest tests/unit/
 
 test-integration:
-	uv run pytest tests/integration --tb=short --maxfail=1 -v
+	$(PYTEST_INTEGRATION) --maxfail=1
 
-.PHONY: test-integration-verbose
 test-integration-verbose:
-	uv run pytest -v -rA --durations=10 tests/integration/
+	uv run pytest tests/integration -v -rA --durations=10
 
 test-integration-openai:
-	uv run pytest tests/integration -m openai --tb=short -v
+	$(PYTEST_INTEGRATION) -m openai
 
 test-integration-gemini:
-	uv run pytest tests/integration -m gemini --tb=short -v
+	$(PYTEST_INTEGRATION) -m gemini
 
 test-integration-llm:
-	uv run pytest tests/integration -m "openai or gemini" --tb=short -v
+	$(PYTEST_INTEGRATION) -m "openai or gemini"
 
 test-integration-hubs:
-	uv run pytest tests/integration -m huggingface --tb=short -v
+	$(PYTEST_INTEGRATION) -m huggingface
 
 test-integration-spin:
-	uv run pytest tests/integration -m spin --tb=short -v
+	$(PYTEST_INTEGRATION) -m spin
 
 test-integration-quick:
-	uv run pytest tests/integration -m "not huggingface" --tb=short -v
+	$(PYTEST_INTEGRATION) -m "not huggingface"
 
 security:
 	uv run bandit -r deepfabric/
