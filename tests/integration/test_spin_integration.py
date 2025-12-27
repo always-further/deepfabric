@@ -72,7 +72,7 @@ class TestSpinClientToolExecution:
                 session_id=session_id,
                 tool_name="write_file",
                 arguments={
-                    "path": "/test.txt",
+                    "file_path": "/test.txt",
                     "content": "Hello from integration test",
                 },
                 component="vfs",
@@ -85,7 +85,7 @@ class TestSpinClientToolExecution:
             read_result = await spin_client.execute_tool(
                 session_id=session_id,
                 tool_name="read_file",
-                arguments={"path": "/test.txt"},
+                arguments={"file_path": "/test.txt"},
                 component="vfs",
             )
 
@@ -129,7 +129,7 @@ class TestSpinClientSession:
             await spin_client.execute_tool(
                 session_id=session_id,
                 tool_name="write_file",
-                arguments={"path": "/cleanup_test.txt", "content": "test"},
+                arguments={"file_path": "/cleanup_test.txt", "content": "test"},
                 component="vfs",
             )
 
@@ -152,7 +152,7 @@ class TestSpinClientSession:
             await spin_client.execute_tool(
                 session_id=session1,
                 tool_name="write_file",
-                arguments={"path": "/isolated.txt", "content": "session1"},
+                arguments={"file_path": "/isolated.txt", "content": "session1"},
                 component="vfs",
             )
 
@@ -160,7 +160,7 @@ class TestSpinClientSession:
             read_result = await spin_client.execute_tool(
                 session_id=session2,
                 tool_name="read_file",
-                arguments={"path": "/isolated.txt"},
+                arguments={"file_path": "/isolated.txt"},
                 component="vfs",
             )
 
