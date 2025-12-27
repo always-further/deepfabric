@@ -16,7 +16,7 @@ topics:
   prompt: "Python programming fundamentals"
   mode: tree
   depth: 2
-  degree: 3
+  degree: 2
 
 generation:
   system_prompt: "Generate clear, educational Q&A pairs."
@@ -32,7 +32,8 @@ generation:
 output:
   system_prompt: |
     You are a helpful assistant.
-  num_samples: 10
+  num_samples: 2
+  batch_size: 1
   save_as: "dataset.jsonl"
 ```
 
@@ -75,7 +76,8 @@ Or with inline options:
 deepfabric generate \
   --topic-prompt "Machine learning basics" \
   --conversation-type basic \
-  --num-samples 50 \
+  --num-samples 2 \
+  --batch-size 1 \
   --provider openai \
   --model gpt-4o \
   --output-save-as ml-dataset.jsonl
@@ -89,4 +91,37 @@ deepfabric generate \
 - `generation.system_prompt` - Instructions for the LLM generating examples
 - `output.system_prompt` - The system message included in training data
 
-**Batch size** affects generation speed. Higher values (`batch_size: 5`) parallelize requests but may hit rate limits.
+**Sample size** affects generation speed and amount. 
+- `num_samples: 10` creates 10 examples.
+- `batch_size` controls parallel requests to the LLM.
+
+So `num_samples: 5` with `batch_size: 5` sends 5 parallel requests, each generating 5 examples, to give a total of 25 samples.
+
+## Graph to sample ratio
+
+When configuring topic generation with a tree or graph, the total number of unique topics is determined by the structure:
+
+- **Tree**: Total Topics = (degree^(depth + 1) - 1) / (degree - 1)
+- **Graph**: Total Topics = degree * depth + 1
+
+For example, a tree with `depth: 2` and `degree: 2` yields 4 unique topics.
+
+The amount of samples generated is dependent on the total unique topics and the `num_samples` setting. If the number of samples exceeds the number of unique topics, DeepFabric will warn and flag the discrepancy.
+
+For example, with a tree of `depth: 2` and `degree: 2`, there are 7 unique topics. If `num_samples` is set to 5, DeepFabric will generate a warning
+
+```bash
+❌  Path validation failed - stopping before topic generation
+❌ Error: Insufficient expected paths for dataset generation:
+  • Expected tree paths: ~4 (depth=2, degree=2)
+  • Requested samples: 5 (5 steps × 1 batch size)
+  • Shortfall: ~1 samples
+
+Recommendations:
+  • Use one of these combinations to utilize the 4 paths:
+    --num-steps 1 --batch-size 4  (generates 4 samples)
+    --num-steps 2 --batch-size 2  (generates 4 samples)
+    --num-steps 3 --batch-size 1  (generates 3 samples)
+  • Or increase --depth (currently 2) or --degree (currently 2)
+  ```
+  

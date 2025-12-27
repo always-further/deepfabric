@@ -15,7 +15,7 @@ llm:
 topics:
   prompt: "Python programming fundamentals"
   mode: tree              # tree | graph
-  depth: 3
+  depth: 2
   degree: 3
   save_as: "topics.jsonl"
   llm:                    # Override shared LLM
@@ -48,15 +48,18 @@ output:
   system_prompt: |
     You are a helpful assistant with tool access.
   include_system_message: true
-  num_samples: 50
-  batch_size: 5
+  num_samples: 4
+  batch_size: 2
   save_as: "dataset.jsonl"
 
 # Optional: Upload to HuggingFace
 huggingface:
-  repository: "username/dataset-name"
+  repository: "org/dataset-name"
   tags: ["python", "agents"]
 ```
+
+> [!NOTE]  
+> The huggingface section is optional and used to upload the dataset after generation. It will require a token be exported in your environment as `HF_TOKEN` or use of the `huggingface-cli` tool, pre-run.
 
 ## Section Reference
 

@@ -33,7 +33,8 @@ generation:
 output:
   system_prompt: |
     You are an AI that explains its reasoning step-by-step.
-  num_samples: 10
+  num_samples: 7
+  batch_size: 1
   save_as: "reasoning-dataset.jsonl"
 ```
 
@@ -47,24 +48,26 @@ Reasoning datasets include a `reasoning` field alongside messages:
 
 ```json
 {
-  "messages": [
-    {
-      "role": "system",
-      "content": "You are an AI that explains its reasoning."
+    "messages": [
+        {
+            "content": "You are an AI that explains its reasoning step-by-step.\n",
+            "role": "system"
+        },
+        {
+            "content": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
+            "role": "user"
+        },
+        {
+            "content": "Sure, let's dive into a problem that requires a bit of logical reasoning and mathematical problem-solving.\n\n**Problem:**\n\nImagine you have a basket containing a mix of apples and oranges. The total number of fruits in the basket is 30. If the number of apples is twice the number of oranges, how many apples and oranges are there in the basket?\n\n**Reasoning:**\n\nHmm, let's think about this. We know the total number of fruits is 30. So, if we let the number of oranges be \\( x \\), then the number of apples would be \\( 2x \\) because the problem states that the number of apples is twice the number of oranges.\n\nNow, if we add the number of apples and oranges together, it should equal the total number of fruits in the basket. So, we can set up the equation:\n\n\\[ x + 2x = 30 \\]\n\nThis simplifies to:\n\n\\[ 3x = 30 \\]\n\nHmm, let's solve for \\( x \\). If we divide both sides of the equation by 3, we get:\n\n\\[ x = \\frac{30}{3} \\]\n\n\\[ x = 10 \\]\n\nOkay, so there are 10 oranges in the basket. Since the number of apples is twice the number of oranges, we multiply 10 by 2 to find the number of apples:\n\n\\[ 2 \\times 10 = 20 \\]\n\nSo, there are 20 apples in the basket.\n\n**Final Answer:**\n\nThere are 20 apples and 10 oranges in the basket.",
+            "role": "assistant"
+        }
+    ],
+    "reasoning": {
+        "content": "Hmm, let's think about this. We know the total number of fruits is 30. So, if we let the number of oranges be \\( x \\), then the number of apples would be \\( 2x \\) because the problem states that the number of apples is twice the number of oranges.\n\nNow, if we add the number of apples and oranges together, it should equal the total number of fruits in the basket. So, we can set up the equation:\n\n\\[ x + 2x = 30 \\]\n\nThis simplifies to:\n\n\\[ 3x = 30 \\]\n\nHmm, let's solve for \\( x \\). If we divide both sides of the equation by 3, we get:\n\n\\[ x = \\frac{30}{3} \\]\n\n\\[ x = 10 \\]\n\nOkay, so there are 10 oranges in the basket. Since the number of apples is twice the number of oranges, we multiply 10 by 2 to find the number of apples:\n\n\\[ 2 \\times 10 = 20 \\]\n\nSo, there are 20 apples in the basket.",
+        "style": "freetext"
     },
-    {
-      "role": "user",
-      "content": "Is a student with a 92 grade and 2 activities eligible for a scholarship that requires 90+ grade OR 3+ activities?"
-    },
-    {
-      "role": "assistant",
-      "content": "Yes, the student is eligible..."
-    }
-  ],
-  "reasoning": {
-    "style": "freetext",
-    "content": "The scholarship requires EITHER a grade of 90+ OR 3+ activities. The student has a 92 grade, which exceeds the 90 threshold. Since the 'or' condition only needs one criterion to be true, the student qualifies based on their grade alone, regardless of having only 2 activities."
-  }
+    "question": "Can you create a reasoning problem that involves mathematical problem-solving and logical reasoning?",
+    "final_answer": "There are 20 apples and 10 oranges in the basket."
 }
 ```
 
@@ -85,7 +88,10 @@ deepfabric generate \
   --topic-prompt "Logic puzzles" \
   --conversation-type chain_of_thought \
   --reasoning-style freetext \
-  --num-samples 20 \
+  --num-samples 1 \
+  --batch-size 1 \
+  --provider openai \
+  --model gpt-4o \
   --output-save-as logic-dataset.jsonl
 ```
 
@@ -96,4 +102,3 @@ deepfabric generate \
 - Use it as auxiliary training signal only
 - Format it as a special token section (e.g., `<thinking>...</thinking>`)
 
-**Model size matters**: Smaller models (< 3B parameters) may struggle to generate consistent reasoning. Consider using larger teacher models for generation.

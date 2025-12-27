@@ -1,6 +1,6 @@
 # Tools
 
-DeepFabric uses [Spin](https://www.fermyon.com/spin), a WebAssembly framework, to execute tools during dataset generation. Tools run in isolated sandboxes, producing authentic training data based on real execution results.
+DeepFabric uses [Spin](https://spinframework.dev), a WebAssembly framework, to execute tools during dataset generation. Tools run in isolated sandboxes, producing authentic training data based on real execution results.
 
 ## Why Real Execution Matters
 
@@ -44,11 +44,24 @@ Components are WebAssembly modules that handle specific tool categories:
 
 ## Quick Start
 
+### Install Spin
+
+#### Docker
+
+We provide a prepacked Docker image:
+
 ```bash
-# Install Spin (macOS)
-brew install fermyon/tap/spin
+docker run -d -p 3000:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
+```
+
+This will now be accessible at `http://localhost:3000`.
+
+#### Local Installation
+
+Follow the [Spin installation guide](https://spinframework.dev/v3/install) for your OS.
 
 # Build and run
+```bash
 cd tools-sdk
 spin build
 spin up
