@@ -24,11 +24,6 @@ jobs:
         image: ghcr.io/always-further/deepfabric/tools-sdk:latest
         ports:
           - 3000:3000
-        options: >-
-          --health-cmd "curl -f http://localhost:3000/health || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     strategy:
       fail-fast: false
@@ -38,6 +33,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v5
+
+      - name: Wait for Spin service
+        run: |
+          echo "Waiting for Spin service to be ready..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+              echo "Spin service is ready"
+              exit 0
+            fi
+            echo "Attempt $i: Spin not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Spin service failed to become ready"
+          exit 1
 
       - name: Set up Python
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6
