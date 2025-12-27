@@ -43,10 +43,11 @@ def small_topic_graph(openai_config):
         depth=1,
     )
 
-    async def run_build():
-        return [event async for event in graph.build_async()]
+    async def build_graph():
+        async for _ in graph.build_async():
+            pass
 
-    asyncio.run(run_build())
+    asyncio.run(build_graph())
     return graph
 
 

@@ -61,10 +61,11 @@ class TestGraphOpenAI:
             depth=depth,
         )
 
-        async def run_build():
-            return [event async for event in graph.build_async()]
+        async def build_graph():
+            async for _ in graph.build_async():
+                pass
 
-        asyncio.run(run_build())
+        asyncio.run(build_graph())
 
         # Save to file
         out_path = tmp_path / "graph.json"
@@ -78,7 +79,7 @@ class TestGraphOpenAI:
 
         # Load into new graph and verify
         graph_params = {
-            "topic_prompt": "placeholder",
+            "topic_prompt": topic,
             "provider": openai_config["provider"],
             "model_name": openai_config["model_name"],
             "degree": degree,
@@ -136,10 +137,11 @@ class TestGraphGemini:
             depth=2,
         )
 
-        async def run_build():
-            return [event async for event in graph.build_async()]
+        async def build_graph():
+            async for _ in graph.build_async():
+                pass
 
-        asyncio.run(run_build())
+        asyncio.run(build_graph())
 
         # Verify no cycles
         assert not graph.has_cycle()
