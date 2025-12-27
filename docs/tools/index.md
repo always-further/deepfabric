@@ -6,17 +6,37 @@ DeepFabric uses [Spin](https://spinframework.dev), a WebAssembly framework, to e
 
 Traditional synthetic data generators simulate tool outputs, which creates unrealistic training data. With Spin, tools execute against real state:
 
-```
-# Simulated (unrealistic)
-Agent: read_file("config.json")
-Result: {"setting": "value"}  # LLM hallucinated this
+=== "Simulated (Unrealistic)"
 
-# Real execution (accurate)
-Agent: read_file("config.json")
-Result: FileNotFound  # Actual state
-Agent: write_file("config.json", content)
-Result: Written 42 bytes  # Real operation
-```
+    !!! danger "Hallucinated Results"
+        The model invents tool outputs - file contents, API responses, command results - with no grounding in reality.
+
+    ```python title="Traditional Approach"
+    Agent: read_file("config.json")
+    Result: {"setting": "value"}  # Made up
+
+    Agent: api_call("GET /users/123")
+    Result: {"name": "John", "id": 123}  # Fabricated
+
+    Agent: run_command("git status")
+    Result: "nothing to commit"  # Assumed
+    ```
+
+=== "Real Execution (Accurate)"
+
+    !!! success "Grounded Results"
+        Tools execute against real state - files, APIs, commands return actual results.
+
+    ```python title="DeepFabric + Spin"
+    Agent: read_file("config.json")
+    Result: FileNotFound  # Actually doesn't exist
+
+    Agent: write_file("config.json", '{"debug": true}')
+    Result: Written 16 bytes  # Real operation
+
+    Agent: read_file("config.json")
+    Result: {"debug": true}  # Actual content
+    ```
 
 ## Architecture
 
@@ -25,7 +45,7 @@ graph TB
     A[DeepFabric<br/>Python] --> B[Spin Service<br/>WASM Host]
     B --> C[VFS<br/>Component]
     B --> D[Mock<br/>Component]
-    B --> E[GitHub<br/>Component]
+    B --> E[Custom<br/>Components]
 ```
 
 Components are WebAssembly modules that handle specific tool categories:
@@ -34,7 +54,7 @@ Components are WebAssembly modules that handle specific tool categories:
 |-----------|---------|-------|
 | **VFS** | Virtual filesystem | read_file, write_file, list_files, delete_file |
 | **Mock** | Dynamic mock execution | Any tool loaded via MCP |
-| **GitHub** | GitHub API (experimental) | Issues, PRs, commits |
+| **Custom** | Your own components | Any tools you build (see [Custom Tools](custom.md)) |
 
 ## Quick Start
 
