@@ -146,5 +146,4 @@ class TestSpinClientSession:
         result = asyncio.run(run_isolation())
 
         # Session 2 should not see session 1's file
-        # Either it fails or returns empty/different content
-        assert result.success is False or "session1" not in result.result
+        assert result.success is False
