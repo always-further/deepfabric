@@ -16,7 +16,7 @@ from deepfabric.config import DataEngineConfig
 class TestModularConfigValidation:
     """Test validation rules for modular configuration."""
 
-    def test_chain_of_thought_requires_reasoning_style(self):
+    def test_cot_requires_reasoning_style(self):
         """Test that cot requires reasoning_style to be set."""
         with pytest.raises(ValueError, match="reasoning_style must be specified"):
             DataEngineConfig(
@@ -27,7 +27,7 @@ class TestModularConfigValidation:
                 # Missing reasoning_style
             )
 
-    def test_reasoning_style_only_with_chain_of_thought(self):
+    def test_reasoning_style_only_with_cot(self):
         """Test that reasoning_style can only be set with cot."""
         with pytest.raises(ValueError, match="reasoning_style can only be set"):
             DataEngineConfig(
@@ -81,7 +81,7 @@ class TestModularConfigCombinations:
         assert config.reasoning_style is None
         assert config.agent_mode is None
 
-    def test_chain_of_thought_freetext(self):
+    def test_cot_freetext(self):
         """Test cot with freetext reasoning."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
@@ -95,7 +95,7 @@ class TestModularConfigCombinations:
         assert config.reasoning_style == "freetext"
         assert config.agent_mode is None
 
-    def test_chain_of_thought_with_agent_single_turn(self):
+    def test_cot_with_agent_single_turn(self):
         """Test cot + agent_mode=single_turn."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
@@ -113,7 +113,7 @@ class TestModularConfigCombinations:
         assert "get_weather" in config.available_tools
         assert "calculate" in config.available_tools
 
-    def test_chain_of_thought_agent_multi_turn(self):
+    def test_cot_agent_multi_turn(self):
         """Test full combination: CoT + agent + multi_turn."""
         config = DataEngineConfig(
             generation_system_prompt="Test",

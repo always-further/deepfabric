@@ -41,15 +41,15 @@ class TestSchemaFramework:
         assert basic_schema is not None
         assert basic_schema == Conversation
 
-        chain_of_thought_schema = get_conversation_schema("cot")
-        assert chain_of_thought_schema is not None
-        assert chain_of_thought_schema == Conversation
+        cot_schema = get_conversation_schema("cot")
+        assert cot_schema is not None
+        assert cot_schema == Conversation
 
 
 class TestUnifiedConversationSchema:
     """Test the new unified Conversation schema with capability fields."""
 
-    def test_chain_of_thought_with_reasoning_capability(self):
+    def test_cot_with_reasoning_capability(self):
         """Test Conversation schema with reasoning capability."""
 
         schema = get_conversation_schema("cot")
@@ -76,7 +76,7 @@ class TestUnifiedConversationSchema:
         assert instance.reasoning.style == "freetext"
         assert isinstance(instance.reasoning.content, str)
 
-    def test_chain_of_thought_with_tool_context(self):
+    def test_cot_with_tool_context(self):
         """Test Conversation schema with tool_context capability."""
 
         schema = get_conversation_schema("cot")

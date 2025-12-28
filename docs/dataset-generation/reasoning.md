@@ -39,7 +39,7 @@ output:
 ```
 
 !!! note "Key Settings"
-    - `conversation.type: cot `
+    - `conversation.type: cot`
     - `conversation.reasoning_style: freetext`
 
 ## Output Format
