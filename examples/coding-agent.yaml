@@ -39,7 +39,7 @@ generation:
     - infrastructure.yml
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: multi_turn
 

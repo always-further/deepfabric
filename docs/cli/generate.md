@@ -120,14 +120,14 @@ Control the type of conversations generated:
 
 ```bash title="Conversation options"
 deepfabric generate config.yaml \
-  --conversation-type chain_of_thought \
+  --conversation-type cot \
   --reasoning-style freetext
 ```
 
 | Option | Values | Description |
 |--------|--------|-------------|
-| `--conversation-type` | `basic`, `chain_of_thought` | Base conversation type |
-| `--reasoning-style` | `freetext`, `agent` | Reasoning style for chain_of_thought |
+| `--conversation-type` | `basic`, `cot` | Base conversation type |
+| `--reasoning-style` | `freetext`, `agent` | Reasoning style for cot |
 | `--agent-mode` | `single_turn`, `multi_turn` | Agent mode (requires tools) |
 | `--min-turns` | INT | Minimum turns for multi_turn mode |
 | `--max-turns` | INT | Maximum turns for multi_turn mode |

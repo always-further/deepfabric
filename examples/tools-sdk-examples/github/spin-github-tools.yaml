@@ -38,7 +38,7 @@ generation:
     instructions: "Create scenarios involving analysis of the octocat/Spoon-Knife repository."
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: multi_turn
 

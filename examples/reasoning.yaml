@@ -30,7 +30,7 @@ generation:
 
   # Chain of thought with freetext reasoning style
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: freetext
 
   max_retries: 3  # Retry on API failures

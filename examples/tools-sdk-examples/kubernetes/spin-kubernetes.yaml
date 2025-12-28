@@ -80,7 +80,7 @@ generation:
     - Checking cluster health and node status
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 

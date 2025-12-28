@@ -78,7 +78,7 @@ generation:
     - Commit analysis: "What changed in the latest commits?"
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: multi_turn
     min_turns: 4

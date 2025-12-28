@@ -34,7 +34,7 @@ generation:
 
   # Chain of thought with agent mode
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     # Single-turn: one-shot tool use in a single assistant response
     agent_mode: single_turn

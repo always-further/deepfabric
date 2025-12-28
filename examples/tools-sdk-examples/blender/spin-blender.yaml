@@ -91,7 +91,7 @@ generation:
     5. For AI generation, explain that it takes time and offer to check status
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 

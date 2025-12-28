@@ -708,7 +708,7 @@ class FreeTextCoT(BaseModel):
     """Chain of Thought dataset in free-text format (GSM8K style)."""
 
     question: str = Field(description="The question or problem to solve")
-    chain_of_thought: str = Field(description="Natural language reasoning explanation")
+    cot: str = Field(description="Natural language reasoning explanation")
     final_answer: str = Field(description="The definitive answer to the question")
 
 
@@ -726,7 +726,7 @@ class HybridCoT(BaseModel):
     """Chain of Thought dataset with both free-text and structured reasoning."""
 
     question: str = Field(description="The question or problem to solve")
-    chain_of_thought: str = Field(description="Natural language reasoning explanation")
+    cot: str = Field(description="Natural language reasoning explanation")
     reasoning_trace: list[ReasoningStep] = Field(
         description="Structured reasoning steps", min_length=1
     )
@@ -780,7 +780,7 @@ class MathematicalAnswerMixin:
 
 # Capability Models for Composable Conversation Schema
 class ReasoningTrace(BaseModel):
-    """Reasoning capability - present when conversation_type='chain_of_thought'."""
+    """Reasoning capability - present when conversation_type='cot'."""
 
     style: Literal["freetext", "agent"] = Field(
         description="The reasoning style: freetext (natural language) or agent (structured step-by-step for tool-calling)"
@@ -929,7 +929,7 @@ class FormattedSample(BaseModel):
 # Unified conversation schema mapping
 CONVERSATION_SCHEMAS = {
     "basic": Conversation,
-    "chain_of_thought": Conversation,
+    "cot": Conversation,
 }
 
 
@@ -943,7 +943,7 @@ def get_conversation_schema(
     populated based on the configuration during generation.
 
     Args:
-        conversation_type: Type of conversation (basic, chain_of_thought)
+        conversation_type: Type of conversation (basic, cot)
 
     Returns:
         Conversation schema (unified for all types)

@@ -910,7 +910,7 @@ class DatasetGenerationTUI(StreamObserver):
             # Map conversation types to friendly names
             type_map = {
                 "basic": "Basic Q&A",
-                "chain_of_thought": "Chain of Thought",
+                "cot": "Chain of Thought",
                 "single_turn_agent": "Single-Turn Agent (Tool Calling)",
                 "multi_turn_agent": "Multi-Turn Agent (Tool Calling)",
             }

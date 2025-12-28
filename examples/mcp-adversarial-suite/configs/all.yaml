@@ -28,7 +28,7 @@ generation:
     You are evaluating AI agent security across multiple threat models including
     capability drift, Unicode confusables, protocol spoofing, SSRF prevention,
     and filesystem access control.
-  conversation_type: chain_of_thought
+  conversation_type: cot
   reasoning_style: agent
   agent_mode: multi_turn
   num_samples: 500

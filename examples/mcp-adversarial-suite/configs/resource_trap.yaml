@@ -33,7 +33,7 @@ generation:
     You are evaluating SSRF and path traversal prevention. The agent must
     validate all resource URIs, reject private IPs and traversal sequences,
     and only access explicitly allowlisted resources.
-  conversation_type: chain_of_thought
+  conversation_type: cot
   reasoning_style: agent
   agent_mode: single_turn
   num_samples: 100

@@ -756,7 +756,7 @@ Remember: You have access to the tools listed above and have used them in this c
 
         # Build metadata
         metadata = {
-            "conversation_type": "chain_of_thought",
+            "conversation_type": "cot",
             "react_steps": len(steps),
         }
 
@@ -1290,7 +1290,7 @@ Is the user's original task/goal from the scenario fully completed?
 
         # Build metadata
         metadata = {
-            "conversation_type": "chain_of_thought" if reasoning_trace else "basic",
+            "conversation_type": "cot" if reasoning_trace else "basic",
             "topic": topic_prompt if topic_prompt else "general",
         }
 

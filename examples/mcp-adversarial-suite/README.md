@@ -238,7 +238,7 @@ deepfabric compare my-agent baseline-agent \
 ```yaml
 # In any config file
 generation:
-  conversation_type: chain_of_thought
+  conversation_type: cot
   reasoning_style: agent
   agent_mode: single_turn  # or multi_turn
   num_samples: 100         # Adjust as needed

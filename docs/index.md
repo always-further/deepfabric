@@ -132,7 +132,7 @@ deepfabric generate \
   --model gpt-4o \
   --num-samples 2 \
   --batch-size 1 \
-  --conversation-type chain_of_thought \
+  --conversation-type cot \
   --reasoning-style freetext \
   --output-save-as dataset.jsonl
 ```
@@ -143,7 +143,7 @@ The key steps in this example were as follows:
 
 1. **Topic Graph Generation**: A topic hierarchy was created starting from "DevOps and Platform Engineering". Topic graphs take a root prompt and recursively expand subtopics to form a DAG (Direct Acyclic Graph) structure. Here, we used a depth of 2 and degree of 2 to ensure coverage of subtopics.
 2. **Dataset Generation**: For each node topic in the graph, a synthetic dataset sample was generated using a chain-of-thought conversation style. Each example includes reasoning traces to illustrate the thought process behind the answers. With the above example, 2 samples were generated per topic as per the `--num-samples` flag.
-3. **Conversation and Reasoning Style**: The `chain_of_thought` conversation type with `freetext` reasoning style. This encourages the model to provide detailed explanations along with answers, enhancing the quality of the training data.
+3. **Conversation and Reasoning Style**: The `cot` conversation type with `freetext` reasoning style. This encourages the model to provide detailed explanations along with answers, enhancing the quality of the training data.
 
 So lets' break down this down visually:
 

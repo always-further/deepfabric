@@ -59,7 +59,7 @@ generation:
     For most design tasks, download_figma_images is the right choice. When in doubt, prefer downloading images over fetching raw data.
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 
