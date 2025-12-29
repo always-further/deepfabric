@@ -42,7 +42,7 @@ Traditional synthetic data generators simulate tool outputs, which creates unrea
 
 ```mermaid
 graph TB
-    A[DeepFabric<br/>Python] --> B[Spin Service<br/>WASM Host]
+    A[DeepFabric] --> B[Spin Service]
     B --> C[VFS<br/>Component]
     B --> D[Mock<br/>Component]
     B --> E[Custom<br/>Components]
@@ -143,21 +143,13 @@ Each dataset sample gets an isolated session. Files created during one sample do
 
     [:octicons-arrow-right-24: Learn more](vfs.md)
 
--   :material-test-tube: **Mock Component**
+-   :material-test-tube: **MCP & Mock Tools**
 
     ---
 
-    Dynamic tool mocking for external APIs
+    Import tools from MCP servers and configure mock responses
 
     [:octicons-arrow-right-24: Configure mocks](mock.md)
-
--   :material-connection: **MCP Integration**
-
-    ---
-
-    Loading tools from MCP servers
-
-    [:octicons-arrow-right-24: MCP setup](mcp.md)
 
 -   :material-wrench: **Custom Tools**
 

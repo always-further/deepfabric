@@ -1,4 +1,4 @@
-# GitHub Spin Component
+# GitHub Spin Component Example
 
 A Python-based Spin component that provides real GitHub API access for DeepFabric dataset generation.
 

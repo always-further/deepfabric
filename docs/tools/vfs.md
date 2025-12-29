@@ -11,6 +11,9 @@ The Virtual Filesystem (VFS) component provides file operations in an isolated, 
 | `list_files` | List all files | None |
 | `delete_file` | Delete a file | `file_path` (string) |
 
+!!! tip "Need another builtin tool?"
+    If you need a generic tool that would see wide use, [open an issue](https://github.com/always-further/deepfabric/issues) to request it.
+
 ## Configuration
 
 ```yaml title="config.yaml"
@@ -27,25 +30,7 @@ generation:
 !!! info "Builtin Component"
     The `builtin` component maps to VFS tools and routes to `/vfs/execute`. List specific tools or omit the list to include all builtin tools.
 
-## Session Isolation
-
-Files are scoped by `session_id`. This prevents cross-contamination between samples:
-
-```mermaid
-graph LR
-    subgraph "Session abc123"
-        A[config.json]
-        B[main.py]
-    end
-    subgraph "Session xyz789"
-        C[readme.md]
-    end
-```
-
-!!! note "Automatic Management"
-    DeepFabric automatically creates and cleans up sessions for each sample.
-
-## Seeding Initial State
+## Seeding Initial Files
 
 Pre-populate files for scenarios:
 
@@ -60,8 +45,18 @@ generation:
         - list_files
     scenario_seed:
       files:
-        "config.json": '{"debug": true, "port": 8080}'
-        "data/users.json": '[{"id": 1, "name": "Alice"}]'
+        "main.py": |
+          def greet(name):
+              return f"Hello, {name}!"
+
+          if __name__ == "__main__":
+              print(greet("World"))
+        "config.json": |
+          {
+            "version": "1.0.0",
+            "debug": true,
+            "max_retries": 3
+          }
 ```
 
 The agent can then read and modify these files during generation.
@@ -98,29 +93,3 @@ Content-Type: application/json
 | `FileNotFound` | File doesn't exist |
 | `InvalidArguments` | Missing required parameter |
 | `IOError` | Storage error |
-
-### Cleanup Session
-
-```bash
-DELETE /vfs/session/{session_id}
-```
-
-Returns count of deleted files.
-
-## Example Workflow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Agent
-    participant VFS
-
-    User->>Agent: Create a config file with debug enabled
-    Agent->>VFS: write_file("config.json", '{"debug": true}')
-    VFS-->>Agent: Successfully wrote 16 bytes
-    Agent->>VFS: read_file("config.json")
-    VFS-->>Agent: '{"debug": true}'
-    Agent->>User: I've created config.json with debug mode enabled
-```
-
-This produces training data where the agent's decisions follow real observations.

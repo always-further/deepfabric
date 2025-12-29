@@ -2,34 +2,79 @@
 
 [Spin](https://www.fermyon.com/spin) is a WebAssembly framework for building serverless applications. DeepFabric uses Spin to run tool execution in isolated sandboxes.
 
-## Installation
+## Getting Started
 
-=== "macOS"
+There are two ways to run the Spin service:
 
-    ```bash
-    brew install fermyon/tap/spin
-    ```
+| Method | Best For |
+|--------|----------|
+| **Docker** | Using the service as-is, quick setup, production |
+| **Local Install** | Developing components, customizing tools, contributing |
 
-=== "Linux"
+=== "Docker (Recommended)"
 
-    ```bash
-    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash
-    sudo mv spin /usr/local/bin/
-    ```
-
-=== "Docker"
+    The fastest way to get started. No installation required:
 
     ```bash
     docker run -d -p 3000:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
     ```
 
-### Verify
+    With a custom port:
 
-```bash
-spin --version
-```
+    ```bash
+    docker run -d -p 8080:3000 ghcr.io/always-further/deepfabric/tools-sdk:latest
+    ```
+
+    Verify it's running:
+
+    ```bash
+    curl http://localhost:3000/vfs/health
+    # {"status":"healthy","components":["vfs"]}
+    ```
+
+=== "Local Install"
+
+    Install Spin if you plan to develop or customize components:
+
+    **macOS:**
+    ```bash
+    brew install fermyon/tap/spin
+    ```
+
+    **Linux:**
+    ```bash
+    curl -fsSL https://developer.fermyon.com/downloads/install.sh | bash
+    sudo mv spin /usr/local/bin/
+    ```
+
+    Verify installation:
+    ```bash
+    spin --version
+    ```
+
+    Build and run:
+    ```bash
+    cd tools-sdk
+    spin build
+    spin up
+    ```
+
+    With a custom port:
+    ```bash
+    spin up --listen 0.0.0.0:8080
+    ```
+
+    Background mode:
+    ```bash
+    spin up --background
+    ```
+
+The service starts at `http://localhost:3000`.
 
 ## Building Components
+
+!!! info "Only needed for local development"
+    Skip this section if you're using Docker.
 
 Navigate to the tools-sdk directory and build:
 
@@ -42,26 +87,6 @@ This compiles all Rust components to WebAssembly. Build output:
 
 - `components/vfs/target/wasm32-wasip1/release/vfs.wasm`
 - `components/mock/target/wasm32-wasip1/release/mock.wasm`
-
-## Running the Service
-
-```bash
-spin up
-```
-
-The service starts at `http://localhost:3000`.
-
-### Custom Port
-
-```bash
-spin up --listen 0.0.0.0:8080
-```
-
-### Background Mode
-
-```bash
-spin up --background
-```
 
 ## Endpoints
 
@@ -116,27 +141,3 @@ component = "vfs"
 source = "components/vfs/target/wasm32-wasip1/release/vfs.wasm"
 key_value_stores = ["default"]
 ```
-
-## Troubleshooting
-
-!!! warning "Port Already in Use"
-    ```bash
-    # Find process
-    lsof -i :3000
-    # Kill it
-    kill -9 <PID>
-    ```
-
-!!! warning "Build Failures"
-    ```bash
-    # Ensure Rust WASM target is installed
-    rustup target add wasm32-wasip1
-    ```
-
-!!! warning "Permission Errors"
-    ```bash
-    # Check spin binary location
-    which spin
-    # Ensure it's executable
-    chmod +x $(which spin)
-    ```

@@ -17,9 +17,14 @@ nav:
     - tools/index.md
     - Spin Framework: tools/spin.md
     - VFS Component: tools/vfs.md
-    - Mock Component: tools/mock.md
-    - MCP Integration: tools/mcp.md
+    - MCP & Mock Tools: tools/mock.md
     - Custom Tools: tools/custom.md
+    - Tutorials:
+      - tools/tutorials/index.md
+      - Python: tools/tutorials/python.md
+      - Go: tools/tutorials/go.md
+      - Rust: tools/tutorials/rust.md
+      - TypeScript: tools/tutorials/typescript.md
   - Training:
     - training/index.md
     - Dataset Preparation: training/dataset-preparation.md

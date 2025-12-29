@@ -332,3 +332,16 @@ Options:
 
 !!! warning "Required Output"
     At least one of `--output` or `--spin` is required.
+
+## Next Steps: Populating Mock Data
+
+After importing tools to Spin, they return default echo responses. To customize:
+
+1. **Set default responses** with `/mock/update-response`
+2. **Add fixtures** for argument-specific responses with `/mock/add-fixture`
+
+See [Mock Component - Building Mock Data Files](../tools/mock.md#building-mock-data-files) for examples.
+
+!!! info "Why Two Steps?"
+    MCP servers define **tool schemas** (what arguments tools accept).
+    You define **mock responses** (what they return) separately.
