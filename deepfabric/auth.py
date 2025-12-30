@@ -9,7 +9,6 @@ from pathlib import Path
 import click
 import httpx
 
-
 from .tui import get_tui
 from .utils import get_bool_env
 

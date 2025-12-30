@@ -13,9 +13,8 @@ import httpx
 
 from rich.console import Console
 
-from .base import BaseReporter
 from ...utils import get_bool_env
-
+from .base import BaseReporter
 
 if TYPE_CHECKING:
     from ..evaluator import EvaluationResult

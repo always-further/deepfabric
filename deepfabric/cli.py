@@ -26,7 +26,6 @@ from .update_checker import check_for_updates
 from .utils import get_bool_env
 from .validation import show_validation_success, validate_path_requirements
 
-
 OverrideValue = str | int | float | bool | None
 OverrideMap = dict[str, OverrideValue]
 
