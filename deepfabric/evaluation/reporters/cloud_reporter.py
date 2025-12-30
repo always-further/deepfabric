@@ -71,12 +71,12 @@ class CloudReporter(BaseReporter):
 
         # Enable cloud reporting if authenticated AND experimental flag is set
         is_experimental = get_bool_env("EXPERIMENTAL_DF")
-        if not is_experimental:
-            self.enabled = False
-        else:
-            self.enabled = (
-                config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
-            )
+        self.enabled = is_experimental and (
+            config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
+        )
+
+
+
 
         # Generate unique run ID for this evaluation
         self.run_id = None  # Will be set when creating run
