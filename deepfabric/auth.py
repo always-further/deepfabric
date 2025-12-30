@@ -9,9 +9,12 @@ from pathlib import Path
 import click
 import httpx
 
+
 from .tui import get_tui
+from .utils import get_bool_env
 
 DEFAULT_API_URL = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.dev")
+
 CONFIG_DIR = Path.home() / ".deepfabric"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
@@ -75,7 +78,13 @@ def prompt_cloud_signup(api_url: str = DEFAULT_API_URL) -> bool:
     Returns:
         True if user successfully authenticated, False otherwise
     """
+    if not get_bool_env("EXPERIMENTAL_DF"):
+
+
+        return False
+
     tui = get_tui()
+
 
     tui.console.print("")
     tui.info("DeepFabric Cloud can save and track your evaluations")

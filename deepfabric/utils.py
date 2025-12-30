@@ -1,7 +1,9 @@
 import ast
 import asyncio
 import json
+import os
 import re
+
 
 VALIDATION_ERROR_INDICATORS = [
     "validation error",
@@ -147,4 +149,18 @@ def read_topic_tree_from_jsonl(file_path: str) -> list[dict]:
     with open(file_path) as file:
         for line in file:
             topic_tree.append(json.loads(line.strip()))
+
     return topic_tree
+
+
+def get_bool_env(key: str, default: bool = False) -> bool:
+    """Get a boolean environment variable.
+
+    Supports: '1', 'true', 'yes', 'on' (case-insensitive) as True.
+    Everything else is False unless default is True and key is missing.
+    """
+    val = os.getenv(key)
+    if val is None:
+        return default
+    return val.lower() in ("1", "true", "yes", "on")
+

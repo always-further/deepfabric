@@ -14,6 +14,8 @@ import httpx
 from rich.console import Console
 
 from .base import BaseReporter
+from ...utils import get_bool_env
+
 
 if TYPE_CHECKING:
     from ..evaluator import EvaluationResult
@@ -68,9 +70,14 @@ class CloudReporter(BaseReporter):
         self.project_id = config.get("project_id") if config else None
 
         # Enable cloud reporting if authenticated
-        self.enabled = (
-            config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
-        )
+        # Enable cloud reporting if authenticated AND experimental flag is set
+        is_experimental = get_bool_env("EXPERIMENTAL_DF")
+        if not is_experimental:
+            self.enabled = False
+        else:
+            self.enabled = (
+                config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
+            )
 
         # Generate unique run ID for this evaluation
         self.run_id = None  # Will be set when creating run
