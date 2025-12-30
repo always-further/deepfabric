@@ -35,6 +35,7 @@ class MetricsSender:
         self,
         endpoint: str,
         api_key: str | None,
+        pipeline_id: str | None = None,
         batch_size: int = 10,
         flush_interval: float = 5.0,
         max_queue_size: int = 1000,
@@ -45,6 +46,7 @@ class MetricsSender:
         Args:
             endpoint: Base URL for the DeepFabric API
             api_key: API key for authentication (None disables sending)
+            pipeline_id: Pipeline ID to associate training runs with (required)
             batch_size: Number of metrics to batch before sending
             flush_interval: Seconds between automatic flushes
             max_queue_size: Maximum queue size (overflow drops metrics)
@@ -52,12 +54,14 @@ class MetricsSender:
         """
         self.endpoint = endpoint.rstrip("/")
         self.api_key = api_key
+        self.pipeline_id = pipeline_id
         self.batch_size = batch_size
         self.flush_interval = flush_interval
         self.timeout = timeout
 
         self._queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=max_queue_size)
         self._stop_event = threading.Event()
+        self._flush_event = threading.Event()
         self._enabled = api_key is not None
 
         # Start background sender thread
@@ -177,19 +181,25 @@ class MetricsSender:
                 should_flush = (
                     len(batch) >= self.batch_size
                     or (time.monotonic() - last_flush) >= self.flush_interval
+                    or self._flush_event.is_set()
                 )
 
                 if should_flush:
                     self._flush_batch(batch)
                     batch = []
                     last_flush = time.monotonic()
+                    self._flush_event.clear()
 
             except queue.Empty:
-                # Timeout - flush if we have pending items
-                if batch and (time.monotonic() - last_flush) >= self.flush_interval:
+                # Timeout - flush if we have pending items or flush requested
+                if batch and (
+                    (time.monotonic() - last_flush) >= self.flush_interval
+                    or self._flush_event.is_set()
+                ):
                     self._flush_batch(batch)
                     batch = []
                     last_flush = time.monotonic()
+                    self._flush_event.clear()
 
         # On shutdown, drain the queue and flush everything
         while not self._queue.empty():
@@ -209,21 +219,36 @@ class MetricsSender:
         if not batch or not self._enabled:
             return
 
+        if not self.pipeline_id:
+            logger.debug("No pipeline_id set, skipping metrics send")
+            return
+
         # Separate events and metrics
-        events = [item for item in batch if item["type"] != "metrics"]
+        run_start_events = [item for item in batch if item["type"] == "run_start"]
+        run_end_events = [item for item in batch if item["type"] == "run_end"]
         metrics = [item["data"] for item in batch if item["type"] == "metrics"]
 
-        # Send events first (run_start, run_end)
-        for event in events:
+        # Build query string with pipeline_id
+        query = f"?pipeline_id={self.pipeline_id}"
+
+        # Send run_start events first (must complete before run_end)
+        for event in run_start_events:
             self._send_to_api(
-                endpoint=f"{self.endpoint}/v1/training/runs",
+                endpoint=f"{self.endpoint}/api/v1/training/runs{query}",
+                payload={"event_type": event["type"], **event["data"]},
+            )
+
+        # Send run_end events after run_start
+        for event in run_end_events:
+            self._send_to_api(
+                endpoint=f"{self.endpoint}/api/v1/training/runs{query}",
                 payload={"event_type": event["type"], **event["data"]},
             )
 
         # Send metrics batch
         if metrics:
             self._send_to_api(
-                endpoint=f"{self.endpoint}/v1/training/metrics",
+                endpoint=f"{self.endpoint}/api/v1/training/metrics{query}",
                 payload={"metrics": metrics},
             )
             self._metrics_sent += len(metrics)
@@ -252,22 +277,31 @@ class MetricsSender:
 
             if not response.ok:
                 self._send_errors += 1
-                logger.debug(f"API request failed: {response.status_code} {response.text[:100]}")
+                # Print error to stderr so it's visible
+                import sys
+                print(
+                    f"[DeepFabric] API error: {response.status_code} {response.text[:200]} "
+                    f"(endpoint: {endpoint})",
+                    file=sys.stderr,
+                )
                 return False
 
         except requests.exceptions.Timeout:
             self._send_errors += 1
-            logger.debug("API request timed out")
+            import sys
+            print(f"[DeepFabric] Request timed out: {endpoint}", file=sys.stderr)
             return False
 
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
             self._send_errors += 1
-            logger.debug("API connection error")
+            import sys
+            print(f"[DeepFabric] Connection error: {e} (endpoint: {endpoint})", file=sys.stderr)
             return False
 
         except requests.exceptions.RequestException as e:
             self._send_errors += 1
-            logger.debug(f"API request error: {e}")
+            import sys
+            print(f"[DeepFabric] Request error: {e} (endpoint: {endpoint})", file=sys.stderr)
             return False
 
         else:
@@ -282,8 +316,16 @@ class MetricsSender:
         if not self._enabled:
             return
 
+        # Signal the background thread to flush its current batch
+        self._flush_event.set()
+
         start = time.monotonic()
-        while not self._queue.empty() and (time.monotonic() - start) < timeout:
+        # Wait for queue to empty and give time for batch to be sent
+        while (time.monotonic() - start) < timeout:
+            if self._queue.empty() and not self._flush_event.is_set():
+                # Give a small buffer for the batch to actually be sent
+                time.sleep(0.2)
+                break
             time.sleep(0.1)
 
     def shutdown(self) -> None:

@@ -51,6 +51,7 @@ class DeepFabricCallback:
         trainer: Any | None = None,
         api_key: str | None = None,
         endpoint: str | None = None,
+        pipeline_id: str | None = None,
         enabled: bool = True,
     ):
         """Initialize the DeepFabric callback.
@@ -60,11 +61,14 @@ class DeepFabricCallback:
             api_key: DeepFabric API key (falls back to DEEPFABRIC_API_KEY env var,
                      then prompts in interactive environments)
             endpoint: API endpoint URL (falls back to DEEPFABRIC_API_URL env var)
+            pipeline_id: Pipeline ID to associate training with (falls back to
+                         DEEPFABRIC_PIPELINE_ID env var or pipeline_id.txt file)
             enabled: Whether logging is enabled (default: True)
         """
         # Get API key from arg, env, or prompt
         self.api_key = api_key or get_api_key()
         self.endpoint = endpoint or os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.ai")
+        self.pipeline_id = pipeline_id or self._get_pipeline_id()
         self.run_id = str(uuid.uuid4())
         self.enabled = enabled and self.api_key is not None
 
@@ -75,14 +79,26 @@ class DeepFabricCallback:
         self.sender = MetricsSender(
             endpoint=self.endpoint,
             api_key=self.api_key if self.enabled else None,
+            pipeline_id=self.pipeline_id,
         )
 
         self._run_started = False
         self._model_name: str | None = None
         self._training_args_logged = False
+        self._start_time: datetime | None = None
 
         if self.enabled:
-            logger.debug(f"DeepFabric callback initialized (run_id={self.run_id})")
+            if self.pipeline_id:
+                logger.debug(
+                    f"DeepFabric callback initialized (run_id={self.run_id}, "
+                    f"pipeline_id={self.pipeline_id})"
+                )
+            else:
+                logger.warning(
+                    "DeepFabric callback initialized but no pipeline_id set. "
+                    "Metrics will not be sent. Set DEEPFABRIC_PIPELINE_ID env var "
+                    "or create pipeline_id.txt file."
+                )
         else:
             logger.debug("DeepFabric callback disabled (no API key)")
 
@@ -101,6 +117,7 @@ class DeepFabricCallback:
             return
 
         self._run_started = True
+        self._start_time = datetime.now(timezone.utc)
 
         # Extract model name from various sources
         model = kwargs.get("model")
@@ -121,6 +138,7 @@ class DeepFabricCallback:
                     "num_train_epochs": state.num_train_epochs,
                     "is_world_process_zero": getattr(state, "is_world_process_zero", True),
                 },
+                "started_at": self._start_time.isoformat(),
             }
         )
 
@@ -204,6 +222,8 @@ class DeepFabricCallback:
         if not self.enabled or not self._run_started:
             return
 
+        completed_at = datetime.now(timezone.utc)
+
         self.sender.send_run_end(
             {
                 "run_id": self.run_id,
@@ -212,6 +232,7 @@ class DeepFabricCallback:
                 "total_flos": getattr(state, "total_flos", None),
                 "best_metric": getattr(state, "best_metric", None),
                 "best_model_checkpoint": getattr(state, "best_model_checkpoint", None),
+                "completed_at": completed_at.isoformat(),
             }
         )
 
@@ -245,6 +266,27 @@ class DeepFabricCallback:
                 "metrics": {"checkpoint_step": state.global_step},
             }
         )
+
+    def _get_pipeline_id(self) -> str | None:
+        """Get pipeline ID from environment or file.
+
+        Returns:
+            Pipeline ID or None
+        """
+        # Try environment variable first
+        pipeline_id = os.getenv("DEEPFABRIC_PIPELINE_ID", "")
+        if pipeline_id:
+            return pipeline_id
+
+        # Try pipeline_id.txt file
+        pipeline_file = "pipeline_id.txt"
+        if os.path.exists(pipeline_file):
+            with open(pipeline_file) as f:
+                pipeline_id = f.read().strip()
+                if pipeline_id:
+                    return pipeline_id
+
+        return None
 
     def _extract_model_name(self, args: TrainingArguments, model: Any | None) -> str | None:
         """Extract model name from various sources.

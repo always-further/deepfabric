@@ -510,6 +510,7 @@ dependencies = [
     { name = "spin-sdk" },
     { name = "torch" },
     { name = "transformers" },
+    { name = "trl" },
 ]
 
 [package.optional-dependencies]
@@ -564,6 +565,7 @@ requires-dist = [
     { name = "spin-sdk", specifier = ">=3.4.1" },
     { name = "torch", specifier = ">=2.4.0" },
     { name = "transformers", specifier = ">=4.57.1" },
+    { name = "trl", specifier = ">=0.26.2" },
 ]
 provides-extras = ["dev", "docs"]
 
@@ -3188,6 +3190,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/38/db80e48b9220c9bce872b0f616ad0446cdf554a40b85c7865cbca99ab3c2/triton-3.5.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c83f2343e1a220a716c7b3ab9fccfcbe3ad4020d189549200e2d2e8d5868bed9", size = 170577179, upload-time = "2025-10-13T16:38:17.865Z" },
     { url = "https://files.pythonhosted.org/packages/ff/60/1810655d1d856c9a4fcc90ee8966d85f552d98c53a6589f95ab2cbe27bb8/triton-3.5.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:da0fa67ccd76c3dcfb0bffe1b1c57c685136a6bd33d141c24d9655d4185b1289", size = 170487949, upload-time = "2025-10-13T16:38:24.881Z" },
     { url = "https://files.pythonhosted.org/packages/fb/b7/1dec8433ac604c061173d0589d99217fe7bf90a70bdc375e745d044b8aad/triton-3.5.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:317fe477ea8fd4524a6a8c499fb0a36984a56d0b75bf9c9cb6133a1c56d5a6e7", size = 170580176, upload-time = "2025-10-13T16:38:31.14Z" },
+]
+
+[[package]]
+name = "trl"
+version = "0.26.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "accelerate" },
+    { name = "datasets" },
+    { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/21/fb9aead218f04b1d62a16ba97fcc4c2e5b629991497b3ec02018be7ca922/trl-0.26.2.tar.gz", hash = "sha256:89c5a81847e74d05f53686bc98ae966d0314ff0644d821a8abb05e0ad94adc47", size = 436370, upload-time = "2025-12-18T15:49:41.147Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/1f/d5e73557b9d7d89343d9569b22b685385e82b6ce0e43de6a934fe6843d4b/trl-0.26.2-py3-none-any.whl", hash = "sha256:532a6d221201b5fef4b961fbaae4c67ca5d9f35c33d35c73ac4ea2cbb35e8d0d", size = 518928, upload-time = "2025-12-18T15:49:39.983Z" },
 ]
 
 [[package]]
