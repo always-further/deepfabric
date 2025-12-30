@@ -98,7 +98,7 @@ class GenerateOptions(BaseModel):
     tui: Literal["rich", "simple"] = Field(default="rich")
 
     # Modular conversation configuration
-    conversation_type: Literal["basic", "chain_of_thought"] | None = None
+    conversation_type: Literal["basic", "cot"] | None = None
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None
     agent_mode: Literal["single_turn", "multi_turn"] | None = None
 
@@ -421,13 +421,13 @@ def _run_generation(
 )
 @click.option(
     "--conversation-type",
-    type=click.Choice(["basic", "chain_of_thought"]),
-    help="Base conversation type: basic (simple chat), chain_of_thought (with reasoning)",
+    type=click.Choice(["basic", "cot"]),
+    help="Base conversation type: basic (simple chat), cot (with reasoning)",
 )
 @click.option(
     "--reasoning-style",
     type=click.Choice(["freetext", "agent"]),
-    help="Reasoning style for chain_of_thought: freetext (natural language) or agent (structured for tool-calling)",
+    help="Reasoning style for cot: freetext (natural language) or agent (structured for tool-calling)",
 )
 @click.option(
     "--agent-mode",
@@ -470,7 +470,7 @@ def generate(  # noqa: PLR0913
     mode: Literal["tree", "graph"] = "tree",
     debug: bool = False,
     topic_only: bool = False,
-    conversation_type: Literal["basic", "chain_of_thought"] | None = None,
+    conversation_type: Literal["basic", "cot"] | None = None,
     reasoning_style: Literal["freetext", "agent"] | None = None,
     agent_mode: Literal["single_turn", "multi_turn"] | None = None,
     min_turns: int | None = None,

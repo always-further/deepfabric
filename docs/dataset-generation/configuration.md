@@ -28,7 +28,7 @@ generation:
   instructions: "Create diverse, practical scenarios."
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 
@@ -108,8 +108,8 @@ Controls sample generation.
 
 | Field | Type | Options | Description |
 |-------|------|---------|-------------|
-| `type` | string | basic, chain_of_thought | Conversation format |
-| `reasoning_style` | string | freetext, agent | For chain_of_thought only |
+| `type` | string | basic, cot | Conversation format |
+| `reasoning_style` | string | freetext, agent | For cot only |
 | `agent_mode` | string | single_turn, multi_turn | For agent style only |
 | `min_turns` | int | 2 | Minimum turns (multi_turn) |
 | `max_turns` | int | 4 | Maximum turns (multi_turn) |

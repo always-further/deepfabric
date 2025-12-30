@@ -16,19 +16,19 @@ from deepfabric.config import DataEngineConfig
 class TestModularConfigValidation:
     """Test validation rules for modular configuration."""
 
-    def test_chain_of_thought_requires_reasoning_style(self):
-        """Test that chain_of_thought requires reasoning_style to be set."""
+    def test_cot_requires_reasoning_style(self):
+        """Test that cot requires reasoning_style to be set."""
         with pytest.raises(ValueError, match="reasoning_style must be specified"):
             DataEngineConfig(
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="chain_of_thought",
+                conversation_type="cot",
                 # Missing reasoning_style
             )
 
-    def test_reasoning_style_only_with_chain_of_thought(self):
-        """Test that reasoning_style can only be set with chain_of_thought."""
+    def test_reasoning_style_only_with_cot(self):
+        """Test that reasoning_style can only be set with cot."""
         with pytest.raises(ValueError, match="reasoning_style can only be set"):
             DataEngineConfig(
                 generation_system_prompt="Test",
@@ -45,7 +45,7 @@ class TestModularConfigValidation:
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="chain_of_thought",
+                conversation_type="cot",
                 reasoning_style="agent",
                 agent_mode="single_turn",
                 # Missing tools configuration
@@ -58,7 +58,7 @@ class TestModularConfigValidation:
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="chain_of_thought",
+                conversation_type="cot",
                 reasoning_style="freetext",
                 agent_mode="single_turn",
                 available_tools=["get_weather"],
@@ -81,51 +81,51 @@ class TestModularConfigCombinations:
         assert config.reasoning_style is None
         assert config.agent_mode is None
 
-    def test_chain_of_thought_freetext(self):
-        """Test chain_of_thought with freetext reasoning."""
+    def test_cot_freetext(self):
+        """Test cot with freetext reasoning."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="freetext",
         )
 
-        assert config.conversation_type == "chain_of_thought"
+        assert config.conversation_type == "cot"
         assert config.reasoning_style == "freetext"
         assert config.agent_mode is None
 
-    def test_chain_of_thought_with_agent_single_turn(self):
-        """Test chain_of_thought + agent_mode=single_turn."""
+    def test_cot_with_agent_single_turn(self):
+        """Test cot + agent_mode=single_turn."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
             agent_mode="single_turn",
             available_tools=["get_weather", "calculate"],
         )
 
-        assert config.conversation_type == "chain_of_thought"
+        assert config.conversation_type == "cot"
         assert config.reasoning_style == "agent"
         assert config.agent_mode == "single_turn"
         assert "get_weather" in config.available_tools
         assert "calculate" in config.available_tools
 
-    def test_chain_of_thought_agent_multi_turn(self):
+    def test_cot_agent_multi_turn(self):
         """Test full combination: CoT + agent + multi_turn."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
             agent_mode="multi_turn",
             available_tools=["tool1", "tool2"],
         )
 
-        assert config.conversation_type == "chain_of_thought"
+        assert config.conversation_type == "cot"
         assert config.reasoning_style == "agent"
         assert config.agent_mode == "multi_turn"
         assert len(config.available_tools) == 2  # noqa: PLR2004
@@ -153,7 +153,7 @@ class TestModularConfigDefaultValues:
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
             agent_mode="single_turn",
             available_tools=["tool1"],
@@ -183,7 +183,7 @@ class TestReasoningStyleOptions:
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="freetext",
         )
 
@@ -195,7 +195,7 @@ class TestReasoningStyleOptions:
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
         )
 
@@ -209,7 +209,7 @@ class TestReasoningStyleOptions:
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="chain_of_thought",
+                conversation_type="cot",
                 reasoning_style="structured",
             )
 
@@ -228,7 +228,7 @@ class TestReasoningStyleOptions:
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="chain_of_thought",
+                conversation_type="cot",
                 reasoning_style="hybrid",
             )
 
@@ -249,7 +249,7 @@ class TestAgentModeOptions:
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
             agent_mode="single_turn",
             available_tools=["tool1"],
@@ -263,7 +263,7 @@ class TestAgentModeOptions:
             generation_system_prompt="Test",
             provider="test",
             model="model",
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="agent",
             agent_mode="multi_turn",
             available_tools=["tool1", "tool2"],

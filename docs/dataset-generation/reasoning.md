@@ -23,7 +23,7 @@ generation:
   instructions: "Show clear reasoning before the final answer."
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: freetext
 
   llm:
@@ -39,7 +39,7 @@ output:
 ```
 
 !!! note "Key Settings"
-    - `conversation.type: chain_of_thought`
+    - `conversation.type: cot`
     - `conversation.reasoning_style: freetext`
 
 ## Output Format
@@ -88,7 +88,7 @@ The `freetext` style produces readable, conversational reasoning traces.
 ```bash title="Generate reasoning dataset"
 deepfabric generate \
   --topic-prompt "Logic puzzles" \
-  --conversation-type chain_of_thought \
+  --conversation-type cot \
   --reasoning-style freetext \
   --num-samples 1 \
   --batch-size 1 \

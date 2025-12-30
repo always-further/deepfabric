@@ -114,7 +114,7 @@ def determine_builder_type(config: "DataSetGeneratorConfig") -> BuilderType:
         raise ValueError(msg)
 
     # Non-agent conversations use single-shot generation
-    if config.conversation_type in ("basic", "chain_of_thought"):
+    if config.conversation_type in ("basic", "cot"):
         return SINGLE_SHOT_BUILDER
 
     msg = f"Cannot determine builder type for conversation_type={config.conversation_type}"
@@ -222,7 +222,7 @@ class SingleShotBuilder(ConversationBuilder):
             prompt_parts.append(f"\nAdditional Instructions: {self.config.instructions}")
 
         # Add reasoning-specific guidance based on style
-        if self.config.conversation_type == "chain_of_thought":
+        if self.config.conversation_type == "cot":
             if self.config.reasoning_style == "freetext":
                 prompt_parts.append(
                     "\nREASONING FORMAT: Generate natural, conversational reasoning content (string format). "

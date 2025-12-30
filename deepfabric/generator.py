@@ -127,14 +127,14 @@ class DataSetGeneratorConfig(BaseModel):
     )
 
     # Modular conversation configuration
-    conversation_type: Literal["basic", "chain_of_thought"] = Field(
+    conversation_type: Literal["basic", "cot"] = Field(
         default="basic",
-        description="Base conversation type: basic (simple chat), chain_of_thought (with reasoning traces)",
+        description="Base conversation type: basic (simple chat), cot (with reasoning traces)",
     )
 
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = Field(
         default=None,
-        description="Reasoning style for chain_of_thought type: freetext (natural language) or agent (structured step-by-step for tool-calling). Note: 'structured' and 'hybrid' are deprecated.",
+        description="Reasoning style for cot type: freetext (natural language) or agent (structured step-by-step for tool-calling). Note: 'structured' and 'hybrid' are deprecated.",
     )
 
     @field_validator("reasoning_style", mode="before")
@@ -1045,7 +1045,7 @@ class DataSetGenerator:
             return CONVERSATION_GENERATION_PROMPT
 
         # Handle chain of thought conversations
-        if self.config.conversation_type == "chain_of_thought":
+        if self.config.conversation_type == "cot":
             # Agent mode with tools - use agent prompts
             if self.config.agent_mode == "single_turn" and self.tool_registry:
                 # Use agent prompt for single-turn tool calling

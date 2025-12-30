@@ -63,8 +63,8 @@ def load_config(  # noqa: PLR0913
         output_save_as: Path to save dataset
         include_system_message: Include system message in dataset
         mode: Topic generation mode (tree or graph)
-        conversation_type: Base conversation type (basic, chain_of_thought)
-        reasoning_style: Reasoning style for chain_of_thought (freetext, agent)
+        conversation_type: Base conversation type (basic, cot)
+        reasoning_style: Reasoning style for cot (freetext, agent)
         agent_mode: Agent mode (single_turn, multi_turn)
 
     Returns:

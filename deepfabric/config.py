@@ -119,13 +119,13 @@ class TopicsConfig(BaseModel):
 class ConversationConfig(BaseModel):
     """Configuration for conversation structure in generation."""
 
-    type: Literal["basic", "chain_of_thought"] = Field(
+    type: Literal["basic", "cot"] = Field(
         default="basic",
-        description="Base conversation type: basic (simple chat), chain_of_thought (with reasoning)",
+        description="Base conversation type: basic (simple chat), cot (with reasoning)",
     )
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = Field(
         default=None,
-        description="Reasoning style for chain_of_thought: freetext or agent. Note: 'structured' and 'hybrid' are deprecated.",
+        description="Reasoning style for cot: freetext or agent. Note: 'structured' and 'hybrid' are deprecated.",
     )
     agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
         default=None,
@@ -159,15 +159,15 @@ class ConversationConfig(BaseModel):
     @model_validator(mode="after")
     def validate_configuration(self):
         """Validate that configuration combinations are consistent."""
-        if self.reasoning_style is not None and self.type != "chain_of_thought":
+        if self.reasoning_style is not None and self.type != "cot":
             raise ValueError(
-                f"reasoning_style can only be set when type='chain_of_thought', "
+                f"reasoning_style can only be set when type='cot', "
                 f"got type='{self.type}'"
             )
 
-        if self.type == "chain_of_thought" and self.reasoning_style is None:
+        if self.type == "cot" and self.reasoning_style is None:
             raise ValueError(
-                "reasoning_style must be specified when type='chain_of_thought'. "
+                "reasoning_style must be specified when type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
             )
 
@@ -349,13 +349,13 @@ class KaggleConfig(BaseModel):
 class EvaluationConfig(BaseModel):
     """Configuration for model evaluation."""
 
-    conversation_type: Literal["basic", "chain_of_thought"] = Field(
+    conversation_type: Literal["basic", "cot"] = Field(
         ...,
         description="Conversation type (must match dataset generation)",
     )
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = Field(
         default=None,
-        description="Reasoning style for chain_of_thought type",
+        description="Reasoning style for cot type",
     )
 
     @field_validator("reasoning_style", mode="before")
@@ -419,15 +419,15 @@ class EvaluationConfig(BaseModel):
     @model_validator(mode="after")
     def validate_evaluation_config(self) -> "EvaluationConfig":
         """Validate evaluation configuration consistency."""
-        if self.reasoning_style is not None and self.conversation_type != "chain_of_thought":
+        if self.reasoning_style is not None and self.conversation_type != "cot":
             raise ValueError(
-                f"reasoning_style can only be set when conversation_type='chain_of_thought', "
+                f"reasoning_style can only be set when conversation_type='cot', "
                 f"got conversation_type='{self.conversation_type}'"
             )
 
-        if self.conversation_type == "chain_of_thought" and self.reasoning_style is None:
+        if self.conversation_type == "cot" and self.reasoning_style is None:
             raise ValueError(
-                "reasoning_style must be specified when conversation_type='chain_of_thought'. "
+                "reasoning_style must be specified when conversation_type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
             )
 
@@ -808,13 +808,13 @@ class DataEngineConfig(BaseModel):
         default=None,
         description="Rate limiting and retry configuration",
     )
-    conversation_type: Literal["basic", "chain_of_thought"] = Field(
+    conversation_type: Literal["basic", "cot"] = Field(
         default="basic",
         description="Base conversation type",
     )
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = Field(
         default=None,
-        description="Reasoning style for chain_of_thought type",
+        description="Reasoning style for cot type",
     )
 
     @field_validator("reasoning_style", mode="before")
@@ -839,15 +839,15 @@ class DataEngineConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_configuration(self):
-        if self.reasoning_style is not None and self.conversation_type != "chain_of_thought":
+        if self.reasoning_style is not None and self.conversation_type != "cot":
             raise ValueError(
-                f"reasoning_style can only be set when conversation_type='chain_of_thought', "
+                f"reasoning_style can only be set when conversation_type='cot', "
                 f"got conversation_type='{self.conversation_type}'"
             )
 
-        if self.conversation_type == "chain_of_thought" and self.reasoning_style is None:
+        if self.conversation_type == "cot" and self.reasoning_style is None:
             raise ValueError(
-                "reasoning_style must be specified when conversation_type='chain_of_thought'. "
+                "reasoning_style must be specified when conversation_type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
             )
 

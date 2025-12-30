@@ -34,7 +34,7 @@ generation:
   instructions: "Create realistic scenarios requiring tools."
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 
@@ -97,7 +97,7 @@ generation:
   instructions: "Create realistic scenarios requiring tools."
 
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: multi_turn
 
@@ -221,7 +221,7 @@ scenario_seed:
 
     ```bash title="Single-turn agent"
     deepfabric generate config.yaml \
-      --conversation-type chain_of_thought \
+      --conversation-type cot \
       --reasoning-style agent \
       --agent-mode single_turn
     ```

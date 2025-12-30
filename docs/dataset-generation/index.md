@@ -71,7 +71,7 @@ graph LR
 
     ```yaml title="config.yaml"
     conversation:
-      type: chain_of_thought
+      type: cot
       reasoning_style: freetext
     ```
 
@@ -81,7 +81,7 @@ graph LR
 
     ```yaml title="config.yaml"
     conversation:
-      type: chain_of_thought
+      type: cot
       reasoning_style: agent
       agent_mode: single_turn
     ```
@@ -92,7 +92,7 @@ graph LR
 
     ```yaml title="config.yaml"
     conversation:
-      type: chain_of_thought
+      type: cot
       reasoning_style: agent
       agent_mode: multi_turn
     ```

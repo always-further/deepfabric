@@ -126,8 +126,8 @@ generation:
     Ensure code is modular, testable, and maintainable.
 
   conversation:
-    type: chain_of_thought      # basic | chain_of_thought
-    reasoning_style: agent      # freetext | agent (for chain_of_thought)
+    type: cot      # basic | cot
+    reasoning_style: agent      # freetext | agent (for cot)
     agent_mode: single_turn     # single_turn | multi_turn (for agent)
   
   # Tool configuration (required for agent modes)
@@ -486,7 +486,7 @@ Enable tool tracing in your YAML config:
 ```yaml
 generation:
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     agent_mode: single_turn
 

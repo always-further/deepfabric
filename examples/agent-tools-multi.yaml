@@ -35,7 +35,7 @@ generation:
 
   # Chain of thought with agent mode
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
     # Multi-turn: extended conversations with multiple tool calls
     agent_mode: single_turn

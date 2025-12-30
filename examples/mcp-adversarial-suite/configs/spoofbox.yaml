@@ -34,7 +34,7 @@ generation:
     You are evaluating protocol integrity in MCP communications. The system
     must correctly correlate requests with responses and reject duplicates,
     wrong IDs, and unsolicited messages.
-  conversation_type: chain_of_thought
+  conversation_type: cot
   reasoning_style: agent
   agent_mode: single_turn
   num_samples: 100

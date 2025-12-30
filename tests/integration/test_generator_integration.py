@@ -98,14 +98,14 @@ class TestDataSetGeneratorOpenAI:
 
     @requires_openai
     @pytest.mark.openai
-    def test_generation_with_chain_of_thought(self, openai_config):
-        """Test generation with chain_of_thought conversation type."""
+    def test_generation_with_cot(self, openai_config):
+        """Test generation with cot conversation type."""
         generator = DataSetGenerator(
             provider=openai_config["provider"],
             model_name=openai_config["model_name"],
             generation_system_prompt="You are a reasoning assistant.",
             temperature=openai_config["temperature"],
-            conversation_type="chain_of_thought",
+            conversation_type="cot",
             reasoning_style="freetext",
         )
 

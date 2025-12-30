@@ -49,12 +49,12 @@ class GroundTruth(BaseModel):
         default=None,
         description="Expected final answer if available",
     )
-    conversation_type: Literal["basic", "chain_of_thought"] = Field(
+    conversation_type: Literal["basic", "cot"] = Field(
         description="Type of conversation",
     )
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = Field(
         default=None,
-        description="Reasoning style if chain_of_thought",
+        description="Reasoning style if cot",
     )
     agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
         default=None,
@@ -75,18 +75,18 @@ class GroundTruthParser:
 
     def __init__(
         self,
-        conversation_type: Literal["basic", "chain_of_thought"],
+        conversation_type: Literal["basic", "cot"],
         reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None,
         agent_mode: Literal["single_turn", "multi_turn"] | None = None,
     ):
         """Initialize parser with conversation configuration.
 
         Args:
-            conversation_type: Type of conversation (basic, chain_of_thought)
-            reasoning_style: Reasoning style for chain_of_thought
+            conversation_type: Type of conversation (basic, cot)
+            reasoning_style: Reasoning style for cot
             agent_mode: Agent mode if tools are used
         """
-        self.conversation_type: Literal["basic", "chain_of_thought"] = conversation_type
+        self.conversation_type: Literal["basic", "cot"] = conversation_type
         self.reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = (
             reasoning_style
         )
@@ -270,7 +270,7 @@ class GroundTruthParser:
 
 def parse_batch(
     conversations: list[Conversation],
-    conversation_type: Literal["basic", "chain_of_thought"],
+    conversation_type: Literal["basic", "cot"],
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None,
     agent_mode: Literal["single_turn", "multi_turn"] | None = None,
 ) -> list[GroundTruth]:
@@ -279,7 +279,7 @@ def parse_batch(
     Args:
         conversations: List of Conversation objects
         conversation_type: Type of conversation
-        reasoning_style: Reasoning style if chain_of_thought
+        reasoning_style: Reasoning style if cot
         agent_mode: Agent mode if tools are used
 
     Returns:
