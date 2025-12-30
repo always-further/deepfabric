@@ -79,11 +79,11 @@ def prompt_cloud_signup(api_url: str = DEFAULT_API_URL) -> bool:
         True if user successfully authenticated, False otherwise
     """
     if not get_bool_env("EXPERIMENTAL_DF"):
-
-
         return False
 
     tui = get_tui()
+
+
 
 
     tui.console.print("")
