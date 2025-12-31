@@ -23,6 +23,7 @@ from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
 from .tui import configure_tui, get_tui
 from .update_checker import check_for_updates
+from .utils import get_bool_env
 from .validation import show_validation_success, validate_path_requirements
 
 OverrideValue = str | int | float | bool | None
@@ -1097,7 +1098,11 @@ def evaluate(
 
 
 # Register the auth command group
-cli.add_command(auth_group)
+# EXPERIMENTAL: Only enable cloud features if explicitly opted in
+if get_bool_env("EXPERIMENTAL_DF"):
+    cli.add_command(auth_group)
+
+
 
 
 @cli.command("import-tools")

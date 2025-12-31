@@ -13,6 +13,7 @@ import httpx
 
 from rich.console import Console
 
+from ...utils import get_bool_env
 from .base import BaseReporter
 
 if TYPE_CHECKING:
@@ -67,10 +68,14 @@ class CloudReporter(BaseReporter):
         # Get project ID from config
         self.project_id = config.get("project_id") if config else None
 
-        # Enable cloud reporting if authenticated
-        self.enabled = (
+        # Enable cloud reporting if authenticated AND experimental flag is set
+        is_experimental = get_bool_env("EXPERIMENTAL_DF")
+        self.enabled = is_experimental and (
             config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
         )
+
+
+
 
         # Generate unique run ID for this evaluation
         self.run_id = None  # Will be set when creating run
