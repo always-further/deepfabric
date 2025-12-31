@@ -1,0 +1,593 @@
+{
+  "metadata": {
+    "model": "gemini-2.5-flash-lite",
+    "provider": "gemini",
+    "temperature": 0.8,
+    "created_at": "2025-12-31T10:41:46Z"
+  },
+  "nodes": {
+    "0": {
+      "id": 0,
+      "topic": "Python programming fundamentals",
+      "children": [
+        1,
+        2,
+        3
+      ],
+      "parents": [],
+      "metadata": {
+        "topic_hash": "963c21bde738a021f0efe74f693f64bca472adc3470f157ed23d8b0cbea006a9",
+        "uuid": "80ea1326-1234-447a-8811-878cf9625851"
+      }
+    },
+    "1": {
+      "id": 1,
+      "topic": "Variables and Data Types in Python",
+      "children": [
+        7,
+        8,
+        9,
+        11,
+        13,
+        31,
+        34,
+        35,
+        36,
+        37
+      ],
+      "parents": [
+        0
+      ],
+      "metadata": {
+        "topic_hash": "cdfd0eceb34fbd710a0dba9ea97753b7e66943384fb871c1360672bbeda73fcf",
+        "uuid": "f3278bff-71e4-435b-9e9c-474cdee65f60"
+      }
+    },
+    "10": {
+      "id": 10,
+      "topic": "Defining and Calling Functions",
+      "children": [
+        31,
+        32,
+        33
+      ],
+      "parents": [
+        3
+      ],
+      "metadata": {
+        "topic_hash": "6d69020b7ec6155ac67716e4bee25dbf468837bdd78a837dd3d9471537763851",
+        "uuid": "7eafacc8-1e6e-4295-bfc7-cc1ce96d677e"
+      }
+    },
+    "11": {
+      "id": 11,
+      "topic": "Function Arguments and Parameters",
+      "children": [
+        34,
+        35,
+        36
+      ],
+      "parents": [
+        3,
+        1
+      ],
+      "metadata": {
+        "topic_hash": "58f0d8ae81db8724992fdff0a8859a082a2e550fa68c67e27230e411cf5aed3a",
+        "uuid": "fa084c17-cd73-4bd8-8d90-806602c57308"
+      }
+    },
+    "12": {
+      "id": 12,
+      "topic": "Return Values and Scope",
+      "children": [
+        37,
+        38,
+        39
+      ],
+      "parents": [
+        3
+      ],
+      "metadata": {
+        "topic_hash": "d4ce3e175944eb037319dfe63f87640d5bed180afee7db21267bb45f4d98de2e",
+        "uuid": "c4c111d1-574d-4700-b0f9-a3c8a3f90f5f"
+      }
+    },
+    "13": {
+      "id": 13,
+      "topic": "Iterating over sequences (strings, lists, tuples) with for loops",
+      "children": [],
+      "parents": [
+        5,
+        7,
+        1
+      ],
+      "metadata": {
+        "topic_hash": "f5a360b81c58652d344830e74db47566f33ca197865e3e0f1e270fb4fe8145a0",
+        "uuid": "3a972fd3-42df-41a5-9b1f-59575d017ecd"
+      }
+    },
+    "14": {
+      "id": 14,
+      "topic": "Using the `range()` function with for loops",
+      "children": [],
+      "parents": [
+        5
+      ],
+      "metadata": {
+        "topic_hash": "d6ac89d1da6bc2e0fd63b73eaffba2d2be2e44ad6b40e83c41a39c822177b10c",
+        "uuid": "8834051d-7686-49b8-a4d6-f3a96b62409a"
+      }
+    },
+    "15": {
+      "id": 15,
+      "topic": "Nested for loops",
+      "children": [],
+      "parents": [
+        5
+      ],
+      "metadata": {
+        "topic_hash": "037ccd2aa8b0aa7ab8d2398f06cdca1e407d9c76ab849c0a3f4db91894917e1d",
+        "uuid": "73f040aa-9477-44eb-ab5b-fb08b124547f"
+      }
+    },
+    "16": {
+      "id": 16,
+      "topic": "Nested If-Else Statements",
+      "children": [],
+      "parents": [
+        4
+      ],
+      "metadata": {
+        "topic_hash": "a71af9a96d3eec25b449f1fa85b993bb0c7fbc82ea04c41cdc2fbe4919dc9273",
+        "uuid": "3bf21676-c300-4990-b221-c10329543c89"
+      }
+    },
+    "17": {
+      "id": 17,
+      "topic": "Elif Statements",
+      "children": [],
+      "parents": [
+        4
+      ],
+      "metadata": {
+        "topic_hash": "c48d8c1a923ec1601a2f4b9eb8d6ccd5bd00e8ed6ef781b82ad06ae11733f82d",
+        "uuid": "4932ffa1-93fa-4e32-a28d-cb44d2a95b84"
+      }
+    },
+    "18": {
+      "id": 18,
+      "topic": "Boolean Logic with If-Else",
+      "children": [],
+      "parents": [
+        4,
+        7
+      ],
+      "metadata": {
+        "topic_hash": "ca7c4e1f0460873af1536c5363e3d8acc555413d57ef606bfae3db5b1b723b7c",
+        "uuid": "5a14fc2e-2de5-4bea-b241-8fad539e3803"
+      }
+    },
+    "19": {
+      "id": 19,
+      "topic": "Syntax and Usage of While Loops",
+      "children": [],
+      "parents": [
+        6
+      ],
+      "metadata": {
+        "topic_hash": "c8035835f3b9b7edecfa819eb78f7d74fe2f6da68b7773eb4a4a5b12d98f046a",
+        "uuid": "d6c5dcc9-9a31-43eb-adfd-2998cc6a6b36"
+      }
+    },
+    "2": {
+      "id": 2,
+      "topic": "Control Flow Statements (if, else, loops)",
+      "children": [
+        4,
+        5,
+        6,
+        31,
+        34,
+        36,
+        38
+      ],
+      "parents": [
+        0
+      ],
+      "metadata": {
+        "topic_hash": "4f731f490531273f580e3726cc20cc2dfc4de22abdc8af2a86a780d464b7ada6",
+        "uuid": "9313e625-de45-480e-9dd4-94796fe4caa6"
+      }
+    },
+    "20": {
+      "id": 20,
+      "topic": "Infinite Loops and How to Avoid Them",
+      "children": [],
+      "parents": [
+        6
+      ],
+      "metadata": {
+        "topic_hash": "b9ee3dcc746afbd23136de52e3f9886c067caab11efbad14e78a6d76ae0cb556",
+        "uuid": "5ccea692-3283-4454-9d35-0f50df5630a0"
+      }
+    },
+    "21": {
+      "id": 21,
+      "topic": "While Loops with Break and Continue Statements",
+      "children": [],
+      "parents": [
+        6
+      ],
+      "metadata": {
+        "topic_hash": "7393079a4b733e2d183e2eebcbfda128e9df92c3c420aca2f3f3ee2bc5d05d9a",
+        "uuid": "bf0b6d5e-6872-4a70-aca9-eed775d5831e"
+      }
+    },
+    "22": {
+      "id": 22,
+      "topic": "Integer Operations in Python",
+      "children": [],
+      "parents": [
+        7
+      ],
+      "metadata": {
+        "topic_hash": "5575010d35913c150eba0dc46568652e0e05848fc7ffaa48f0785bc3377a3083",
+        "uuid": "e04b72db-8f21-4209-a9f4-cb922bea1c24"
+      }
+    },
+    "23": {
+      "id": 23,
+      "topic": "Floating-Point Number Precision",
+      "children": [],
+      "parents": [
+        7
+      ],
+      "metadata": {
+        "topic_hash": "2da67c73d4cd119d54910e366c291388ce11ea57505d68601632d2ca330ce502",
+        "uuid": "b618a3b5-9153-4bce-812c-836bd3ac00a9"
+      }
+    },
+    "24": {
+      "id": 24,
+      "topic": "String Manipulation and Methods",
+      "children": [],
+      "parents": [
+        7
+      ],
+      "metadata": {
+        "topic_hash": "7b8d218b4b4d8d4a6d0119aade829ba3e4bf5ac1b80c47af544beeb3b2747e12",
+        "uuid": "4d39465f-04f0-48c3-87ee-34a3eb543330"
+      }
+    },
+    "25": {
+      "id": 25,
+      "topic": "Explicit Type Conversion (Casting)",
+      "children": [],
+      "parents": [
+        9
+      ],
+      "metadata": {
+        "topic_hash": "d25bc763d21209ce95b3aa0fe8da2707ae84eb214483b2fd6167923f715b1f7f",
+        "uuid": "fba6c8e9-a8e8-4d08-9424-821563a25a82"
+      }
+    },
+    "26": {
+      "id": 26,
+      "topic": "Implicit Type Conversion (Coercion)",
+      "children": [],
+      "parents": [
+        9,
+        7
+      ],
+      "metadata": {
+        "topic_hash": "2b9ced244134de3e29baa01a79d50b88c75b8cbe3f8ea845755adaaf4dcadc45",
+        "uuid": "5aba4681-b003-479f-8d13-76b584d89804"
+      }
+    },
+    "27": {
+      "id": 27,
+      "topic": "Converting Strings to Numbers",
+      "children": [],
+      "parents": [
+        9,
+        7
+      ],
+      "metadata": {
+        "topic_hash": "7de176214999f3c6cca06dc1bdca15bf056768d2313e883fc47e2c35e362bd14",
+        "uuid": "b572b68a-6862-440f-a8a0-73fe8d0d29d1"
+      }
+    },
+    "28": {
+      "id": 28,
+      "topic": "Mutability and its impact on object references",
+      "children": [],
+      "parents": [
+        8
+      ],
+      "metadata": {
+        "topic_hash": "e03bf3ac2a451215801cb0d2115fb8bf62f2a1e387881e4dfd6a1c688f8d7ce3",
+        "uuid": "ceb68575-daef-402e-a3a1-f54d9ba69a5f"
+      }
+    },
+    "29": {
+      "id": 29,
+      "topic": "Examples of Mutable Data Types (list, dict, set)",
+      "children": [],
+      "parents": [
+        8
+      ],
+      "metadata": {
+        "topic_hash": "e745673f252b40f36bb7b34f2a579ba7e4a8280935dd4e5174f7599753d44fd0",
+        "uuid": "2c53986e-5c9d-45bf-9293-ffc16cc82005"
+      }
+    },
+    "3": {
+      "id": 3,
+      "topic": "Functions in Python",
+      "children": [
+        10,
+        11,
+        12,
+        32,
+        35,
+        36,
+        37
+      ],
+      "parents": [
+        0
+      ],
+      "metadata": {
+        "topic_hash": "36406c62aac6855be36149d02e258c12fdc705a18714c270be69b710c3784b11",
+        "uuid": "1e99afb8-e072-4bc7-b32d-6fbd2ab2c251"
+      }
+    },
+    "30": {
+      "id": 30,
+      "topic": "Examples of Immutable Data Types (int, float, str, tuple)",
+      "children": [],
+      "parents": [
+        8,
+        7
+      ],
+      "metadata": {
+        "topic_hash": "5f440907638bb3d8c0999e777c709482bd40b213b577dd6ffe62ade99a284c62",
+        "uuid": "7e4fad06-920c-48cb-8774-c8bf4057e7bf"
+      }
+    },
+    "31": {
+      "id": 31,
+      "topic": "Syntax for defining functions",
+      "children": [],
+      "parents": [
+        10,
+        1,
+        2
+      ],
+      "metadata": {
+        "topic_hash": "518941245da9411ab261ac6bba81d448cd3ca5e0df4d4adc63018f749fb2c74a",
+        "uuid": "8e74d59a-bcfc-48ec-b24e-0d1b7867e2b0"
+      }
+    },
+    "32": {
+      "id": 32,
+      "topic": "Calling functions with arguments",
+      "children": [],
+      "parents": [
+        10,
+        3,
+        4
+      ],
+      "metadata": {
+        "topic_hash": "1241f6dbe0b5b0251eebaf2f8e4740504415dd01a0c5f65f95489dfe479b1c85",
+        "uuid": "f61f5266-0a48-4c6e-aadf-99f22a144848"
+      }
+    },
+    "33": {
+      "id": 33,
+      "topic": "Return values from functions",
+      "children": [],
+      "parents": [
+        10,
+        5,
+        6
+      ],
+      "metadata": {
+        "topic_hash": "3b3d96700c46aab77aad81332b525980bf581a2e6103b87abfa08dc5f3045875",
+        "uuid": "3ef0d9c7-d24e-4cca-a62f-10b9bbd98858"
+      }
+    },
+    "34": {
+      "id": 34,
+      "topic": "Positional Arguments",
+      "children": [],
+      "parents": [
+        11,
+        1,
+        2
+      ],
+      "metadata": {
+        "topic_hash": "60f950e7b702fd81548a60d9b5592d3c940b8890a3871b51d4c88a33ec0bf8de",
+        "uuid": "d0c4c208-0a3b-4498-b927-17e737713516"
+      }
+    },
+    "35": {
+      "id": 35,
+      "topic": "Keyword Arguments",
+      "children": [],
+      "parents": [
+        11,
+        1,
+        3
+      ],
+      "metadata": {
+        "topic_hash": "19f56c32f9fe2bd01869d35745912ada30352bdc606492a630e4aa184041683b",
+        "uuid": "b4e8250e-eead-4cd3-bd28-c3441ba160f2"
+      }
+    },
+    "36": {
+      "id": 36,
+      "topic": "Default Parameter Values",
+      "children": [],
+      "parents": [
+        11,
+        1,
+        2,
+        3
+      ],
+      "metadata": {
+        "topic_hash": "445aafec16437dec92d297cd357bbac1da9a7da1a15f1bce8404ce92ae0292fa",
+        "uuid": "89ba5712-00ff-4430-a597-30e9d9d89bfe"
+      }
+    },
+    "37": {
+      "id": 37,
+      "topic": "Understanding Return Values",
+      "children": [],
+      "parents": [
+        12,
+        1,
+        3
+      ],
+      "metadata": {
+        "topic_hash": "c69c3d1b328ab7fb55d5eb2db24d11b4c75d4f122c912da39000265ff084330e",
+        "uuid": "a3ceb34c-5052-4047-98f9-7a66886a06a3"
+      }
+    },
+    "38": {
+      "id": 38,
+      "topic": "Local vs. Global Scope",
+      "children": [],
+      "parents": [
+        12,
+        2,
+        4
+      ],
+      "metadata": {
+        "topic_hash": "2088ea95e03e074fb6f26f9bebf874ca50f6f34f61d414fcca21992b6ffb9cfd",
+        "uuid": "63e7540d-ad9b-4172-b0b8-cc278547caa6"
+      }
+    },
+    "39": {
+      "id": 39,
+      "topic": "Scope and Return Value Interaction",
+      "children": [],
+      "parents": [
+        12,
+        5,
+        6
+      ],
+      "metadata": {
+        "topic_hash": "0f6b976394cdb1b2ac7e7224fcdecc5d0636f95d6fbe06b67c1a2a3e7cff742a",
+        "uuid": "1a474557-c271-4a91-87e5-98a8312b056a"
+      }
+    },
+    "4": {
+      "id": 4,
+      "topic": "If-Else Statements",
+      "children": [
+        16,
+        17,
+        18,
+        32,
+        38
+      ],
+      "parents": [
+        2
+      ],
+      "metadata": {
+        "topic_hash": "69202f6352895c68a0bd96aebabe4395dc9a8997739ff302bd7ea845e6a92ad5",
+        "uuid": "182dd3e1-fb31-40c9-8381-1e7dd903f2c4"
+      }
+    },
+    "5": {
+      "id": 5,
+      "topic": "For Loops",
+      "children": [
+        13,
+        14,
+        15,
+        33,
+        39
+      ],
+      "parents": [
+        2
+      ],
+      "metadata": {
+        "topic_hash": "12bd8aba18067c3173b4651ebee6bbb75012f19f8225f3db4570e5eeef8113db",
+        "uuid": "a0b4e0e6-fb28-41f1-b8bb-ea642f944fef"
+      }
+    },
+    "6": {
+      "id": 6,
+      "topic": "While Loops",
+      "children": [
+        19,
+        20,
+        21,
+        33,
+        39
+      ],
+      "parents": [
+        2
+      ],
+      "metadata": {
+        "topic_hash": "5d0fd4acb8443423f5e4c7e5d2420a4d17f617d346ba05f2105ba3dab1afbd4c",
+        "uuid": "c8b1574d-e715-4103-8dc9-c4fe861d88eb"
+      }
+    },
+    "7": {
+      "id": 7,
+      "topic": "Python Basic Data Types (int, float, str, bool)",
+      "children": [
+        13,
+        18,
+        22,
+        23,
+        24,
+        26,
+        27,
+        30
+      ],
+      "parents": [
+        1
+      ],
+      "metadata": {
+        "topic_hash": "115a4b93f81dd640239bc55faca48913017fc8e2c4f7861386ea97ead125c0f9",
+        "uuid": "e9f32763-d9fc-47a6-9d87-7e2328263933"
+      }
+    },
+    "8": {
+      "id": 8,
+      "topic": "Python Mutable vs. Immutable Data Types",
+      "children": [
+        28,
+        29,
+        30
+      ],
+      "parents": [
+        1
+      ],
+      "metadata": {
+        "topic_hash": "39b439fe4bbd348a52c305623ba6b37c9ea6dd79879031131f8b6492f008ecb7",
+        "uuid": "fbed62ef-6b1c-4054-adaa-2ed212f399f8"
+      }
+    },
+    "9": {
+      "id": 9,
+      "topic": "Type Casting and Conversion in Python",
+      "children": [
+        25,
+        26,
+        27
+      ],
+      "parents": [
+        1
+      ],
+      "metadata": {
+        "topic_hash": "8a47465ae106781ccae339415b800ea90844f16eab876ca0d63a6124b10bff2b",
+        "uuid": "1d13f266-37f8-46d1-9873-3574e0161171"
+      }
+    }
+  },
+  "root_id": 0
+}

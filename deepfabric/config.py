@@ -161,8 +161,7 @@ class ConversationConfig(BaseModel):
         """Validate that configuration combinations are consistent."""
         if self.reasoning_style is not None and self.type != "cot":
             raise ValueError(
-                f"reasoning_style can only be set when type='cot', "
-                f"got type='{self.type}'"
+                f"reasoning_style can only be set when type='cot', got type='{self.type}'"
             )
 
         if self.type == "cot" and self.reasoning_style is None:
