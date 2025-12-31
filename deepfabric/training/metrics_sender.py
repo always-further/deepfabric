@@ -5,6 +5,7 @@ from __future__ import annotations
 import atexit
 import logging
 import queue
+import sys
 import threading
 import time
 
@@ -278,7 +279,6 @@ class MetricsSender:
             if not response.ok:
                 self._send_errors += 1
                 # Print error to stderr so it's visible
-                import sys
                 print(
                     f"[DeepFabric] API error: {response.status_code} {response.text[:200]} "
                     f"(endpoint: {endpoint})",
@@ -288,19 +288,19 @@ class MetricsSender:
 
         except requests.exceptions.Timeout:
             self._send_errors += 1
-            import sys
+
             print(f"[DeepFabric] Request timed out: {endpoint}", file=sys.stderr)
             return False
 
         except requests.exceptions.ConnectionError as e:
             self._send_errors += 1
-            import sys
+
             print(f"[DeepFabric] Connection error: {e} (endpoint: {endpoint})", file=sys.stderr)
             return False
 
         except requests.exceptions.RequestException as e:
             self._send_errors += 1
-            import sys
+
             print(f"[DeepFabric] Request error: {e} (endpoint: {endpoint})", file=sys.stderr)
             return False
 

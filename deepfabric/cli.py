@@ -1103,8 +1103,6 @@ if get_bool_env("EXPERIMENTAL_DF"):
     cli.add_command(auth_group)
 
 
-
-
 @cli.command("import-tools")
 @click.option(
     "--transport",

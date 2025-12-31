@@ -74,9 +74,6 @@ class CloudReporter(BaseReporter):
             config.get("enabled", bool(self.auth_token)) if config else bool(self.auth_token)
         )
 
-
-
-
         # Generate unique run ID for this evaluation
         self.run_id = None  # Will be set when creating run
         self.evaluation_run_id = None  # Backend run ID

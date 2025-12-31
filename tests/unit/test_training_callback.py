@@ -125,6 +125,7 @@ class TestMetricsSender:
         sender = MetricsSender(
             endpoint="https://api.test.com",
             api_key="test-key",
+            pipeline_id="test-pipeline",
             batch_size=2,
             flush_interval=0.1,
         )

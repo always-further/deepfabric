@@ -82,9 +82,6 @@ def prompt_cloud_signup(api_url: str = DEFAULT_API_URL) -> bool:
 
     tui = get_tui()
 
-
-
-
     tui.console.print("")
     tui.info("DeepFabric Cloud can save and track your evaluations")
     tui.info("   - Compare models across runs")

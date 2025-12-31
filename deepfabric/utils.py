@@ -162,4 +162,3 @@ def get_bool_env(key: str, default: bool = False) -> bool:
     if val is None:
         return default
     return val.lower() in ("1", "true", "yes", "on")
-
