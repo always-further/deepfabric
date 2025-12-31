@@ -163,6 +163,9 @@ class Graph(TopicModel):
         # Progress reporter for streaming feedback (set by topic_manager)
         self.progress_reporter: ProgressReporter | None = None
 
+        # Store creation timestamp for provenance tracking
+        self.created_at: datetime = datetime.now(timezone.utc)
+
         trace(
             "graph_created",
             {
@@ -208,7 +211,7 @@ class Graph(TopicModel):
                 provider=self.provider,
                 model=self.model_name,
                 temperature=self.temperature,
-                created_at=datetime.now(timezone.utc).isoformat(),
+                created_at=self.created_at.isoformat(),
             ),
         )
 
@@ -231,6 +234,12 @@ class Graph(TopicModel):
         graph_model = GraphModel(**data)
         graph = cls(**params)
         graph.nodes = {}
+
+        # Restore original creation timestamp if present in the loaded graph
+        if graph_model.metadata and graph_model.metadata.created_at:
+            # Handle 'Z' suffix for Python < 3.11 compatibility
+            created_at_str = graph_model.metadata.created_at.replace("Z", "+00:00")
+            graph.created_at = datetime.fromisoformat(created_at_str)
 
         # Create nodes
         for node_model in graph_model.nodes.values():
