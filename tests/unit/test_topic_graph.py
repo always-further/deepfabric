@@ -1,6 +1,8 @@
 import asyncio
+import hashlib
 import json
 import tempfile
+import uuid as uuid_module
 
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -10,6 +12,7 @@ import pytest  # type: ignore
 from deepfabric.graph import (
     Graph,
     GraphConfig,
+    GraphMetadata,
     GraphModel,
     Node,
     NodeModel,
@@ -71,6 +74,51 @@ class TestNode:
         assert child_model.topic == "Child"
         assert child_model.children == []
         assert child_model.parents == [1]
+
+    def test_node_uuid_generation(self):
+        """Test that nodes automatically get a UUID4 in metadata."""
+        node = Node("Test topic", 42)
+        assert "uuid" in node.metadata
+        # Verify it's a valid UUID4 format
+        parsed_uuid = uuid_module.UUID(node.metadata["uuid"])
+        assert parsed_uuid.version == 4  # noqa: PLR2004
+
+    def test_node_topic_hash_generation(self):
+        """Test that nodes automatically get a SHA256 topic_hash in metadata."""
+        topic = "Test topic for hashing"
+        node = Node(topic, 42)
+        assert "topic_hash" in node.metadata
+        # Verify it matches the expected SHA256 hash
+        expected_hash = hashlib.sha256(topic.encode("utf-8")).hexdigest()
+        assert node.metadata["topic_hash"] == expected_hash
+        # SHA256 hex digest is 64 characters
+        assert len(node.metadata["topic_hash"]) == 64  # noqa: PLR2004
+
+    def test_node_preserves_existing_metadata(self):
+        """Test that existing metadata is not overwritten during node creation."""
+        existing_uuid = "custom-uuid-value"
+        existing_hash = "custom-hash-value"
+        existing_metadata = {
+            "uuid": existing_uuid,
+            "topic_hash": existing_hash,
+            "custom_field": "custom_value",
+        }
+        node = Node("Test topic", 42, metadata=existing_metadata)
+
+        # Existing values should be preserved
+        assert node.metadata["uuid"] == existing_uuid
+        assert node.metadata["topic_hash"] == existing_hash
+        assert node.metadata["custom_field"] == "custom_value"
+
+    def test_node_metadata_in_pydantic(self):
+        """Test that uuid and topic_hash are included in Pydantic conversion."""
+        node = Node("Test topic", 42)
+        pydantic_model = node.to_pydantic()
+
+        assert "uuid" in pydantic_model.metadata
+        assert "topic_hash" in pydantic_model.metadata
+        assert pydantic_model.metadata["uuid"] == node.metadata["uuid"]
+        assert pydantic_model.metadata["topic_hash"] == node.metadata["topic_hash"]
 
 
 class TestGraphConfig:
@@ -193,6 +241,49 @@ class TestGraph:
         assert len(pydantic_model.nodes) == 2  # noqa: PLR2004
         assert pydantic_model.nodes[0].topic == "Test root topic"
         assert pydantic_model.nodes[1].topic == "Child"
+
+    def test_graph_metadata_serialization(self, topic_graph):
+        """Test that graph-level metadata is included in Pydantic conversion."""
+        pydantic_model = topic_graph.to_pydantic()
+
+        # Verify metadata is present
+        assert pydantic_model.metadata is not None
+        assert isinstance(pydantic_model.metadata, GraphMetadata)
+
+        # Verify all required fields are present
+        assert pydantic_model.metadata.provider == "openai"
+        assert pydantic_model.metadata.model == "test-model"
+        assert pydantic_model.metadata.temperature == 0.7  # noqa: PLR2004
+        assert pydantic_model.metadata.created_at is not None
+
+        # Verify created_at is ISO 8601 format (contains 'T' separator)
+        assert "T" in pydantic_model.metadata.created_at
+
+    def test_graph_metadata_in_json(self, topic_graph):
+        """Test that graph-level metadata appears in JSON output."""
+        json_str = topic_graph.to_json()
+        data = json.loads(json_str)
+
+        assert "metadata" in data
+        assert data["metadata"]["provider"] == "openai"
+        assert data["metadata"]["model"] == "test-model"
+        assert data["metadata"]["temperature"] == 0.7  # noqa: PLR2004
+        assert "created_at" in data["metadata"]
+
+    def test_node_metadata_in_json(self, topic_graph):
+        """Test that node-level metadata (uuid, topic_hash) appears in JSON output."""
+        json_str = topic_graph.to_json()
+        data = json.loads(json_str)
+
+        # Check root node metadata
+        root_node = data["nodes"]["0"]
+        assert "metadata" in root_node
+        assert "uuid" in root_node["metadata"]
+        assert "topic_hash" in root_node["metadata"]
+
+        # Verify topic_hash is correct SHA256
+        expected_hash = hashlib.sha256(b"Test root topic").hexdigest()
+        assert root_node["metadata"]["topic_hash"] == expected_hash
 
     def test_to_json(self, topic_graph):
         """Test JSON serialization."""
@@ -486,5 +577,60 @@ class TestIntegration:
             loaded_chemistry = loaded.nodes[chemistry.id]
             assert len(loaded_chemistry.children) == 2  # noqa: PLR2004
             assert any(child.topic == "Biology" for child in loaded_chemistry.children)
+        finally:
+            Path(temp_path).unlink()
+
+    def test_backward_compatibility_no_metadata(self):
+        """Test loading old graph JSON files that don't have metadata fields."""
+        # Simulate an old graph JSON without metadata
+        old_graph_json = {
+            "nodes": {
+                "0": {
+                    "id": 0,
+                    "topic": "Root Topic",
+                    "children": [1],
+                    "parents": [],
+                    "metadata": {},  # Old format: empty metadata
+                },
+                "1": {
+                    "id": 1,
+                    "topic": "Child Topic",
+                    "children": [],
+                    "parents": [0],
+                    "metadata": {},
+                },
+            },
+            "root_id": 0,
+            # No "metadata" field at graph level
+        }
+
+        graph_params = {
+            "topic_prompt": "Root Topic",
+            "model_name": "test-model",
+            "temperature": 0.5,
+            "degree": 2,
+            "depth": 2,
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(old_graph_json, f)
+            temp_path = f.name
+
+        try:
+            # Load should succeed without errors
+            loaded = Graph.from_json(temp_path, graph_params)
+
+            # Verify structure was loaded correctly
+            assert len(loaded.nodes) == 2  # noqa: PLR2004
+            assert loaded.root.topic == "Root Topic"
+            assert len(loaded.root.children) == 1
+
+            # Verify nodes get uuid and topic_hash auto-generated on load
+            assert "uuid" in loaded.root.metadata
+            assert "topic_hash" in loaded.root.metadata
+
+            # Verify topic_hash is correct for the loaded topic
+            expected_hash = hashlib.sha256(b"Root Topic").hexdigest()
+            assert loaded.root.metadata["topic_hash"] == expected_hash
         finally:
             Path(temp_path).unlink()

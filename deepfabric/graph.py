@@ -1,7 +1,10 @@
 import asyncio
+import hashlib
 import json
 import textwrap
+import uuid
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -69,6 +72,15 @@ class GraphConfig(BaseModel):
     )
 
 
+class GraphMetadata(BaseModel):
+    """Metadata for the entire graph for provenance tracking."""
+
+    provider: str = Field(..., description="LLM provider used (e.g., openai, ollama)")
+    model: str = Field(..., description="Model name used (e.g., gpt-4o)")
+    temperature: float = Field(..., description="Temperature setting used for generation")
+    created_at: str = Field(..., description="ISO 8601 timestamp when graph was created")
+
+
 class NodeModel(BaseModel):
     """Pydantic model for a node in the graph."""
 
@@ -84,6 +96,9 @@ class GraphModel(BaseModel):
 
     nodes: dict[int, NodeModel]
     root_id: int
+    metadata: GraphMetadata | None = Field(
+        default=None, description="Graph-level metadata for provenance tracking"
+    )
 
 
 class Node:
@@ -95,6 +110,14 @@ class Node:
         self.children: list[Node] = []
         self.parents: list[Node] = []
         self.metadata: dict[str, Any] = metadata.copy() if metadata is not None else {}
+
+        # Auto-generate uuid if not present (stable node identification)
+        if "uuid" not in self.metadata:
+            self.metadata["uuid"] = str(uuid.uuid4())
+
+        # Auto-generate topic_hash if not present (duplicate detection via SHA256)
+        if "topic_hash" not in self.metadata:
+            self.metadata["topic_hash"] = hashlib.sha256(topic.encode("utf-8")).hexdigest()
 
     def to_pydantic(self) -> NodeModel:
         """Converts the runtime Node to its Pydantic model representation."""
@@ -140,6 +163,9 @@ class Graph(TopicModel):
         # Progress reporter for streaming feedback (set by topic_manager)
         self.progress_reporter: ProgressReporter | None = None
 
+        # Store creation timestamp for provenance tracking
+        self.created_at: datetime = datetime.now(timezone.utc)
+
         trace(
             "graph_created",
             {
@@ -181,6 +207,12 @@ class Graph(TopicModel):
         return GraphModel(
             nodes={node_id: node.to_pydantic() for node_id, node in self.nodes.items()},
             root_id=self.root.id,
+            metadata=GraphMetadata(
+                provider=self.provider,
+                model=self.model_name,
+                temperature=self.temperature,
+                created_at=self.created_at.isoformat(),
+            ),
         )
 
     def to_json(self) -> str:
@@ -202,6 +234,12 @@ class Graph(TopicModel):
         graph_model = GraphModel(**data)
         graph = cls(**params)
         graph.nodes = {}
+
+        # Restore original creation timestamp if present in the loaded graph
+        if graph_model.metadata and graph_model.metadata.created_at:
+            # Handle 'Z' suffix for Python < 3.11 compatibility
+            created_at_str = graph_model.metadata.created_at.replace("Z", "+00:00")
+            graph.created_at = datetime.fromisoformat(created_at_str)
 
         # Create nodes
         for node_model in graph_model.nodes.values():
