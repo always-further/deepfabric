@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import logging
 import queue
-import sys
 import threading
 import time
 
@@ -232,19 +231,17 @@ class MetricsSender:
         # Build query string with pipeline_id
         query = f"?pipeline_id={self.pipeline_id}"
 
-        # Send run_start events first (must complete before run_end)
-        for event in run_start_events:
-            self._send_to_api(
-                endpoint=f"{self.endpoint}/api/v1/training/runs{query}",
-                payload={"event_type": event["type"], **event["data"]},
-            )
+        def send_run_events(events: list[dict[str, Any]]) -> None:
+            """Send run start/end events."""
+            for event in events:
+                self._send_to_api(
+                    endpoint=f"{self.endpoint}/api/v1/training/runs{query}",
+                    payload={"event_type": event["type"], **event["data"]},
+                )
 
-        # Send run_end events after run_start
-        for event in run_end_events:
-            self._send_to_api(
-                endpoint=f"{self.endpoint}/api/v1/training/runs{query}",
-                payload={"event_type": event["type"], **event["data"]},
-            )
+        # Send run events, ensuring start events are processed before end events
+        send_run_events(run_start_events)
+        send_run_events(run_end_events)
 
         # Send metrics batch
         if metrics:
@@ -278,30 +275,27 @@ class MetricsSender:
 
             if not response.ok:
                 self._send_errors += 1
-                # Print error to stderr so it's visible
-                print(
-                    f"[DeepFabric] API error: {response.status_code} {response.text[:200]} "
-                    f"(endpoint: {endpoint})",
-                    file=sys.stderr,
+                logger.warning(
+                    "API error: %s %s (endpoint: %s)",
+                    response.status_code,
+                    response.text[:200],
+                    endpoint,
                 )
                 return False
 
         except requests.exceptions.Timeout:
             self._send_errors += 1
-
-            print(f"[DeepFabric] Request timed out: {endpoint}", file=sys.stderr)
+            logger.warning("Request timed out: %s", endpoint)
             return False
 
         except requests.exceptions.ConnectionError as e:
             self._send_errors += 1
-
-            print(f"[DeepFabric] Connection error: {e} (endpoint: {endpoint})", file=sys.stderr)
+            logger.warning("Connection error: %s (endpoint: %s)", e, endpoint)
             return False
 
         except requests.exceptions.RequestException as e:
             self._send_errors += 1
-
-            print(f"[DeepFabric] Request error: {e} (endpoint: {endpoint})", file=sys.stderr)
+            logger.warning("Request error: %s (endpoint: %s)", e, endpoint)
             return False
 
         else:
@@ -320,11 +314,9 @@ class MetricsSender:
         self._flush_event.set()
 
         start = time.monotonic()
-        # Wait for queue to empty and give time for batch to be sent
+        # Wait for queue to empty and flush event to be cleared (indicates batch was sent)
         while (time.monotonic() - start) < timeout:
             if self._queue.empty() and not self._flush_event.is_set():
-                # Give a small buffer for the batch to actually be sent
-                time.sleep(0.2)
                 break
             time.sleep(0.1)
 
