@@ -9,6 +9,7 @@ This module provides the load_dataset function for loading datasets from:
 import json
 import re
 import warnings
+
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Literal
@@ -286,7 +287,7 @@ def _load_from_cloud(
 
     # Parse namespace/slug
     parts = path.split("/")
-    if len(parts) != 2:
+    if len(parts) != 2:  # noqa: PLR2004
         raise LoaderError(
             f"Invalid cloud path format: {path}. Expected 'namespace/slug'.",
             context={"path": path},

@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+
 from pathlib import Path
 
 import pytest
@@ -49,11 +50,11 @@ class TestDatasetBasics:
 
     def test_dataset_len(self, sample_dataset):
         """Test __len__ returns correct count."""
-        assert len(sample_dataset) == 3
+        assert len(sample_dataset) == 3  # noqa: PLR2004
 
     def test_dataset_num_rows(self, sample_dataset):
         """Test num_rows property."""
-        assert sample_dataset.num_rows == 3
+        assert sample_dataset.num_rows == 3  # noqa: PLR2004
 
     def test_dataset_empty(self):
         """Test empty dataset."""
@@ -108,13 +109,13 @@ class TestDatasetAccess:
         """Test slice access returns new Dataset."""
         sliced = sample_dataset[0:2]
         assert isinstance(sliced, Dataset)
-        assert len(sliced) == 2
+        assert len(sliced) == 2  # noqa: PLR2004
         assert sliced["text"] == ["hello", "world"]
 
     def test_slice_access_step(self, sample_dataset):
         """Test slice with step."""
         sliced = sample_dataset[::2]
-        assert len(sliced) == 2
+        assert len(sliced) == 2  # noqa: PLR2004
         assert sliced["text"] == ["hello", "test"]
 
     def test_invalid_key_type(self, sample_dataset):
@@ -129,7 +130,7 @@ class TestDatasetIteration:
     def test_iteration(self, sample_dataset):
         """Test iterating over dataset."""
         items = list(sample_dataset)
-        assert len(items) == 3
+        assert len(items) == 3  # noqa: PLR2004
         assert items[0] == {"text": "hello", "label": 1}
 
     def test_iteration_in_for_loop(self, sample_dataset):
@@ -143,7 +144,7 @@ class TestDatasetIteration:
 class TestDatasetSplit:
     """Test Dataset split functionality."""
 
-    def test_split_basic(self, sample_data):
+    def test_split_basic(self, _sample_data):
         """Test basic split."""
         # Use larger dataset for meaningful split
         data = [{"i": i} for i in range(100)]
@@ -152,8 +153,8 @@ class TestDatasetSplit:
 
         assert "train" in splits
         assert "test" in splits
-        assert len(splits["train"]) == 80
-        assert len(splits["test"]) == 20
+        assert len(splits["train"]) == 80  # noqa: PLR2004
+        assert len(splits["test"]) == 20  # noqa: PLR2004
 
     def test_split_seed_reproducibility(self):
         """Test split with same seed produces same results."""
@@ -196,7 +197,7 @@ class TestDatasetTransformations:
     def test_select(self, sample_dataset):
         """Test select by indices."""
         selected = sample_dataset.select([0, 2])
-        assert len(selected) == 2
+        assert len(selected) == 2  # noqa: PLR2004
         assert selected["text"] == ["hello", "test"]
 
     def test_shuffle(self):
@@ -205,7 +206,7 @@ class TestDatasetTransformations:
         ds = Dataset(data)
 
         shuffled = ds.shuffle(seed=42)
-        assert len(shuffled) == 10
+        assert len(shuffled) == 10  # noqa: PLR2004
         # Should be in different order
         assert shuffled.to_list() != ds.to_list()
 
@@ -226,7 +227,7 @@ class TestDatasetTransformations:
     def test_filter(self, sample_dataset):
         """Test filter function."""
         filtered = sample_dataset.filter(lambda x: x["label"] == 1)
-        assert len(filtered) == 2
+        assert len(filtered) == 2  # noqa: PLR2004
         assert filtered["text"] == ["hello", "test"]
 
 
@@ -239,7 +240,7 @@ class TestDatasetSerialization:
         assert result == sample_data
         # Should be a copy
         result.append({"new": "item"})
-        assert len(sample_dataset) == 3
+        assert len(sample_dataset) == 3  # noqa: PLR2004
 
     def test_to_jsonl(self, sample_dataset):
         """Test saving to JSONL."""
@@ -252,7 +253,7 @@ class TestDatasetSerialization:
             # Read back and verify
             with open(path) as f:
                 lines = f.readlines()
-            assert len(lines) == 3
+            assert len(lines) == 3  # noqa: PLR2004
             assert json.loads(lines[0]) == {"text": "hello", "label": 1}
         finally:
             Path(path).unlink()
@@ -266,7 +267,7 @@ class TestDatasetSerialization:
 
         try:
             ds = Dataset.from_jsonl(path)
-            assert len(ds) == 3
+            assert len(ds) == 3  # noqa: PLR2004
             assert ds["text"] == ["hello", "world", "test"]
         finally:
             Path(path).unlink()
@@ -274,7 +275,7 @@ class TestDatasetSerialization:
     def test_from_list(self, sample_data):
         """Test creating from list."""
         ds = Dataset.from_list(sample_data)
-        assert len(ds) == 3
+        assert len(ds) == 3  # noqa: PLR2004
         assert ds["text"] == ["hello", "world", "test"]
 
 
@@ -304,7 +305,7 @@ class TestDatasetDict:
         test_ds = Dataset(sample_data[2:])
         dd = DatasetDict({"train": train_ds, "test": test_ds})
 
-        assert len(dd["train"]) == 2
+        assert len(dd["train"]) == 2  # noqa: PLR2004
         assert len(dd["test"]) == 1
 
     def test_datasetdict_repr(self, sample_data):
@@ -326,7 +327,7 @@ class TestMessagesFormat:
         """Test accessing messages column."""
         ds = Dataset(messages_data)
         messages = ds["messages"]
-        assert len(messages) == 2
+        assert len(messages) == 2  # noqa: PLR2004
         assert messages[0][0]["role"] == "user"
 
     def test_messages_iteration_for_tokenizer(self, messages_data):
