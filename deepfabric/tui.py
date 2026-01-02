@@ -41,13 +41,21 @@ class TopicBuildingMixin:
 
     Subclasses must have these attributes:
     - tui: DeepFabricTUI instance
+    - live_display: Live | None
     - live_layout: Layout | None
     - events_log: deque
     """
 
     tui: "DeepFabricTUI"
+    live_display: "Live | None"
     live_layout: "Layout | None"
     events_log: "deque"
+
+    def stop_live(self) -> None:
+        """Stop the Live display if it's running."""
+        if self.live_display:
+            self.live_display.stop()
+            self.live_display = None
 
     def _refresh_left(self) -> None:
         """Update events panel in left column."""
