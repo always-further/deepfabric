@@ -129,6 +129,7 @@ target/
 # Project files
 venv/
 *.jsonl
+*.json
 formats/*
 # coverage files
 .coverage.*

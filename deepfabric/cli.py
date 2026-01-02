@@ -108,6 +108,9 @@ class GenerateOptions(BaseModel):
     max_turns: int | None = None
     min_tool_calls: int | None = None
 
+    # Cloud upload (experimental)
+    cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None
+
     @model_validator(mode="after")
     def validate_mode_constraints(self) -> "GenerateOptions":
         if self.topic_only and self.topics_load:
@@ -334,6 +337,38 @@ def _initialize_topic_model(
     return topic_model
 
 
+def _trigger_cloud_upload(
+    *,
+    preparation: GenerationPreparation,
+    options: GenerateOptions,
+    dataset_path: str | None = None,
+) -> None:
+    """Trigger cloud upload if EXPERIMENTAL_DF is enabled and mode is 'graph'.
+
+    Args:
+        preparation: Generation preparation context
+        options: CLI options including cloud_upload flag
+        dataset_path: Path to dataset file (None for topic-only mode)
+    """
+    # Cloud upload only supports graph mode, not tree mode
+    # Use config.topics.mode since options.mode may have CLI default value
+    actual_mode = preparation.config.topics.mode
+    if not (get_bool_env("EXPERIMENTAL_DF") and actual_mode == "graph"):
+        return
+
+    from .cloud_upload import handle_cloud_upload  # noqa: PLC0415
+
+    graph_path = (
+        options.topics_save_as or preparation.config.topics.save_as or "topic_graph.json"
+    )
+
+    handle_cloud_upload(
+        dataset_path=dataset_path,
+        graph_path=graph_path,
+        cloud_upload_flag=options.cloud_upload,
+    )
+
+
 def _run_generation(
     *,
     preparation: GenerationPreparation,
@@ -365,6 +400,13 @@ def _run_generation(
     trace(
         "dataset_generated",
         {"samples": len(dataset)},
+    )
+
+    # Cloud upload (experimental feature)
+    _trigger_cloud_upload(
+        preparation=preparation,
+        options=options,
+        dataset_path=output_save_path,
     )
 
 
@@ -450,6 +492,13 @@ def _run_generation(
     type=int,
     help="Minimum tool calls before allowing conversation conclusion",
 )
+@click.option(
+    "--cloud-upload",
+    type=click.Choice(["all", "dataset", "graph", "none"], case_sensitive=False),
+    default=None,
+    help="Upload to DeepFabric Cloud (experimental): all, dataset, graph, or none. "
+    "Enables headless mode for CI. Requires DEEPFABRIC_API_KEY or prior auth.",
+)
 def generate(  # noqa: PLR0913
     config_file: str | None,
     output_system_prompt: str | None = None,
@@ -477,6 +526,7 @@ def generate(  # noqa: PLR0913
     min_turns: int | None = None,
     max_turns: int | None = None,
     min_tool_calls: int | None = None,
+    cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None,
     tui: Literal["rich", "simple"] = "rich",
 ) -> None:
     """Generate training data from a YAML configuration file or CLI parameters."""
@@ -519,6 +569,7 @@ def generate(  # noqa: PLR0913
             min_turns=min_turns,
             max_turns=max_turns,
             min_tool_calls=min_tool_calls,
+            cloud_upload=cloud_upload,
             tui=tui,
         )
     except PydanticValidationError as error:
@@ -542,6 +593,12 @@ def generate(  # noqa: PLR0913
         )
 
         if topic_only:
+            # Cloud upload for topic-only mode (graph only, no dataset)
+            _trigger_cloud_upload(
+                preparation=preparation,
+                options=options,
+                dataset_path=None,
+            )
             return
 
         _run_generation(
@@ -982,7 +1039,7 @@ def evaluate(
 
         # Create inference configuration
         inference_config = InferenceConfig(
-            model_path=model_path,
+            model=model_path,
             adapter_path=adapter_path,
             backend=cast(Literal["transformers", "ollama"], backend),
             temperature=temperature,

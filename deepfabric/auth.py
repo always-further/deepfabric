@@ -12,7 +12,7 @@ import httpx
 from .tui import get_tui
 from .utils import get_bool_env
 
-DEFAULT_API_URL = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.dev")
+DEFAULT_API_URL = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.cloud")
 
 CONFIG_DIR = Path.home() / ".deepfabric"
 CONFIG_FILE = CONFIG_DIR / "config.json"
