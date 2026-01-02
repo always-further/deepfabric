@@ -22,11 +22,11 @@ Tool-calling datasets often include all available tool definitions in every samp
 The `prepare_dataset_for_training` function optimizes your dataset:
 
 ```python title="Prepare dataset"
-from datasets import load_dataset
+from deepfabric import load_dataset
 from deepfabric.training import prepare_dataset_for_training
 
 # Load dataset
-dataset = load_dataset("your/dataset", split="train")
+dataset = load_dataset("your-username/dataset")
 
 # Prepare with optimizations
 prepared = prepare_dataset_for_training(
@@ -59,20 +59,20 @@ print(f"Samples: {len(prepared)}")
 ## Complete Training Pipeline
 
 ```python title="Full training pipeline"
-from datasets import load_dataset
+from deepfabric import load_dataset
 from deepfabric.training import prepare_dataset_for_training
 from transformers import AutoTokenizer
 from trl import SFTTrainer, SFTConfig
 
 # 1. Load and prepare dataset
-dataset = load_dataset("your/tool-calling-dataset", split="train")
+dataset = load_dataset("your-username/tool-calling-dataset")
 prepared = prepare_dataset_for_training(dataset, tool_strategy="used_only")
 
-# 2. Split into train/val/test
-train_temp = prepared.train_test_split(test_size=0.2, seed=42)
+# 2. Split into train/val/test using native split()
+train_temp = prepared.split(test_size=0.2, seed=42)
 train_ds = train_temp["train"]
 
-val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
+val_test = train_temp["test"].split(test_size=0.5, seed=42)
 val_ds = val_test["train"]
 test_ds = val_test["test"]  # Hold out for final evaluation
 
@@ -93,20 +93,24 @@ def format_sample(example):
 train_formatted = train_ds.map(format_sample)
 val_formatted = val_ds.map(format_sample)
 
-# 4. Check sequence lengths
+# 4. Convert to HuggingFace Dataset for TRL
+train_hf = train_formatted.to_hf()
+val_hf = val_formatted.to_hf()
+
+# 5. Check sequence lengths
 def get_length(example):
     return {"length": len(tokenizer(example["text"])["input_ids"])}
 
-lengths = train_formatted.map(get_length)
+lengths = train_hf.map(get_length)
 print(f"Max length: {max(lengths['length'])}")
 print(f"Mean length: {sum(lengths['length'])/len(lengths['length']):.0f}")
 
-# 5. Train
+# 6. Train
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
-    train_dataset=train_formatted,
-    eval_dataset=val_formatted,
+    train_dataset=train_hf,
+    eval_dataset=val_hf,
     args=SFTConfig(
         output_dir="./output",
         max_seq_length=4096,
@@ -181,7 +185,8 @@ If you're getting CUDA out-of-memory errors during training, consider these stra
     === "Filter Long Samples"
 
         ```python
-        prepared = prepared.filter(lambda x: len(x["text"]) < 4096)
+        # Using DeepFabric Dataset
+        short_samples = prepared.filter(lambda x: len(x["text"]) < 4096)
         ```
 
     === "Smaller Batches"
@@ -201,3 +206,28 @@ If you're getting CUDA out-of-memory errors during training, consider these stra
             gradient_checkpointing_kwargs={"use_reentrant": False},
         )
         ```
+
+---
+
+## Alternative: HuggingFace Datasets
+
+If you prefer to use HuggingFace datasets directly, the preparation utilities work with both:
+
+```python title="With HuggingFace datasets"
+from datasets import load_dataset
+from deepfabric.training import prepare_dataset_for_training
+
+# Load with HuggingFace
+dataset = load_dataset("your-username/dataset", split="train")
+
+# Prepare works the same way
+prepared = prepare_dataset_for_training(dataset, tool_strategy="used_only")
+
+# Split with HuggingFace method
+train_temp = prepared.train_test_split(test_size=0.2, seed=42)
+train_ds = train_temp["train"]
+
+val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
+val_ds = val_test["train"]
+test_ds = val_test["test"]
+```

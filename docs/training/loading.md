@@ -1,37 +1,60 @@
 # Loading Datasets
 
-DeepFabric outputs standard JSONL files compatible with HuggingFace datasets.
+DeepFabric provides a native `load_dataset` function for loading datasets from local files or DeepFabric Cloud. The API is designed to be familiar to HuggingFace users while avoiding external dependencies.
 
-## From Local File
+## From Local JSONL File
 
 ```python title="Load from local JSONL"
-from datasets import load_dataset
+from deepfabric import load_dataset
 
-dataset = load_dataset("json", data_files="dataset.jsonl", split="train")
+dataset = load_dataset("dataset.jsonl")
+
+print(f"Loaded {len(dataset)} samples")
+print(f"Columns: {dataset.column_names}")
 ```
 
-## From HuggingFace Hub
+## From DeepFabric Cloud
 
-Upload first:
+Load datasets directly from DeepFabric Cloud using the `namespace/slug` format:
 
-```bash title="Upload to HuggingFace"
-deepfabric upload-hf dataset.jsonl --repo your-username/my-dataset
+```python title="Load from DeepFabric Cloud"
+from deepfabric import load_dataset
+
+# Load from cloud (automatically cached to ~/.cache/deepfabric/datasets/)
+dataset = load_dataset("your-username/my-dataset")
+
+# Disable caching for fresh data
+dataset = load_dataset("your-username/my-dataset", use_cache=False)
 ```
 
-Then load:
+!!! tip "Cloud Caching"
+    Cloud datasets are cached locally by default. The cache is stored in `~/.cache/deepfabric/datasets/`.
 
-```python title="Load from Hub"
-dataset = load_dataset("your-username/my-dataset", split="train")
+## From Text Files
+
+Load text files with different sampling modes:
+
+```python title="Load text files"
+from deepfabric import load_dataset
+
+# By line (default)
+dataset = load_dataset("text", data_files="corpus.txt", sample_by="line")
+
+# By paragraph (double newline separated)
+dataset = load_dataset("text", data_files="corpus.txt", sample_by="paragraph")
+
+# Entire document as one sample
+dataset = load_dataset("text", data_files="corpus.txt", sample_by="document")
 ```
 
 ## Train/Validation/Test Split
 
-For proper evaluation, split into three sets:
+Use the native `split()` method for reproducible train/test splits:
 
 === "Simple Split"
 
     ```python title="Two-way split"
-    splits = dataset.train_test_split(test_size=0.1, seed=42)
+    splits = dataset.split(test_size=0.1, seed=42)
     train_ds = splits["train"]
     eval_ds = splits["test"]
     ```
@@ -40,11 +63,11 @@ For proper evaluation, split into three sets:
 
     ```python title="Train/val/test split (recommended)"
     # First split: 80% train, 20% temp
-    train_temp = dataset.train_test_split(test_size=0.2, seed=42)
+    train_temp = dataset.split(test_size=0.2, seed=42)
     train_ds = train_temp["train"]  # 80% for training
 
     # Second split: 50/50 of the 20% temp
-    val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42)
+    val_test = train_temp["test"].split(test_size=0.5, seed=42)
     val_ds = val_test["train"]   # 10% for validation during training
     test_ds = val_test["test"]   # 10% for final evaluation (hold out!)
     ```
@@ -55,6 +78,16 @@ For proper evaluation, split into three sets:
 ## Accessing Fields
 
 ```python title="Access sample fields"
+# Column access - get all values for a field
+messages = dataset["messages"]  # List of all message arrays
+
+# Index access - get single sample
+sample = dataset[0]  # Dict with all fields
+
+# Slice access - get subset as new Dataset
+subset = dataset[0:10]
+
+# Iteration
 for sample in dataset:
     messages = sample["messages"]
     reasoning = sample.get("reasoning")
@@ -67,20 +100,69 @@ for sample in dataset:
         tool_calls = msg.get("tool_calls")
 ```
 
-## Filtering
+## Transformations
 
-Keep only samples with tool calls:
+```python title="Map and filter"
+# Transform samples
+def add_length(sample):
+    sample["length"] = len(sample["messages"])
+    return sample
 
-```python title="Filter by tools"
+transformed = dataset.map(add_length)
+
+# Filter samples
 with_tools = dataset.filter(lambda x: x.get("tools") is not None)
-```
 
-Filter by reasoning style:
-
-```python title="Filter by reasoning style"
+# Filter by reasoning style
 agent_samples = dataset.filter(
     lambda x: x.get("reasoning", {}).get("style") == "agent"
 )
+```
+
+## Shuffling
+
+```python title="Shuffle dataset"
+shuffled = dataset.shuffle(seed=42)
+```
+
+## Integration with TRL
+
+DeepFabric datasets integrate seamlessly with HuggingFace TRL for training:
+
+```python title="Use with TRL"
+from deepfabric import load_dataset
+from transformers import AutoTokenizer
+from trl import SFTTrainer, SFTConfig
+
+# Load with DeepFabric
+dataset = load_dataset("your-username/my-dataset")
+splits = dataset.split(test_size=0.1, seed=42)
+
+# Format with tokenizer
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+
+def format_sample(sample):
+    text = tokenizer.apply_chat_template(
+        sample["messages"],
+        tools=sample.get("tools"),
+        tokenize=False,
+        add_generation_prompt=False,
+    )
+    return {"text": text}
+
+train_formatted = splits["train"].map(format_sample)
+
+# Convert to HuggingFace Dataset for TRL
+train_hf = train_formatted.to_hf()
+
+# Train
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=train_hf,
+    args=SFTConfig(output_dir="./output"),
+)
+trainer.train()
 ```
 
 ## Optimizing Tool-Calling Datasets
@@ -91,7 +173,10 @@ agent_samples = dataset.filter(
 Use `prepare_dataset_for_training` to reduce overhead:
 
 ```python title="Optimize tool datasets"
+from deepfabric import load_dataset
 from deepfabric.training import prepare_dataset_for_training
+
+dataset = load_dataset("your-username/tool-dataset")
 
 # Filter to only tools actually used in each conversation
 prepared = prepare_dataset_for_training(
@@ -103,34 +188,67 @@ prepared = prepare_dataset_for_training(
 
 See [Dataset Preparation](dataset-preparation.md) for details.
 
-## Shuffling
+## Saving Datasets
 
-```python
-shuffled = dataset.shuffle(seed=42)
+```python title="Save to JSONL"
+dataset.to_jsonl("output.jsonl")
 ```
 
-## Streaming Large Datasets
+## Inspection
 
-For datasets that don't fit in memory:
+```python title="Inspect dataset"
+# Dataset info
+print(dataset)
+# Dataset(num_rows=1000, columns=['messages', 'reasoning', 'tools', ...])
 
-```python title="Stream large datasets"
-dataset = load_dataset(
-    "your-username/large-dataset",
-    split="train",
-    streaming=True
-)
+# First sample
+print(dataset[0])
 
-for sample in dataset:
-    # Process one at a time
-    process(sample)
+# Column names
+print(dataset.column_names)
+# ['messages', 'reasoning', 'tools', 'metadata', ...]
+
+# Number of samples
+print(len(dataset))
 ```
 
-## Combining Datasets
+---
 
-Merge multiple DeepFabric datasets:
+## Alternative: HuggingFace Datasets
+
+If you prefer to use HuggingFace datasets directly, DeepFabric outputs are fully compatible:
+
+```python title="Load with HuggingFace datasets"
+from datasets import load_dataset
+
+# From local file
+dataset = load_dataset("json", data_files="dataset.jsonl", split="train")
+
+# From HuggingFace Hub
+dataset = load_dataset("your-username/my-dataset", split="train")
+
+# Split with HuggingFace
+splits = dataset.train_test_split(test_size=0.1, seed=42)
+```
+
+### Upload to HuggingFace Hub
+
+```bash title="Upload to HuggingFace"
+deepfabric upload-hf dataset.jsonl --repo your-username/my-dataset
+```
+
+Then load from the Hub:
+
+```python title="Load from Hub"
+from datasets import load_dataset
+
+dataset = load_dataset("your-username/my-dataset", split="train")
+```
+
+### Combining Datasets with HuggingFace
 
 ```python title="Combine datasets"
-from datasets import concatenate_datasets
+from datasets import load_dataset, concatenate_datasets
 
 basic = load_dataset("user/basic-ds", split="train")
 agent = load_dataset("user/agent-ds", split="train")
@@ -139,17 +257,19 @@ combined = concatenate_datasets([basic, agent])
 combined = combined.shuffle(seed=42)
 ```
 
-## Inspection
+### Streaming Large Datasets
 
-```python title="Inspect dataset"
-# Dataset info
-print(dataset)
-# Dataset({features: ['messages', 'reasoning', 'tools', ...], num_rows: 1000})
+For datasets that don't fit in memory, use HuggingFace's streaming:
 
-# First sample
-print(dataset[0])
+```python title="Stream large datasets"
+from datasets import load_dataset
 
-# Column names
-print(dataset.column_names)
-# ['messages', 'reasoning', 'tools', 'metadata', ...]
+dataset = load_dataset(
+    "your-username/large-dataset",
+    split="train",
+    streaming=True
+)
+
+for sample in dataset:
+    process(sample)
 ```

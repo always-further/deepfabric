@@ -67,10 +67,10 @@ class TestBuildUrls:
             resource_id="abc123",
             slug="my-dataset",
             username="testuser",
-            frontend_url="https://platform.deepfabric.dev",
+            frontend_url="https://example.deepfabric.null",
         )
-        assert public_url == "https://platform.deepfabric.dev/testuser/my-dataset"
-        assert internal_url == "https://platform.deepfabric.dev/datasets/abc123"
+        assert public_url == "https://example.deepfabric.null/testuser/my-dataset"
+        assert internal_url == "https://example.deepfabric.null/datasets/abc123"
 
     def test_dataset_without_username(self):
         """Test building URLs for dataset without username."""
@@ -79,10 +79,10 @@ class TestBuildUrls:
             resource_id="abc123",
             slug="my-dataset",
             username=None,
-            frontend_url="https://platform.deepfabric.dev",
+            frontend_url="https://example.deepfabric.null",
         )
         assert public_url is None
-        assert internal_url == "https://platform.deepfabric.dev/datasets/abc123"
+        assert internal_url == "https://example.deepfabric.null/datasets/abc123"
 
     def test_graph_with_username(self):
         """Test building URLs for graph with username."""
@@ -91,10 +91,10 @@ class TestBuildUrls:
             resource_id="def456",
             slug="my-graph",
             username="testuser",
-            frontend_url="https://platform.deepfabric.dev",
+            frontend_url="https://example.deepfabric.null",
         )
-        assert public_url == "https://platform.deepfabric.dev/graphs/testuser/my-graph"
-        assert internal_url == "https://platform.deepfabric.dev/graphs/def456"
+        assert public_url == "https://example.deepfabric.null/graphs/testuser/my-graph"
+        assert internal_url == "https://example.deepfabric.null/graphs/def456"
 
 
 class TestGetCurrentUser:

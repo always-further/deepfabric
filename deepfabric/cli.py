@@ -358,9 +358,7 @@ def _trigger_cloud_upload(
 
     from .cloud_upload import handle_cloud_upload  # noqa: PLC0415
 
-    graph_path = (
-        options.topics_save_as or preparation.config.topics.save_as or "topic_graph.json"
-    )
+    graph_path = options.topics_save_as or preparation.config.topics.save_as or "topic_graph.json"
 
     handle_cloud_upload(
         dataset_path=dataset_path,
