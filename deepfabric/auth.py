@@ -13,6 +13,7 @@ from .tui import get_tui
 from .utils import get_bool_env
 
 DEFAULT_API_URL = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.cloud")
+DEFAULT_FRONTEND_URL = os.getenv("DEEPFABRIC_FRONTEND_URL", "https://deepfabric.cloud")
 
 CONFIG_DIR = Path.home() / ".deepfabric"
 CONFIG_FILE = CONFIG_DIR / "config.json"
@@ -117,7 +118,7 @@ def prompt_cloud_signup(api_url: str = DEFAULT_API_URL) -> bool:
 
     if auth_choice == "register":
         tui.info("Opening DeepFabric Cloud registration page...")
-        register_url = api_url.replace("/api", "").rstrip("/") + "/signup"
+        register_url = DEFAULT_FRONTEND_URL.rstrip("/") + "/signup"
         with contextlib.suppress(Exception):
             webbrowser.open(register_url)
         tui.info("After registering, come back here to log in.")

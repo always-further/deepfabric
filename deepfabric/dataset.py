@@ -150,12 +150,9 @@ class Dataset:
         train_indices = indices[:split_idx]
         test_indices = indices[split_idx:]
 
-        train_data = [self._data[i] for i in train_indices]
-        test_data = [self._data[i] for i in test_indices]
-
         return {
-            "train": Dataset(train_data, self._metadata.copy()),
-            "test": Dataset(test_data, self._metadata.copy()),
+            "train": self.select(train_indices),
+            "test": self.select(test_indices),
         }
 
     def select(self, indices: list[int]) -> "Dataset":

@@ -138,11 +138,91 @@ def _load_text_files(
     return DatasetDict(datasets)
 
 
+def _load_json_file(file_path: str) -> list[dict[str, Any]]:
+    """Load a standard JSON file (array of objects).
+
+    Args:
+        file_path: Path to the JSON file
+
+    Returns:
+        List of sample dictionaries
+
+    Raises:
+        LoaderError: If the file is not valid JSON or not an array of objects
+    """
+    with open(file_path, encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise LoaderError(
+                f"Invalid JSON in {file_path}: {e}",
+                context={"file": file_path},
+            ) from e
+
+    if isinstance(data, list):
+        # Validate all items are dicts
+        for i, item in enumerate(data):
+            if not isinstance(item, dict):
+                raise LoaderError(
+                    f"Expected array of objects in {file_path}, "
+                    f"but item at index {i} is {type(item).__name__}",
+                    context={"file": file_path, "index": i},
+                )
+        return data
+    if isinstance(data, dict):
+        # Single object - wrap in list
+        return [data]
+    raise LoaderError(
+        f"Expected JSON array or object in {file_path}, got {type(data).__name__}",
+        context={"file": file_path},
+    )
+
+
+def _load_jsonl_file(file_path: str) -> list[dict[str, Any]]:
+    """Load a JSONL file (one JSON object per line).
+
+    Args:
+        file_path: Path to the JSONL file
+
+    Returns:
+        List of sample dictionaries
+    """
+    samples: list[dict[str, Any]] = []
+    with open(file_path, encoding="utf-8") as f:
+        for line_num, line in enumerate(f, 1):
+            if not line.strip():
+                continue
+            try:
+                samples.append(json.loads(line))
+            except json.JSONDecodeError as e:
+                raise LoaderError(
+                    f"Invalid JSON on line {line_num} of {file_path}: {e}",
+                    context={"file": file_path, "line": line_num},
+                ) from e
+    return samples
+
+
+def _load_json_or_jsonl_file(file_path: str) -> list[dict[str, Any]]:
+    """Load a JSON or JSONL file based on extension.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        List of sample dictionaries
+    """
+    path = Path(file_path)
+    if path.suffix == ".jsonl":
+        return _load_jsonl_file(file_path)
+    # .json files are standard JSON (array or object)
+    return _load_json_file(file_path)
+
+
 def _load_jsonl_files(
     data_files: dict[str, str | list[str]] | str | list[str] | None,
     data_dir: str | None,
 ) -> Dataset | DatasetDict:
-    """Load JSONL files into Dataset.
+    """Load JSON/JSONL files into Dataset.
 
     Args:
         data_files: File paths specification
@@ -154,7 +234,7 @@ def _load_jsonl_files(
     files_dict = _normalize_data_files(data_files, data_dir)
 
     if not files_dict:
-        raise LoaderError("No data files specified for jsonl format")
+        raise LoaderError("No data files specified for json/jsonl format")
 
     datasets: dict[str, Dataset] = {}
     for split_name, file_list in files_dict.items():
@@ -162,18 +242,8 @@ def _load_jsonl_files(
         for file_path in file_list:
             if not Path(file_path).exists():
                 raise LoaderError(f"File not found: {file_path}")
-            with open(file_path, encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    if not line.strip():
-                        continue
-                    try:
-                        samples.append(json.loads(line))
-                    except json.JSONDecodeError as e:
-                        raise LoaderError(
-                            f"Invalid JSON on line {line_num} of {file_path}: {e}",
-                            context={"file": file_path, "line": line_num},
-                        ) from e
-        datasets[split_name] = Dataset(samples, {"source": "jsonl", "split": split_name})
+            samples.extend(_load_json_or_jsonl_file(file_path))
+        datasets[split_name] = Dataset(samples, {"source": "json", "split": split_name})
 
     if len(datasets) == 1 and "train" in datasets:
         return datasets["train"]
@@ -197,12 +267,13 @@ def _load_from_directory(
     if not dir_path.is_dir():
         raise LoaderError(f"Directory not found: {data_dir}")
 
-    # Find all text and jsonl files
+    # Find all supported files
     text_files = list(dir_path.glob("*.txt"))
-    jsonl_files = list(dir_path.glob("*.jsonl")) + list(dir_path.glob("*.json"))
+    jsonl_files = list(dir_path.glob("*.jsonl"))
+    json_files = list(dir_path.glob("*.json"))
 
-    if not text_files and not jsonl_files:
-        raise LoaderError(f"No .txt or .jsonl files found in {data_dir}")
+    if not text_files and not jsonl_files and not json_files:
+        raise LoaderError(f"No .txt, .json, or .jsonl files found in {data_dir}")
 
     samples: list[dict[str, Any]] = []
 
@@ -211,19 +282,13 @@ def _load_from_directory(
         texts = _read_text_file(str(file_path), sample_by)
         samples.extend([{"text": t} for t in texts])
 
-    # Load jsonl files
+    # Load JSONL files (one JSON object per line)
     for file_path in jsonl_files:
-        with open(file_path, encoding="utf-8") as f:
-            for line_num, line in enumerate(f, 1):
-                if not line.strip():
-                    continue
-                try:
-                    samples.append(json.loads(line))
-                except json.JSONDecodeError as e:
-                    raise LoaderError(
-                        f"Invalid JSON on line {line_num} of {file_path}: {e}",
-                        context={"file": str(file_path), "line": line_num},
-                    ) from e
+        samples.extend(_load_jsonl_file(str(file_path)))
+
+    # Load JSON files (array of objects or single object)
+    for file_path in json_files:
+        samples.extend(_load_json_file(str(file_path)))
 
     return Dataset(samples, {"source": "directory", "path": data_dir})
 
@@ -313,7 +378,6 @@ def _load_from_cloud(
             response = client.get(
                 f"{effective_api_url}/api/v1/datasets/by-slug/{namespace}/{slug}/with-samples",
                 headers=headers,
-                params={"limit": 10000},
                 timeout=120.0,
             )
             response.raise_for_status()

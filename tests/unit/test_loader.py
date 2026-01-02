@@ -249,6 +249,76 @@ class TestLoadJsonlFiles:
             Path(path).unlink()
 
 
+class TestLoadJsonFiles:
+    """Test loading standard JSON files (array of objects)."""
+
+    @pytest.fixture
+    def json_array_file(self):
+        """Create a temporary JSON file with array of objects."""
+        data = [
+            {"messages": [{"role": "user", "content": "Hello"}]},
+            {"messages": [{"role": "user", "content": "World"}]},
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(data, f)
+            path = f.name
+        yield path
+        Path(path).unlink()
+
+    @pytest.fixture
+    def json_single_object_file(self):
+        """Create a temporary JSON file with single object."""
+        data = {"messages": [{"role": "user", "content": "Single"}]}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(data, f)
+            path = f.name
+        yield path
+        Path(path).unlink()
+
+    def test_load_json_array_file(self, json_array_file):
+        """Test loading a JSON file with array of objects."""
+        ds = load_dataset("json", data_files=json_array_file)
+        assert isinstance(ds, Dataset)
+        assert len(ds) == EXPECTED_SAMPLE_COUNT
+        assert ds[0]["messages"][0]["content"] == "Hello"
+
+    def test_load_json_direct_path(self, json_array_file):
+        """Test loading JSON by direct path."""
+        ds = load_dataset(json_array_file)
+        assert len(ds) == EXPECTED_SAMPLE_COUNT
+
+    def test_load_json_single_object(self, json_single_object_file):
+        """Test loading JSON file with single object wraps in list."""
+        ds = load_dataset(json_single_object_file)
+        assert isinstance(ds, Dataset)
+        assert len(ds) == 1
+        assert ds[0]["messages"][0]["content"] == "Single"
+
+    def test_load_json_invalid_content(self):
+        """Test loading JSON with non-object array items raises error."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(["string1", "string2"], f)
+            path = f.name
+
+        try:
+            with pytest.raises(LoaderError, match="Expected array of objects"):
+                load_dataset(path)
+        finally:
+            Path(path).unlink()
+
+    def test_load_json_invalid_json(self):
+        """Test loading invalid JSON raises error."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("not valid json")
+            path = f.name
+
+        try:
+            with pytest.raises(LoaderError, match="Invalid JSON"):
+                load_dataset(path)
+        finally:
+            Path(path).unlink()
+
+
 class TestLoadFromDirectory:
     """Test loading from directory."""
 
@@ -266,6 +336,16 @@ class TestLoadFromDirectory:
         # Cleanup
         shutil.rmtree(dir_path)
 
+    @pytest.fixture
+    def data_dir_with_json(self):
+        """Create a temporary directory with JSON file."""
+        dir_path = tempfile.mkdtemp()
+        # Create standard JSON file (array)
+        with open(Path(dir_path) / "data.json", "w") as f:
+            json.dump([{"text": "from json"}], f)
+        yield dir_path
+        shutil.rmtree(dir_path)
+
     def test_load_from_directory_text(self, data_dir):
         """Test loading text files from directory."""
         ds = load_dataset("text", data_dir=data_dir)
@@ -276,6 +356,13 @@ class TestLoadFromDirectory:
         """Test loading directory by direct path."""
         ds = load_dataset(data_dir)
         assert len(ds) > 0
+
+    def test_load_directory_with_json_file(self, data_dir_with_json):
+        """Test loading directory with standard JSON file (array format)."""
+        ds = load_dataset(data_dir_with_json)
+        assert isinstance(ds, Dataset)
+        assert len(ds) == 1
+        assert ds[0]["text"] == "from json"
 
 
 class TestLoadFromCloud:
