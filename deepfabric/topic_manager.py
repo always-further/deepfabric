@@ -98,8 +98,7 @@ async def _process_graph_events(graph: Graph, debug: bool = False) -> dict | Non
                         get_tui().error(f"      Error: {last_error}")
     except Exception as e:
         # Stop TUI before printing error to ensure visibility
-        if tui_started:
-            tui.stop_live()
+        tui.stop_live()
         if debug:
             get_tui().error(f"Debug: Full traceback:\n{traceback.format_exc()}")
         get_tui().error(f"Graph build failed: {str(e)}")
