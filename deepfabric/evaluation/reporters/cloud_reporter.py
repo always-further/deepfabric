@@ -46,7 +46,7 @@ class CloudReporter(BaseReporter):
 
         Args:
             config: Optional configuration with:
-                - api_url: DeepFabric API URL (default: https://api.deepfabric.dev")
+                - api_url: DeepFabric API URL (default: https://api.deepfabric.cloud")
                 - project_id: Project ID to associate results with
                 - auth_token: Authentication token (if not provided, will read from config file)
                 - enabled: Whether to enable cloud reporting (default: True if authenticated)
@@ -54,7 +54,7 @@ class CloudReporter(BaseReporter):
         super().__init__(config)
 
         # Get API URL from config or environment
-        self.api_url = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.dev")
+        self.api_url = os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.cloud")
         if config and "api_url" in config:
             self.api_url = config["api_url"]
 

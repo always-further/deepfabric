@@ -14,7 +14,7 @@ topics:
   system_prompt: ""
   depth: 3         # Graph depth
   degree: 3        # Number of subtopics per parent node
-  save_as: "basic-graph-topics.jsonl"
+  save_as: "basic-graph-topics.json"
 
   # LLM configuration for topic graph generation
   llm:
@@ -46,6 +46,6 @@ output:
     You are a helpful AI assistant that provides accurate and informative responses.
 
   include_system_message: true
-  num_samples: 4       # Number of examples to generate
-  batch_size: 3        # Parallel generation batch size
+  num_samples: 2       # Number of examples to generate
+  batch_size: 1        # Parallel generation batch size
   save_as: "basic-dataset.jsonl"
