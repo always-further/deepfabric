@@ -144,7 +144,7 @@ class TestDatasetIteration:
 class TestDatasetSplit:
     """Test Dataset split functionality."""
 
-    def test_split_basic(self, _sample_data):
+    def test_split_basic(self):
         """Test basic split."""
         # Use larger dataset for meaningful split
         data = [{"i": i} for i in range(100)]
