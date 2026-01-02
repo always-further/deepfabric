@@ -47,7 +47,7 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 HTTP_TOO_MANY_REQUESTS = 429
 
 # Default frontend URL - derived from API URL or explicit env var
-DEFAULT_FRONTEND_URL = "https://app.deepfabric.cloud"
+DEFAULT_FRONTEND_URL = "https://deepfabric.cloud"
 
 
 def derive_frontend_url(api_url: str = DEFAULT_API_URL) -> str:
@@ -57,7 +57,7 @@ def derive_frontend_url(api_url: str = DEFAULT_API_URL) -> str:
         api_url: The API URL (e.g., https://api.deepfabric.cloud)
 
     Returns:
-        The frontend URL (e.g., https://app.deepfabric.cloud)
+        The frontend URL (e.g., https://deepfabric.cloud)
     """
     # Check for explicit override first
     explicit_url = os.getenv("DEEPFABRIC_FRONTEND_URL")
@@ -69,7 +69,6 @@ def derive_frontend_url(api_url: str = DEFAULT_API_URL) -> str:
         # Local development - assume frontend on port 3000
         return "http://localhost:3000"
 
-    # Production: api.deepfabric.cloud -> app.deepfabric.cloud
     if "api." in api_url:
         return api_url.replace("api.", "app.").rstrip("/")
 

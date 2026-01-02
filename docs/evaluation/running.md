@@ -26,6 +26,29 @@ config = EvaluatorConfig(
 
 ## Basic Usage
 
+=== "From DeepFabric Dataset"
+
+    ```python title="Load with DeepFabric"
+    from deepfabric import load_dataset
+    from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
+
+    # Load and split dataset
+    dataset = load_dataset("your-username/my-dataset")
+    splits = dataset.split(test_size=0.1, seed=42)
+    eval_ds = splits["test"]
+
+    # Configure and run
+    config = EvaluatorConfig(
+        inference_config=InferenceConfig(
+            model="./fine-tuned-model",
+            backend="transformers",
+        ),
+    )
+
+    evaluator = Evaluator(config)
+    results = evaluator.evaluate(dataset=eval_ds)
+    ```
+
 === "From HuggingFace Dataset"
 
     ```python title="Load from HuggingFace"
@@ -123,7 +146,13 @@ config = EvaluatorConfig(
 ```python title="In-memory evaluation"
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
+from deepfabric import load_dataset
 from deepfabric.evaluation import Evaluator, EvaluatorConfig, InferenceConfig
+
+# Load and split dataset
+dataset = load_dataset("your-username/my-dataset")
+splits = dataset.split(test_size=0.1, seed=42)
+eval_ds = splits["test"]
 
 # Train your model
 trainer = SFTTrainer(model=model, tokenizer=tokenizer, ...)

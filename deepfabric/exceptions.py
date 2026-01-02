@@ -65,3 +65,17 @@ class RetryExhaustedError(ModelError):
     """Raised when maximum retries are exceeded."""
 
     pass
+
+
+class LoaderError(DeepFabricError):
+    """Raised when dataset loading fails.
+
+    Common causes:
+    - File not found
+    - Invalid file format (malformed JSON/JSONL)
+    - Cloud authentication failure
+    - Network errors
+    - Empty dataset
+    """
+
+    pass

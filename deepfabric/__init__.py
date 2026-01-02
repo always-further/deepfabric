@@ -11,6 +11,7 @@ from .auth import (
 )
 from .cli import cli
 from .config import DeepFabricConfig
+from .dataset import Dataset, DatasetDict
 from .exceptions import (
     APIError,
     ConfigurationError,
@@ -19,6 +20,7 @@ from .exceptions import (
     DeepFabricError,
     HubUploadError,
     JSONParsingError,
+    LoaderError,
     ModelError,
     RetryExhaustedError,
     TreeError,
@@ -27,6 +29,7 @@ from .exceptions import (
 from .generator import DataSetGenerator, DataSetGeneratorConfig
 from .graph import Graph, GraphConfig
 from .hf_hub import HFUploader
+from .loader import load_dataset
 from .training import DeepFabricCallback, MetricsSender
 from .tree import Tree, TreeConfig
 
@@ -42,6 +45,10 @@ __all__ = [
     "DeepFabricConfig",
     "HFUploader",
     "cli",
+    # Dataset loading
+    "load_dataset",
+    "Dataset",
+    "DatasetDict",
     # Training metrics logging
     "DeepFabricCallback",
     "MetricsSender",
@@ -67,4 +74,5 @@ __all__ = [
     "JSONParsingError",
     "APIError",
     "RetryExhaustedError",
+    "LoaderError",
 ]

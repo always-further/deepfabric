@@ -6,33 +6,35 @@ DeepFabric datasets integrate directly with popular training frameworks. This se
 
 ```mermaid
 graph LR
-    A[Generate Dataset] --> B[Upload to Hub]
-    B --> C[Load in Training]
-    C --> D[Prepare Dataset]
-    D --> E[Format with Template]
-    E --> F[Train Model]
+    A[Generate Dataset] --> B[Load Dataset]
+    B --> C[Prepare Dataset]
+    C --> D[Format with Template]
+    D --> E[Train Model]
 ```
 
 1. **Generate dataset** - `deepfabric generate config.yaml`
-2. **Upload to Hub** - `deepfabric upload-hf dataset.jsonl --repo user/dataset`
-3. **Load in training** - `load_dataset("user/dataset")`
-4. **Prepare dataset** - `prepare_dataset_for_training()` (optional but recommended)
-5. **Format with template** - `tokenizer.apply_chat_template()`
-6. **Train** - SFTTrainer, Unsloth etc.
+2. **Load dataset** - `load_dataset("namespace/dataset")` or from local file
+3. **Prepare dataset** - `prepare_dataset_for_training()` (optional but recommended)
+4. **Format with template** - `tokenizer.apply_chat_template()`
+5. **Train** - SFTTrainer, Unsloth etc.
 
 ## Quick Example
 
 ```python title="training_example.py"
-from datasets import load_dataset
+from deepfabric import load_dataset
+from deepfabric.training import prepare_dataset_for_training
 from transformers import AutoTokenizer
 from trl import SFTTrainer, SFTConfig
-from deepfabric.training import prepare_dataset_for_training
 
-# Load dataset
-dataset = load_dataset("your-username/my-dataset", split="train")
+# Load dataset from DeepFabric Cloud or local file
+dataset = load_dataset("your-username/my-dataset")
+
+# Split into train/eval
+splits = dataset.split(test_size=0.1, seed=42)
+train_ds = splits["train"]
 
 # Prepare dataset (reduces tool overhead for tool-calling datasets)
-prepared = prepare_dataset_for_training(dataset, tool_strategy="used_only")
+prepared = prepare_dataset_for_training(train_ds, tool_strategy="used_only")
 
 # Format with tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
@@ -48,17 +50,23 @@ def format_sample(example):
 
 formatted = prepared.map(format_sample)
 
+# Convert to HuggingFace Dataset for TRL
+train_hf = formatted.to_hf()
+
 # Train
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
-    train_dataset=formatted,
+    train_dataset=train_hf,
     args=SFTConfig(output_dir="./output"),
 )
 trainer.train()
 ```
 
 ## Key Concepts
+
+!!! info "Native Dataset Loading"
+    DeepFabric provides its own `load_dataset` function that works with local files and DeepFabric Cloud. No HuggingFace datasets dependency required.
 
 !!! info "Chat Templates"
     Chat templates convert message arrays into model-specific formats. Each model family (Qwen, Llama, Mistral) has its own template.
@@ -80,7 +88,7 @@ trainer.train()
 
     ---
 
-    HuggingFace integration and data management
+    DeepFabric Cloud, local files, and HuggingFace integration
 
     [:octicons-arrow-right-24: Learn more](loading.md)
 
