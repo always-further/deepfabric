@@ -108,7 +108,9 @@ class CloudReporter(BaseReporter):
             else:
                 # For in-memory model objects, extract name from config
                 model_config = getattr(model_value, "config", None)
-                model_name = getattr(model_config, "name_or_path", None) or type(model_value).__name__
+                model_name = (
+                    getattr(model_config, "name_or_path", None) or type(model_value).__name__
+                )
 
             # Create evaluation run
             run_data = {

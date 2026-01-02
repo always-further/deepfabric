@@ -97,6 +97,9 @@ async def _process_graph_events(graph: Graph, debug: bool = False) -> dict | Non
                         get_tui().error(f"  [{idx}] Node ID: {node_id}, Attempts: {attempts}")
                         get_tui().error(f"      Error: {last_error}")
     except Exception as e:
+        # Stop TUI before printing error to ensure visibility
+        if tui_started:
+            tui.stop_live()
         if debug:
             get_tui().error(f"Debug: Full traceback:\n{traceback.format_exc()}")
         get_tui().error(f"Graph build failed: {str(e)}")
@@ -147,6 +150,8 @@ async def _process_tree_events(tree: Tree, debug: bool = False) -> dict | None:
                         )
                         get_tui().error(f"      Error: {failure.get('error', 'Unknown error')}")
     except Exception as e:
+        # Stop TUI before printing error to ensure visibility
+        tui.stop_live()
         if debug:
             get_tui().error(f"Debug: Full traceback:\n{traceback.format_exc()}")
         get_tui().error(f"Tree build failed: {str(e)}")

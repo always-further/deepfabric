@@ -302,6 +302,12 @@ class TreeBuildingTUI(TopicBuildingMixin, StreamObserver):
         self.current_topic_path: list[str] | None = None
         self.root_topic: str | None = None
 
+    def stop_live(self) -> None:
+        """Stop the Live display if it's running."""
+        if self.live_display:
+            self.live_display.stop()
+            self.live_display = None
+
     def start_building(self, model_name: str, depth: int, degree: int, root_topic: str) -> None:
         """Start the tree building process."""
         self.max_depth = depth
@@ -532,6 +538,12 @@ class GraphBuildingTUI(TopicBuildingMixin, StreamObserver):
         self.simple_mode = False
         self.current_topic_path: list[str] | None = None
         self.root_topic: str | None = None
+
+    def stop_live(self) -> None:
+        """Stop the Live display if it's running."""
+        if self.live_display:
+            self.live_display.stop()
+            self.live_display = None
 
     def start_building(self, model_name: str, depth: int, degree: int, root_topic: str) -> None:
         """Start the graph building process."""
