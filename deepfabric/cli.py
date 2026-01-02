@@ -337,6 +337,38 @@ def _initialize_topic_model(
     return topic_model
 
 
+def _trigger_cloud_upload(
+    *,
+    preparation: GenerationPreparation,
+    options: GenerateOptions,
+    dataset_path: str | None = None,
+) -> None:
+    """Trigger cloud upload if EXPERIMENTAL_DF is enabled and mode is 'graph'.
+
+    Args:
+        preparation: Generation preparation context
+        options: CLI options including cloud_upload flag
+        dataset_path: Path to dataset file (None for topic-only mode)
+    """
+    # Cloud upload only supports graph mode, not tree mode
+    # Use config.topics.mode since options.mode may have CLI default value
+    actual_mode = preparation.config.topics.mode
+    if not (get_bool_env("EXPERIMENTAL_DF") and actual_mode == "graph"):
+        return
+
+    from .cloud_upload import handle_cloud_upload  # noqa: PLC0415
+
+    graph_path = (
+        options.topics_save_as or preparation.config.topics.save_as or "topic_graph.json"
+    )
+
+    handle_cloud_upload(
+        dataset_path=dataset_path,
+        graph_path=graph_path,
+        cloud_upload_flag=options.cloud_upload,
+    )
+
+
 def _run_generation(
     *,
     preparation: GenerationPreparation,
@@ -371,21 +403,11 @@ def _run_generation(
     )
 
     # Cloud upload (experimental feature)
-    # Note: Cloud only supports graph mode, not tree mode
-    # Use config.topics.mode since options.mode may have CLI default value
-    actual_mode = preparation.config.topics.mode
-    if get_bool_env("EXPERIMENTAL_DF") and actual_mode == "graph":
-        from .cloud_upload import handle_cloud_upload  # noqa: PLC0415
-
-        graph_path = (
-            options.topics_save_as or preparation.config.topics.save_as or "topic_graph.json"
-        )
-
-        handle_cloud_upload(
-            dataset_path=output_save_path,
-            graph_path=graph_path,
-            cloud_upload_flag=options.cloud_upload,
-        )
+    _trigger_cloud_upload(
+        preparation=preparation,
+        options=options,
+        dataset_path=output_save_path,
+    )
 
 
 @cli.command()
@@ -572,20 +594,11 @@ def generate(  # noqa: PLR0913
 
         if topic_only:
             # Cloud upload for topic-only mode (graph only, no dataset)
-            if get_bool_env("EXPERIMENTAL_DF") and preparation.config.topics.mode == "graph":
-                from .cloud_upload import handle_cloud_upload  # noqa: PLC0415
-
-                graph_path = (
-                    options.topics_save_as
-                    or preparation.config.topics.save_as
-                    or "topic_graph.json"
-                )
-
-                handle_cloud_upload(
-                    dataset_path=None,  # No dataset in topic-only mode
-                    graph_path=graph_path,
-                    cloud_upload_flag=options.cloud_upload,
-                )
+            _trigger_cloud_upload(
+                preparation=preparation,
+                options=options,
+                dataset_path=None,
+            )
             return
 
         _run_generation(

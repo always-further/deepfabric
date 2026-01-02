@@ -13,7 +13,14 @@ import os
 import re
 import time
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rich.console import Console
+
+    from .tui import DeepFabricTUI
 
 import click
 import httpx
@@ -117,7 +124,7 @@ def get_current_user(api_url: str = DEFAULT_API_URL) -> dict | None:
             save_config(config)
 
             return user_data
-    except Exception:
+    except (httpx.RequestError, httpx.HTTPStatusError, json.JSONDecodeError, KeyError):
         return None
 
 
@@ -415,7 +422,7 @@ def _get_user_friendly_error(e: httpx.HTTPStatusError) -> str:  # noqa: PLR0911
         if raw_message:
             return raw_message
 
-    except Exception:  # noqa: S110
+    except (json.JSONDecodeError, KeyError, TypeError):
         pass
 
     # Fallback based on status code
@@ -522,8 +529,8 @@ def _display_upload_result(
     Returns:
         Dict with all URLs for JSON output
     """
-    result = {"success": True}
-    lines = []
+    result: dict[str, str | bool] = {"success": True}
+    lines: list[str] = []
 
     if dataset_result:
         dataset_id = dataset_result.get("dataset_id", "")
@@ -598,7 +605,7 @@ def _upload_with_retry(
     Raises:
         Exception: If all retries fail
     """
-    last_error = None
+    last_error: Exception | None = None
     delay = initial_delay
 
     for attempt in range(max_retries + 1):
@@ -627,7 +634,93 @@ def _upload_with_retry(
                 time.sleep(delay)
                 delay *= 2
 
-    raise last_error
+    if last_error is not None:
+        raise last_error
+    # This should never happen as the loop always catches an exception
+    raise RuntimeError("Upload failed with unknown error")
+
+
+def _perform_upload(
+    resource_type: str,
+    file_path: str,
+    upload_fn: Callable[[str, str], dict],
+    success_message_fn: Callable[[dict], str],
+    tui: "DeepFabricTUI",
+    console: "Console",
+    api_url: str,
+    headless: bool,
+) -> dict | None:
+    """Perform upload with retry logic for auth errors and duplicate names.
+
+    Args:
+        resource_type: Type of resource ("dataset" or "graph")
+        file_path: Path to the file to upload
+        upload_fn: Function that takes (name, slug) and performs the upload
+        success_message_fn: Function that takes the result and returns a success message
+        tui: TUI instance for displaying messages
+        console: Rich console instance
+        api_url: API URL for re-authentication
+        headless: Whether running in headless mode
+
+    Returns:
+        Upload result dict or None if upload failed/skipped
+    """
+    default_name, default_slug = derive_name_and_slug(file_path)
+    if headless:
+        name, slug = default_name, default_slug
+    else:
+        name, slug = prompt_for_name(resource_type, default_name, default_slug)
+
+    # Loop to handle retries (auth errors, duplicate names)
+    max_name_retries = 3
+    for _attempt in range(max_name_retries):
+        tui.info(f"Uploading {resource_type} '{name}'...")
+
+        try:
+            result = _upload_with_retry(lambda n=name, s=slug: upload_fn(n, s))
+        except httpx.HTTPStatusError as e:
+            # Check for auth error (401)
+            if e.response.status_code == HTTP_UNAUTHORIZED:
+                if _handle_auth_error(api_url, headless):
+                    # Re-authenticated, retry upload
+                    continue
+                # User declined re-auth or headless mode
+                if headless:
+                    raise click.ClickException(
+                        f"{resource_type.capitalize()} upload failed: authentication required"
+                    ) from None
+                return None
+
+            # Check for duplicate name error
+            if _is_duplicate_name_error(e.response) and not headless:
+                tui.warning(
+                    f"A {resource_type} named '{slug}' already exists. "
+                    "Please choose a different name."
+                )
+                console.print()
+                name, slug = prompt_for_name(resource_type, name + "-2", slug + "-2")
+                continue
+
+            # Other HTTP errors - show user-friendly message
+            error_msg = _get_user_friendly_error(e)
+            tui.error(f"Failed to upload {resource_type}: {error_msg}")
+            if headless:
+                raise click.ClickException(
+                    f"{resource_type.capitalize()} upload failed: {error_msg}"
+                ) from None
+            return None
+        except Exception as e:
+            tui.error(f"Failed to upload {resource_type}: {e}")
+            if headless:
+                raise click.ClickException(
+                    f"{resource_type.capitalize()} upload failed: {e}"
+                ) from None
+            return None
+        else:
+            tui.success(success_message_fn(result))
+            return result
+
+    return None
 
 
 def handle_cloud_upload(  # noqa: PLR0911
@@ -747,122 +840,37 @@ def handle_cloud_upload(  # noqa: PLR0911
     # Upload dataset
     dataset_result = None
     if upload_dataset_flag and dataset_path:
-        default_name, default_slug = derive_name_and_slug(dataset_path)
-        if headless:
-            name, slug = default_name, default_slug
-        else:
-            name, slug = prompt_for_name("dataset", default_name, default_slug)
-
-        # Loop to handle retries (auth errors, duplicate names)
-        max_name_retries = 3
-        for _attempt in range(max_name_retries):
-            tui.info(f"Uploading dataset '{name}'...")
-
-            try:
-                dataset_result = _upload_with_retry(
-                    lambda n=name, s=slug: upload_dataset(
-                        dataset_path=dataset_path,
-                        name=n,
-                        slug=s,
-                        api_url=api_url,
-                    )
-                )
-                tui.success(f"Dataset uploaded: {dataset_result.get('samples_count', 0)} samples")
-                break
-            except httpx.HTTPStatusError as e:
-                # Check for auth error (401)
-                if e.response.status_code == HTTP_UNAUTHORIZED:
-                    if _handle_auth_error(api_url, headless):
-                        # Re-authenticated, retry upload
-                        continue
-                    # User declined re-auth or headless mode
-                    if headless:
-                        raise click.ClickException(
-                            "Dataset upload failed: authentication required"
-                        ) from None
-                    break
-
-                # Check for duplicate name error
-                if _is_duplicate_name_error(e.response) and not headless:
-                    tui.warning(
-                        f"A dataset named '{slug}' already exists. Please choose a different name."
-                    )
-                    console.print()
-                    name, slug = prompt_for_name("dataset", name + "-2", slug + "-2")
-                    continue
-
-                # Other HTTP errors - show user-friendly message
-                error_msg = _get_user_friendly_error(e)
-                tui.error(f"Failed to upload dataset: {error_msg}")
-                if headless:
-                    raise click.ClickException(f"Dataset upload failed: {error_msg}") from None
-                break
-            except Exception as e:
-                tui.error(f"Failed to upload dataset: {e}")
-                if headless:
-                    raise click.ClickException(f"Dataset upload failed: {e}") from None
-                break
+        dataset_result = _perform_upload(
+            resource_type="dataset",
+            file_path=dataset_path,
+            upload_fn=lambda n, s: upload_dataset(
+                dataset_path=dataset_path, name=n, slug=s, api_url=api_url
+            ),
+            success_message_fn=lambda r: f"Dataset uploaded: {r.get('samples_count', 0)} samples",
+            tui=tui,
+            console=console,
+            api_url=api_url,
+            headless=headless,
+        )
 
     # Upload graph
     graph_result = None
     if upload_graph_flag and graph_path:
-        default_name, default_slug = derive_name_and_slug(graph_path)
-        if headless:
-            name, slug = default_name, default_slug
-        else:
-            name, slug = prompt_for_name("graph", default_name, default_slug)
-
-        # Loop to handle retries (auth errors, duplicate names)
-        max_name_retries = 3
-        for _attempt in range(max_name_retries):
-            tui.info(f"Uploading graph '{name}'...")
-
-            try:
-                graph_result = _upload_with_retry(
-                    lambda n=name, s=slug: upload_topic_graph(
-                        graph_path=graph_path,
-                        name=n,
-                        slug=s,
-                        api_url=api_url,
-                    )
-                )
-                nodes = graph_result.get("nodes_imported", 0)
-                edges = graph_result.get("edges_imported", 0)
-                tui.success(f"Graph uploaded: {nodes} nodes, {edges} edges")
-                break
-            except httpx.HTTPStatusError as e:
-                # Check for auth error (401)
-                if e.response.status_code == HTTP_UNAUTHORIZED:
-                    if _handle_auth_error(api_url, headless):
-                        # Re-authenticated, retry upload
-                        continue
-                    # User declined re-auth or headless mode
-                    if headless:
-                        raise click.ClickException(
-                            "Graph upload failed: authentication required"
-                        ) from None
-                    break
-
-                # Check for duplicate name error
-                if _is_duplicate_name_error(e.response) and not headless:
-                    tui.warning(
-                        f"A graph named '{slug}' already exists. Please choose a different name."
-                    )
-                    console.print()
-                    name, slug = prompt_for_name("graph", name + "-2", slug + "-2")
-                    continue
-
-                # Other HTTP errors - show user-friendly message
-                error_msg = _get_user_friendly_error(e)
-                tui.error(f"Failed to upload graph: {error_msg}")
-                if headless:
-                    raise click.ClickException(f"Failed to upload graph: {error_msg}") from None
-                break
-            except Exception as e:
-                tui.error(f"Failed to upload graph: {e}")
-                if headless:
-                    raise click.ClickException(f"Graph upload failed: {e}") from None
-                break
+        graph_result = _perform_upload(
+            resource_type="graph",
+            file_path=graph_path,
+            upload_fn=lambda n, s: upload_topic_graph(
+                graph_path=graph_path, name=n, slug=s, api_url=api_url
+            ),
+            success_message_fn=lambda r: (
+                f"Graph uploaded: {r.get('nodes_imported', 0)} nodes, "
+                f"{r.get('edges_imported', 0)} edges"
+            ),
+            tui=tui,
+            console=console,
+            api_url=api_url,
+            headless=headless,
+        )
 
     # Display results
     if dataset_result or graph_result:
