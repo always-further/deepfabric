@@ -5,6 +5,7 @@ import re
 import secrets
 import string
 
+from typing import Any, Union
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Literal
 
@@ -139,17 +140,37 @@ class MCPInputSchemaProperty(BaseModel):
     description: str = Field(default="", description="Property description")
     default: Any | None = Field(default=None, description="Default value")
 
-
-class MCPInputSchema(BaseModel):
-    """MCP tool input schema (JSON Schema format)."""
+# MCP (Model Context Protocol) tool schema models
+class MCPInputSchemaProperty(BaseModel):
+    """A single property in an MCP input schema."""
 
     model_config = {"extra": "allow"}
 
-    type: str = Field(default="object", description="Schema type")
-    properties: dict[str, MCPInputSchemaProperty] = Field(
-        default_factory=dict, description="Parameter properties"
+    type: Union[str, list[str]] = Field(
+        default="string", description="JSON Schema type"
     )
-    required: list[str] = Field(default_factory=list, description="Required parameter names")
+    description: str = Field(default="", description="Property description")
+    default: Any | None = Field(default=None, description="Default value")
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_nullable_type(cls, v: Any) -> Any:
+        """
+        Normalize OpenAPI-style nullable types:
+        ["string", "null"] → "string"
+        """
+        if isinstance(v, list):
+            non_null = [t for t in v if t != "null"]
+
+            if len(non_null) > 1:
+                raise ValueError(
+                    f"Multiple non-null types are not supported for a single property: {v}"
+                )
+
+            return non_null[0] if non_null else "string"
+
+        return v
+
 
 
 class MCPToolDefinition(BaseModel):
