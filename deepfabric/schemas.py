@@ -5,6 +5,7 @@ import re
 import secrets
 import string
 
+from typing import Union
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Literal
 
@@ -135,9 +136,23 @@ class MCPInputSchemaProperty(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    type: str = Field(default="string", description="JSON Schema type")
+    type: Union[str, list[str]] = Field(
+        default="string", description="JSON Schema type"
+    )
     description: str = Field(default="", description="Property description")
     default: Any | None = Field(default=None, description="Default value")
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_nullable_type(cls, v):
+        """
+        Normalize OpenAPI-style nullable types:
+        ["string", "null"] → "string"
+        """
+        if isinstance(v, list):
+            non_null = [t for t in v if t != "null"]
+            return non_null[0] if non_null else "string"
+        return v
 
 
 class MCPInputSchema(BaseModel):
