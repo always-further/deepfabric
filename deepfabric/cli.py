@@ -752,12 +752,135 @@ def upload() -> None:
     pass
 
 
+def _upload_to_cloud(
+    file: str,
+    resource_type: Literal["dataset", "graph"],
+    handle: str | None,
+    name: str | None,
+    description: str | None,
+    tags: list[str] | None,
+    config_file: str | None,
+) -> None:
+    """Shared helper for uploading datasets and graphs to DeepFabric Cloud.
+
+    Args:
+        file: Path to the file to upload
+        resource_type: Either "dataset" or "graph"
+        handle: Resource handle (e.g., username/resource-name)
+        name: Display name for the resource
+        description: Description for the resource
+        tags: Tags for the resource (only used for datasets)
+        config_file: Path to config file with upload settings
+    """
+    # Lazy imports to avoid slow startup
+    import httpx  # noqa: PLC0415
+
+    from .auth import DEFAULT_API_URL  # noqa: PLC0415
+    from .cloud_upload import (  # noqa: PLC0415
+        _get_user_friendly_error,
+        build_urls,
+        derive_frontend_url,
+        derive_name_and_slug,
+        ensure_authenticated,
+        get_current_user,
+        upload_dataset,
+        upload_topic_graph,
+    )
+
+    tui = get_tui()
+    config_key = resource_type  # "dataset" or "graph"
+    url_resource_type = "datasets" if resource_type == "dataset" else "graphs"
+
+    # Load handle from config if not provided via CLI
+    final_handle = handle
+    final_description = description or ""
+    final_tags = list(tags) if tags else []
+
+    if config_file:
+        config = DeepFabricConfig.from_yaml(config_file)
+        cloud_config = config.get_deepfabric_cloud_config()
+        if not final_handle:
+            final_handle = cloud_config.get(config_key)
+        if not description and cloud_config.get("description"):
+            final_description = cloud_config.get("description", "")
+        if resource_type == "dataset" and not tags and cloud_config.get("tags"):
+            final_tags = cloud_config.get("tags", [])
+
+    # Ensure authenticated
+    if not ensure_authenticated(DEFAULT_API_URL, headless=False):
+        tui.error("Authentication required. Run 'deepfabric auth login' first.")
+        sys.exit(1)
+
+    # Derive name and slug from filename if not provided
+    default_name, default_slug = derive_name_and_slug(file)
+    final_name = name or default_name
+
+    # Use slug from handle if provided, otherwise use derived slug
+    if final_handle and "/" in final_handle:
+        final_slug = final_handle.split("/")[-1]
+    else:
+        final_slug = final_handle or default_slug
+
+    tui.info(f"Uploading {resource_type} '{final_name}'...")
+
+    try:
+        # Call the appropriate upload function
+        if resource_type == "dataset":
+            result = upload_dataset(
+                dataset_path=file,
+                name=final_name,
+                slug=final_slug,
+                description=final_description,
+                tags=final_tags,
+                api_url=DEFAULT_API_URL,
+            )
+            resource_id = result.get("dataset_id") or result.get("id")
+        else:
+            result = upload_topic_graph(
+                graph_path=file,
+                name=final_name,
+                description=final_description,
+                slug=final_slug,
+                api_url=DEFAULT_API_URL,
+            )
+            resource_id = result.get("id")
+
+        # Display success message
+        tui.success(f"{resource_type.capitalize()} '{final_name}' uploaded successfully!")
+
+        # Display URL if available
+        if resource_id:
+            user_info = get_current_user(DEFAULT_API_URL)
+            username = user_info.get("username") if user_info else None
+            frontend_url = derive_frontend_url(DEFAULT_API_URL)
+            public_url, internal_url = build_urls(
+                url_resource_type, resource_id, final_slug, username, frontend_url
+            )
+            tui.info(f"View at: {public_url or internal_url}")
+
+    except httpx.HTTPStatusError as e:
+        error_msg = _get_user_friendly_error(e)
+        if "already exists" in error_msg.lower():
+            tui.error(
+                f"A {resource_type} with slug '{final_slug}' already exists. "
+                "Use a different --handle value."
+            )
+        else:
+            tui.error(f"Error uploading {resource_type}: {error_msg}")
+        sys.exit(1)
+    except Exception as e:
+        tui.error(f"Error uploading {resource_type}: {str(e)}")
+        sys.exit(1)
+
+
 @upload.command("dataset")
 @click.argument("file", type=click.Path(exists=True))
 @click.option("--handle", help="Dataset handle (e.g., username/dataset-name)")
 @click.option("--name", help="Display name for the dataset")
 @click.option("--description", help="Description for the dataset")
-@click.option("--tags", multiple=True, help="Tags for the dataset (can be specified multiple times)")
+@click.option(
+    "--tags", multiple=True, help="Tags for the dataset (can be specified multiple times)"
+)
 @click.option(
     "--config",
     "config_file",
@@ -782,95 +905,19 @@ def upload_dataset_cmd(
 
         deepfabric upload dataset output.jsonl --config config.yaml
     """
-    trace("cli_upload_dataset", {"has_config": config_file is not None, "has_handle": handle is not None})
-    tui = get_tui()
-
-    try:
-        # Lazy imports to avoid slow startup
-        from .auth import DEFAULT_API_URL  # noqa: PLC0415
-        from .cloud_upload import (  # noqa: PLC0415
-            build_urls,
-            derive_frontend_url,
-            derive_name_and_slug,
-            ensure_authenticated,
-            get_current_user,
-            upload_dataset,
-        )
-
-        # Load handle from config if not provided via CLI
-        final_handle = handle
-        final_description = description or ""
-        final_tags = list(tags) if tags else []
-
-        if config_file:
-            config = DeepFabricConfig.from_yaml(config_file)
-            cloud_config = config.get_deepfabric_cloud_config()
-            if not final_handle:
-                final_handle = cloud_config.get("dataset")
-            if not description and cloud_config.get("description"):
-                final_description = cloud_config.get("description", "")
-            if not tags and cloud_config.get("tags"):
-                final_tags = cloud_config.get("tags", [])
-
-        # Ensure authenticated
-        if not ensure_authenticated(DEFAULT_API_URL, headless=False):
-            tui.error("Authentication required. Run 'deepfabric auth login' first.")
-            sys.exit(1)
-
-        # Derive name and slug from filename if not provided
-        default_name, default_slug = derive_name_and_slug(file)
-        final_name = name or default_name
-
-        # Use slug from handle if provided, otherwise use derived slug
-        if final_handle and "/" in final_handle:
-            final_slug = final_handle.split("/")[-1]
-        else:
-            final_slug = final_handle or default_slug
-
-        tui.info(f"Uploading dataset '{final_name}'...")
-
-        result = upload_dataset(
-            dataset_path=file,
-            name=final_name,
-            slug=final_slug,
-            description=final_description,
-            tags=final_tags,
-            api_url=DEFAULT_API_URL,
-        )
-
-        # Display success with URLs
-        user_info = get_current_user(DEFAULT_API_URL)
-        username = user_info.get("username") if user_info else None
-        frontend_url = derive_frontend_url(DEFAULT_API_URL)
-
-        dataset_id = result.get("dataset_id") or result.get("id")
-        if dataset_id:
-            public_url, internal_url = build_urls(
-                "datasets", dataset_id, final_slug, username, frontend_url
-            )
-            tui.success(f"Dataset '{final_name}' uploaded successfully!")
-            if public_url:
-                tui.info(f"View at: {public_url}")
-            else:
-                tui.info(f"View at: {internal_url}")
-        else:
-            tui.success(f"Dataset '{final_name}' uploaded successfully!")
-
-    except Exception as e:
-        # Lazy import for error handling
-        import httpx  # noqa: PLC0415
-
-        from .cloud_upload import _get_user_friendly_error  # noqa: PLC0415
-
-        if isinstance(e, httpx.HTTPStatusError):
-            error_msg = _get_user_friendly_error(e)
-            if "already exists" in error_msg.lower():
-                tui.error(f"A dataset with slug '{final_slug}' already exists. Use a different --handle value.")
-            else:
-                tui.error(f"Error uploading dataset: {error_msg}")
-        else:
-            tui.error(f"Error uploading dataset: {str(e)}")
-        sys.exit(1)
+    trace(
+        "cli_upload_dataset",
+        {"has_config": config_file is not None, "has_handle": handle is not None},
+    )
+    _upload_to_cloud(
+        file=file,
+        resource_type="dataset",
+        handle=handle,
+        name=name,
+        description=description,
+        tags=list(tags) if tags else None,
+        config_file=config_file,
+    )
 
 
 @upload.command("graph")
@@ -901,91 +948,19 @@ def upload_graph_cmd(
 
         deepfabric upload graph graph.json --config config.yaml
     """
-    trace("cli_upload_graph", {"has_config": config_file is not None, "has_handle": handle is not None})
-    tui = get_tui()
-
-    try:
-        # Lazy imports to avoid slow startup
-        from .auth import DEFAULT_API_URL  # noqa: PLC0415
-        from .cloud_upload import (  # noqa: PLC0415
-            build_urls,
-            derive_frontend_url,
-            derive_name_and_slug,
-            ensure_authenticated,
-            get_current_user,
-            upload_topic_graph,
-        )
-
-        # Load handle from config if not provided via CLI
-        final_handle = handle
-        final_description = description or ""
-
-        if config_file:
-            config = DeepFabricConfig.from_yaml(config_file)
-            cloud_config = config.get_deepfabric_cloud_config()
-            if not final_handle:
-                final_handle = cloud_config.get("graph")
-            if not description and cloud_config.get("description"):
-                final_description = cloud_config.get("description", "")
-
-        # Ensure authenticated
-        if not ensure_authenticated(DEFAULT_API_URL, headless=False):
-            tui.error("Authentication required. Run 'deepfabric auth login' first.")
-            sys.exit(1)
-
-        # Derive name and slug from filename if not provided
-        default_name, default_slug = derive_name_and_slug(file)
-        final_name = name or default_name
-
-        # Use slug from handle if provided, otherwise use derived slug
-        if final_handle and "/" in final_handle:
-            final_slug = final_handle.split("/")[-1]
-        else:
-            final_slug = final_handle or default_slug
-
-        tui.info(f"Uploading graph '{final_name}'...")
-
-        result = upload_topic_graph(
-            graph_path=file,
-            name=final_name,
-            description=final_description,
-            slug=final_slug,
-            api_url=DEFAULT_API_URL,
-        )
-
-        # Display success with URLs
-        user_info = get_current_user(DEFAULT_API_URL)
-        username = user_info.get("username") if user_info else None
-        frontend_url = derive_frontend_url(DEFAULT_API_URL)
-
-        graph_id = result.get("id")
-        if graph_id:
-            public_url, internal_url = build_urls(
-                "graphs", graph_id, final_slug, username, frontend_url
-            )
-            tui.success(f"Graph '{final_name}' uploaded successfully!")
-            if public_url:
-                tui.info(f"View at: {public_url}")
-            else:
-                tui.info(f"View at: {internal_url}")
-        else:
-            tui.success(f"Graph '{final_name}' uploaded successfully!")
-
-    except Exception as e:
-        # Lazy import for error handling
-        import httpx  # noqa: PLC0415
-
-        from .cloud_upload import _get_user_friendly_error  # noqa: PLC0415
-
-        if isinstance(e, httpx.HTTPStatusError):
-            error_msg = _get_user_friendly_error(e)
-            if "already exists" in error_msg.lower():
-                tui.error(f"A graph with slug '{final_slug}' already exists. Use a different --handle value.")
-            else:
-                tui.error(f"Error uploading graph: {error_msg}")
-        else:
-            tui.error(f"Error uploading graph: {str(e)}")
-        sys.exit(1)
+    trace(
+        "cli_upload_graph",
+        {"has_config": config_file is not None, "has_handle": handle is not None},
+    )
+    _upload_to_cloud(
+        file=file,
+        resource_type="graph",
+        handle=handle,
+        name=name,
+        description=description,
+        tags=None,
+        config_file=config_file,
+    )
 
 
 @cli.command()

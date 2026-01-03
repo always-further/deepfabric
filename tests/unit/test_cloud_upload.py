@@ -69,7 +69,7 @@ class TestBuildUrls:
             username="testuser",
             frontend_url="https://example.deepfabric.null",
         )
-        assert public_url == "https://example.deepfabric.null/testuser/my-dataset"
+        assert public_url == "https://example.deepfabric.null/dataset/testuser/my-dataset"
         assert internal_url == "https://example.deepfabric.null/datasets/abc123"
 
     def test_dataset_without_username(self):
