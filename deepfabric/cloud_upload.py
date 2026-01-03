@@ -359,7 +359,7 @@ def build_urls(
 
     if username:
         if resource_type == "datasets":
-            public_url = f"{frontend_url}/{username}/{slug}"
+            public_url = f"{frontend_url}/dataset/{username}/{slug}"
         else:
             public_url = f"{frontend_url}/graphs/{username}/{slug}"
     else:

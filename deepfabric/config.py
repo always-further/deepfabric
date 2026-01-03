@@ -345,6 +345,27 @@ class KaggleConfig(BaseModel):
     version_notes: str | None = Field(None, description="Version notes for dataset update")
 
 
+class DeepFabricCloudConfig(BaseModel):
+    """Configuration for DeepFabric Cloud integration."""
+
+    graph: str | None = Field(
+        default=None,
+        description="DeepFabric Cloud graph handle (e.g., username/graph-name)",
+    )
+    dataset: str | None = Field(
+        default=None,
+        description="DeepFabric Cloud dataset handle (e.g., username/dataset-name)",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Description for uploaded resources",
+    )
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Tags for uploaded resources",
+    )
+
+
 class EvaluationConfig(BaseModel):
     """Configuration for model evaluation."""
 
@@ -456,6 +477,9 @@ class DeepFabricConfig(BaseModel):
     evaluation: EvaluationConfig | None = Field(None, description="Evaluation configuration")
     huggingface: HuggingFaceConfig | None = Field(None, description="Hugging Face configuration")
     kaggle: KaggleConfig | None = Field(None, description="Kaggle configuration")
+    deepfabric_cloud: DeepFabricCloudConfig | None = Field(
+        None, description="DeepFabric Cloud configuration"
+    )
 
     @classmethod
     def _detect_old_format(cls, config_dict: dict) -> bool:
@@ -661,6 +685,10 @@ See documentation for full examples.
     def get_kaggle_config(self) -> dict:
         """Get Kaggle configuration."""
         return self.kaggle.model_dump() if self.kaggle else {}
+
+    def get_deepfabric_cloud_config(self) -> dict:
+        """Get DeepFabric Cloud configuration."""
+        return self.deepfabric_cloud.model_dump() if self.deepfabric_cloud else {}
 
     def get_configured_providers(self) -> set[str]:
         """Get the set of LLM providers configured in this config."""
