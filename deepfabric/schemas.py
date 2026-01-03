@@ -5,7 +5,7 @@ import re
 import secrets
 import string
 
-from typing import Union
+from typing import Any, Union
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Literal
 
@@ -144,14 +144,21 @@ class MCPInputSchemaProperty(BaseModel):
 
     @field_validator("type", mode="before")
     @classmethod
-    def normalize_nullable_type(cls, v):
+    def normalize_nullable_type(cls, v: Any) -> Any:
         """
         Normalize OpenAPI-style nullable types:
         ["string", "null"] → "string"
         """
         if isinstance(v, list):
             non_null = [t for t in v if t != "null"]
+
+            if len(non_null) > 1:
+                raise ValueError(
+                    f"Multiple non-null types are not supported for a single property: {v}"
+                )
+
             return non_null[0] if non_null else "string"
+
         return v
 
 
