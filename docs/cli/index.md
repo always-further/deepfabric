@@ -46,6 +46,14 @@ DeepFabric's command-line interface provides a modular set of tools that support
 
     [:octicons-arrow-right-24: Reference](upload-kaggle.md)
 
+-   :material-cloud-upload-outline: **upload**
+
+    ---
+
+    DeepFabric Cloud integration and publishing (experimental)
+
+    [:octicons-arrow-right-24: Reference](upload.md)
+
 -   :material-import: **import-tools**
 
     ---
