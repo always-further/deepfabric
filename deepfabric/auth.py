@@ -61,12 +61,7 @@ def clear_tokens() -> None:
 
 def is_authenticated() -> bool:
     """Check if user is authenticated via API key or OAuth token."""
-    # Check environment variable first
-    if os.getenv("DEEPFABRIC_API_KEY"):
-        return True
-    # Then check stored config
-    config = get_config()
-    return bool(config.get("access_token") or config.get("api_key"))
+    return bool(get_auth_token())
 
 
 def get_auth_token() -> str | None:

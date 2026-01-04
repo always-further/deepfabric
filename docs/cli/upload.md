@@ -35,11 +35,17 @@ The upload command supports multiple authentication approaches:
 
 === "Interactive Login"
 
-    If no API key is set, you'll be prompted to log in via browser:
+    If not authenticated, you'll be automatically prompted to log in via browser:
+
+    ```bash
+    deepfabric upload dataset dataset.jsonl --handle username/dataset-name
+    # You will be prompted: "Would you like to log in now? [Y/n]"
+    ```
+
+    You can also log in separately beforehand:
 
     ```bash
     deepfabric auth login
-    deepfabric upload dataset dataset.jsonl --handle username/dataset-name
     ```
 
 ## Subcommands
