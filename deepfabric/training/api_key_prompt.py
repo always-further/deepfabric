@@ -127,9 +127,9 @@ def _show_notebook_prompt() -> str | None:
             </div>
             <p style="margin: 0; font-size: 14px; opacity: 0.9;">
                 Enter your API key to automatically log training metrics.<br>
-                Get your key at <a href="https://app.deepfabric.ai/settings/api"
+                You can create a key from your profile page: <a href="https://deepfabric.cloud/profile"
                    target="_blank" style="color: #fff; text-decoration: underline;">
-                   app.deepfabric.ai/settings/api</a>
+                   deepfabric.cloud/profile</a>
             </p>
         </div>
     """
@@ -182,8 +182,8 @@ def _show_colab_prompt() -> str | None:
                 </div>
                 <p style="margin: 0; font-size: 14px; opacity: 0.9;">
                     Enter your API key below to log training metrics.<br>
-                    Get your key at <a href="https://app.deepfabric.ai/settings/api"
-                       target="_blank" style="color: #fff;">app.deepfabric.ai/settings/api</a><br>
+                    You can create a key from your profile page: <a href="https://deepfabric.cloud/profile"
+                       target="_blank" style="color: #fff;">deepfabric.cloud/profile</a><br>
                     <em>Press Enter without typing to skip.</em>
                 </p>
             </div>
@@ -211,7 +211,7 @@ def _show_terminal_prompt() -> str | None:
     print("=" * 60)
     print()
     print("  Enter your API key to log training metrics to DeepFabric.")
-    print("  Get your key at: https://app.deepfabric.ai/settings/api")
+    print("  You can create a key from your profile page: https://deepfabric.cloud/profile")
     print()
     print("  Press Enter without typing to skip (disable logging).")
     print()
