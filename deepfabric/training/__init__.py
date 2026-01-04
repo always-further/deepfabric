@@ -28,7 +28,7 @@ Usage:
 
 Environment Variables:
     DEEPFABRIC_API_KEY: API key for authentication
-    DEEPFABRIC_API_URL: SaaS backend URL (default: https://api.deepfabric.ai)
+    DEEPFABRIC_API_URL: SaaS backend URL (default: https://api.deepfabric.cloud)
 """
 
 from __future__ import annotations

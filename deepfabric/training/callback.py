@@ -43,7 +43,7 @@ class DeepFabricCallback:
 
     Environment Variables:
         DEEPFABRIC_API_KEY: API key (alternative to constructor arg)
-        DEEPFABRIC_API_URL: Backend URL (default: https://api.deepfabric.ai)
+        DEEPFABRIC_API_URL: Backend URL (default: https://api.deepfabric.cloud)
     """
 
     def __init__(
@@ -67,7 +67,7 @@ class DeepFabricCallback:
         """
         # Get API key from arg, env, or prompt
         self.api_key = api_key or get_api_key()
-        self.endpoint = endpoint or os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.ai")
+        self.endpoint = endpoint or os.getenv("DEEPFABRIC_API_URL", "https://api.deepfabric.cloud")
         self.pipeline_id = pipeline_id or self._get_pipeline_id()
         self.run_id = str(uuid.uuid4())
         self.enabled = enabled and self.api_key is not None

@@ -343,7 +343,7 @@ callback = DeepFabricCallback(
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DEEPFABRIC_API_KEY` | API key for authentication | None |
-| `DEEPFABRIC_API_URL` | Backend endpoint URL | `https://api.deepfabric.ai` |
+| `DEEPFABRIC_API_URL` | Backend endpoint URL | `https://api.deepfabric.cloud` |
 
 ## Custom Callbacks
 

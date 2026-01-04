@@ -24,7 +24,7 @@ class MetricsSender:
 
     Example:
         sender = MetricsSender(
-            endpoint="https://api.deepfabric.ai",
+            endpoint="https://api.deepfabric.cloud",
             api_key="your-api-key",
         )
         sender.send_metrics({"loss": 2.5, "step": 100})
