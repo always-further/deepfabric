@@ -180,11 +180,20 @@ class Dataset:
         rng.shuffle(indices)
         return self.select(indices)
 
-    def map(self, fn: Callable[[dict[str, Any]], dict[str, Any]]) -> "Dataset":
+    def map(
+        self,
+        fn: Callable[[dict[str, Any]], dict[str, Any]],
+        num_proc: int | None = None,
+        desc: str | None = None,
+        **kwargs: Any,
+    ) -> "Dataset":
         """Apply function to each sample.
 
         Args:
             fn: Function that takes a sample dict and returns a new sample dict
+            num_proc: Ignored (for HuggingFace Dataset compatibility)
+            desc: Ignored (for HuggingFace Dataset compatibility)
+            **kwargs: Additional kwargs ignored for compatibility
 
         Returns:
             New Dataset with transformed samples
