@@ -42,6 +42,7 @@ nav:
     - visualize: cli/visualize.md
     - upload-hf: cli/upload-hf.md
     - upload-kaggle: cli/upload-kaggle.md
+    - upload: cli/upload.md
     - import-tools: cli/import-tools.md
     - evaluate: cli/evaluate.md
     - info: cli/info.md
