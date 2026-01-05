@@ -796,14 +796,20 @@ class ReasoningTrace(BaseModel):
 class ToolContext(BaseModel):
     """Tool execution history - present when tools are used.
 
-    Note: available_tools has been removed as it was redundant with the
-    top-level 'tools' field in Conversation. Use 'tools' for the OpenAI-format
-    tool definitions needed by chat templates.
+    Note: available_tools has been deprecated in favor of the top-level 'tools'
+    field in Conversation. Use 'tools' for the OpenAI-format tool definitions
+    needed by chat templates. The field is kept here for backward compatibility
+    with existing datasets.
     """
 
     executions: list[ToolExecution] = Field(
         default_factory=list,
         description="Tool executions performed during the conversation (may be empty if agent answered without tools)",
+    )
+    # Deprecated: kept for backward compatibility with existing datasets
+    available_tools: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Deprecated: Use top-level 'tools' field instead. Kept for backward compatibility.",
     )
 
     class Config:
