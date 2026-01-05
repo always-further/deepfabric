@@ -162,7 +162,9 @@ class TransformersBackend(InferenceBackend):
                         load_in_4bit=config.load_in_4bit,
                     )
                     # Load LoRA adapter using PEFT
-                    self.model = self._peft.PeftModel.from_pretrained(self.model, config.adapter_path)
+                    self.model = self._peft.PeftModel.from_pretrained(
+                        self.model, config.adapter_path
+                    )
                 else:
                     # Load merged model or base model directly
                     self.model, self.tokenizer = FastLanguageModel.from_pretrained(
