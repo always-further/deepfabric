@@ -298,9 +298,10 @@ class DeepFabricCallback:
         Returns:
             Model name or None
         """
-        # Try args first
-        if hasattr(args, "model_name_or_path"):
-            return args.model_name_or_path
+        # Try args first (model_name_or_path exists on SFTConfig and similar subclasses)
+        model_name_or_path = getattr(args, "model_name_or_path", None)
+        if model_name_or_path is not None:
+            return model_name_or_path
 
         # Try model config
         if model is not None:
@@ -310,8 +311,9 @@ class DeepFabricCallback:
                 return model.name_or_path
 
         # Try output_dir as fallback
-        if hasattr(args, "output_dir"):
-            return os.path.basename(args.output_dir)
+        output_dir = getattr(args, "output_dir", None)
+        if output_dir is not None:
+            return os.path.basename(output_dir)
 
         return None
 

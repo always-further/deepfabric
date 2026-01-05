@@ -24,6 +24,25 @@ from .reporters import BaseReporter, CloudReporter, FileReporter, MultiReporter
 
 console = Console()
 
+# Mapping for legacy conversation_type values
+_CONVERSATION_TYPE_ALIASES = {
+    "chain_of_thought": "cot",
+}
+
+
+def _normalize_conversation_type(value: str) -> str:
+    """Normalize conversation_type to valid values.
+
+    Handles legacy values like 'chain_of_thought' -> 'cot'.
+
+    Args:
+        value: Raw conversation_type value from dataset
+
+    Returns:
+        Normalized value ('basic' or 'cot')
+    """
+    return _CONVERSATION_TYPE_ALIASES.get(value, value)
+
 
 class EvaluatorConfig(BaseModel):
     """Configuration for evaluation run."""
@@ -247,9 +266,10 @@ class Evaluator:
         # Convert sample dict to Conversation object
         conversation = Conversation.model_validate(sample)
 
-        # Determine conversation type from metadata
+        # Determine conversation type from metadata (normalize legacy values)
         metadata = conversation.metadata or {}
-        conv_type = metadata.get("conversation_type", "basic")
+        raw_conv_type = metadata.get("conversation_type", "basic")
+        conv_type = _normalize_conversation_type(raw_conv_type)
         reasoning_style = metadata.get("reasoning_style")
         agent_mode = metadata.get("agent_mode")
 

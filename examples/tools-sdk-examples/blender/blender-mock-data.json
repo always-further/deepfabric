@@ -1,12 +1,18 @@
 {
   "description": "Comprehensive Blender MCP mock data for testing tool execution with 3D design assistant scenarios",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "mockResponses": {
     "get_scene_info": {
       "defaultResponse": {
-        "name": "Untitled",
-        "objects": [],
-        "activeObject": null,
+        "name": "Project_Scene",
+        "objects": [
+          {"name": "Cube", "type": "MESH"},
+          {"name": "Sphere", "type": "MESH"},
+          {"name": "Plane", "type": "MESH"},
+          {"name": "Camera", "type": "CAMERA"},
+          {"name": "Light", "type": "LIGHT"}
+        ],
+        "activeObject": "Cube",
         "renderEngine": "CYCLES",
         "renderSettings": {
           "resolution": {"x": 1920, "y": 1080},
@@ -22,27 +28,15 @@
     },
     "get_object_info": {
       "defaultResponse": {
-        "name": "{{objectName}}",
-        "type": "MESH",
-        "location": {"x": 0.0, "y": 0.0, "z": 0.0},
-        "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
-        "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
-        "dimensions": {"x": 2.0, "y": 2.0, "z": 2.0},
-        "vertices": 8,
-        "edges": 12,
-        "faces": 6,
-        "materials": [],
-        "modifiers": [],
-        "visible": true,
-        "selected": false
+        "error": "Object not found in scene",
+        "suggestion": "Use get_scene_info to list available objects"
       }
     },
     "get_viewport_screenshot": {
       "defaultResponse": {
         "success": true,
-        "filePath": "{{filePath}}",
-        "resolution": {"width": 1920, "height": 1080},
         "format": "PNG",
+        "resolution": {"width": 1920, "height": 1080},
         "size": 2457600
       }
     },
@@ -55,7 +49,6 @@
     },
     "get_polyhaven_categories": {
       "defaultResponse": {
-        "assetType": "{{assetType}}",
         "categories": [
           {"name": "architectural", "count": 245},
           {"name": "fabric", "count": 89},
@@ -70,27 +63,29 @@
     },
     "search_polyhaven_assets": {
       "defaultResponse": {
-        "query": "{{query}}",
-        "assetType": "{{assetType}}",
-        "results": [],
-        "totalCount": 0
+        "results": [
+          {
+            "id": "generic_texture_001",
+            "name": "Generic Texture",
+            "category": "misc",
+            "tags": ["texture", "material"],
+            "downloads": 50000,
+            "resolution": "4K"
+          }
+        ],
+        "totalCount": 1
       }
     },
     "download_polyhaven_asset": {
       "defaultResponse": {
         "success": true,
-        "assetId": "{{assetId}}",
-        "assetType": "{{assetType}}",
-        "downloadPath": "/tmp/polyhaven/{{assetId}}",
         "imported": true
       }
     },
     "set_texture": {
       "defaultResponse": {
         "success": true,
-        "objectName": "{{objectName}}",
-        "texturePath": "{{texturePath}}",
-        "materialName": "{{objectName}}_Material"
+        "materialCreated": true
       }
     },
     "get_polyhaven_status": {
@@ -120,18 +115,22 @@
     },
     "search_sketchfab_models": {
       "defaultResponse": {
-        "query": "{{query}}",
-        "results": [],
-        "totalCount": 0,
-        "nextCursor": null
+        "results": [
+          {
+            "uid": "generic_model_001",
+            "name": "3D Model",
+            "author": "artist",
+            "license": "CC-BY-4.0",
+            "polyCount": 10000,
+            "downloadable": true
+          }
+        ],
+        "totalCount": 1
       }
     },
     "download_sketchfab_model": {
       "defaultResponse": {
         "success": true,
-        "modelUid": "{{modelUid}}",
-        "modelName": "Downloaded Model",
-        "importPath": "/tmp/sketchfab/{{modelUid}}.glb",
         "imported": true,
         "objectCount": 1
       }
@@ -139,34 +138,29 @@
     "generate_hyper3d_model_via_text": {
       "defaultResponse": {
         "success": true,
-        "jobId": "rodin_{{timestamp}}",
-        "prompt": "{{prompt}}",
-        "status": "queued",
+        "jobId": "rodin_job_001",
+        "status": "processing",
         "estimatedTime": 120
       }
     },
     "generate_hyper3d_model_via_images": {
       "defaultResponse": {
         "success": true,
-        "jobId": "rodin_img_{{timestamp}}",
-        "imageCount": "{{imageCount}}",
-        "status": "queued",
+        "jobId": "rodin_img_job_001",
+        "status": "processing",
         "estimatedTime": 180
       }
     },
     "poll_rodin_job_status": {
       "defaultResponse": {
-        "jobId": "{{jobId}}",
         "status": "completed",
         "progress": 100,
-        "modelReady": true,
-        "downloadUrl": "https://api.hyper3d.ai/models/{{jobId}}/download"
+        "modelReady": true
       }
     },
     "import_generated_asset": {
       "defaultResponse": {
         "success": true,
-        "jobId": "{{jobId}}",
         "objectName": "Generated_Asset",
         "vertices": 15000,
         "faces": 12000,
@@ -184,15 +178,13 @@
     "generate_hunyuan3d_model": {
       "defaultResponse": {
         "success": true,
-        "jobId": "hunyuan_{{timestamp}}",
-        "inputType": "text",
+        "jobId": "hunyuan_job_001",
         "status": "processing",
         "estimatedTime": 90
       }
     },
     "poll_hunyuan_job_status": {
       "defaultResponse": {
-        "jobId": "{{jobId}}",
         "status": "completed",
         "progress": 100,
         "modelReady": true
@@ -201,7 +193,6 @@
     "import_generated_asset_hunyuan": {
       "defaultResponse": {
         "success": true,
-        "jobId": "{{jobId}}",
         "objectName": "Hunyuan_Asset",
         "vertices": 8000,
         "faces": 6500,
@@ -217,12 +208,37 @@
           "name": "ArchViz_Interior",
           "objects": [
             {"name": "Room", "type": "MESH"},
+            {"name": "Floor", "type": "MESH"},
+            {"name": "Wall", "type": "MESH"},
+            {"name": "Ceiling", "type": "MESH"},
             {"name": "Sofa", "type": "MESH"},
             {"name": "Coffee_Table", "type": "MESH"},
+            {"name": "Dining_Table", "type": "MESH"},
+            {"name": "Chair", "type": "MESH"},
+            {"name": "Desk", "type": "MESH"},
+            {"name": "Bookshelf", "type": "MESH"},
+            {"name": "TV_Stand", "type": "MESH"},
+            {"name": "Bed", "type": "MESH"},
+            {"name": "Nightstand", "type": "MESH"},
+            {"name": "Wardrobe", "type": "MESH"},
             {"name": "Floor_Lamp", "type": "MESH"},
+            {"name": "Table_Lamp", "type": "MESH"},
+            {"name": "Ceiling_Light", "type": "MESH"},
             {"name": "Rug", "type": "MESH"},
+            {"name": "Curtains", "type": "MESH"},
             {"name": "Window", "type": "MESH"},
+            {"name": "Door", "type": "MESH"},
+            {"name": "Plant", "type": "MESH"},
+            {"name": "Vase", "type": "MESH"},
+            {"name": "Picture_Frame", "type": "MESH"},
+            {"name": "Mirror", "type": "MESH"},
+            {"name": "Cube", "type": "MESH"},
+            {"name": "Sphere", "type": "MESH"},
+            {"name": "Cylinder", "type": "MESH"},
+            {"name": "Plane", "type": "MESH"},
+            {"name": "Character", "type": "MESH"},
             {"name": "Sun", "type": "LIGHT"},
+            {"name": "Area_Light", "type": "LIGHT"},
             {"name": "Camera", "type": "CAMERA"}
           ],
           "activeObject": "Sofa",
@@ -238,7 +254,7 @@
             "hdriEnabled": true,
             "hdriPath": "/textures/interior_hdri.exr"
           },
-          "frameRange": {"start": 1, "end": 1, "current": 1},
+          "frameRange": {"start": 1, "end": 250, "current": 1},
           "units": "METRIC",
           "unitScale": 1.0
         }
@@ -246,7 +262,147 @@
     ],
     "get_object_info": [
       {
-        "match": {"objectName": "Sofa"},
+        "match": {"object_name": "Cube"},
+        "response": {
+          "name": "Cube",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.0, "y": 2.0, "z": 2.0},
+          "vertices": 8,
+          "edges": 12,
+          "faces": 6,
+          "materials": [
+            {"name": "Cube_Material", "type": "PRINCIPLED", "baseColor": {"r": 0.8, "g": 0.8, "b": 0.8}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Sphere"},
+        "response": {
+          "name": "Sphere",
+          "type": "MESH",
+          "location": {"x": 3.0, "y": 0.0, "z": 1.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.0, "y": 2.0, "z": 2.0},
+          "vertices": 482,
+          "edges": 960,
+          "faces": 480,
+          "materials": [
+            {"name": "Sphere_Material", "type": "PRINCIPLED", "baseColor": {"r": 0.2, "g": 0.5, "b": 0.8}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Cylinder"},
+        "response": {
+          "name": "Cylinder",
+          "type": "MESH",
+          "location": {"x": -2.0, "y": 2.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.0, "y": 2.0, "z": 2.0},
+          "vertices": 64,
+          "edges": 96,
+          "faces": 34,
+          "materials": [
+            {"name": "Cylinder_Material", "type": "PRINCIPLED", "baseColor": {"r": 0.6, "g": 0.3, "b": 0.1}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Plane"},
+        "response": {
+          "name": "Plane",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": -1.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 10.0, "y": 10.0, "z": 1.0},
+          "dimensions": {"x": 20.0, "y": 20.0, "z": 0.0},
+          "vertices": 4,
+          "edges": 4,
+          "faces": 1,
+          "materials": [
+            {"name": "Ground_Material", "type": "PRINCIPLED", "baseColor": {"r": 0.4, "g": 0.4, "b": 0.4}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Floor"},
+        "response": {
+          "name": "Floor",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 5.0, "y": 5.0, "z": 1.0},
+          "dimensions": {"x": 10.0, "y": 10.0, "z": 0.1},
+          "vertices": 4,
+          "edges": 4,
+          "faces": 1,
+          "materials": [
+            {"name": "Floor_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.35, "g": 0.2, "b": 0.1}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Wall"},
+        "response": {
+          "name": "Wall",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": -5.0, "z": 1.5},
+          "rotation": {"x": 1.5708, "y": 0.0, "z": 0.0},
+          "scale": {"x": 5.0, "y": 3.0, "z": 1.0},
+          "dimensions": {"x": 10.0, "y": 0.2, "z": 3.0},
+          "vertices": 8,
+          "edges": 12,
+          "faces": 6,
+          "materials": [
+            {"name": "Wall_Paint", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.95, "b": 0.92}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Ceiling"},
+        "response": {
+          "name": "Ceiling",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 3.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 5.0, "y": 5.0, "z": 1.0},
+          "dimensions": {"x": 10.0, "y": 10.0, "z": 0.1},
+          "vertices": 4,
+          "edges": 4,
+          "faces": 1,
+          "materials": [
+            {"name": "Ceiling_White", "type": "PRINCIPLED", "baseColor": {"r": 1.0, "g": 1.0, "b": 1.0}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Sofa"},
         "response": {
           "name": "Sofa",
           "type": "MESH",
@@ -258,7 +414,8 @@
           "edges": 91234,
           "faces": 45000,
           "materials": [
-            {"name": "Sofa_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.25, "b": 0.35}}
+            {"name": "Sofa_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.25, "b": 0.35}},
+            {"name": "Sofa_Legs", "type": "PRINCIPLED", "baseColor": {"r": 0.1, "g": 0.08, "b": 0.05}, "metallic": 0.0}
           ],
           "modifiers": [
             {"name": "Subdivision", "type": "SUBSURF", "levels": 2}
@@ -273,7 +430,7 @@
         }
       },
       {
-        "match": {"objectName": "Coffee_Table"},
+        "match": {"object_name": "Coffee_Table"},
         "response": {
           "name": "Coffee_Table",
           "type": "MESH",
@@ -285,8 +442,8 @@
           "edges": 24800,
           "faces": 12300,
           "materials": [
-            {"name": "Wood_Walnut", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.15, "b": 0.1}},
-            {"name": "Metal_Black", "type": "PRINCIPLED", "baseColor": {"r": 0.02, "g": 0.02, "b": 0.02}, "metallic": 1.0}
+            {"name": "Table_Top_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.15, "b": 0.1}},
+            {"name": "Table_Legs_Metal", "type": "PRINCIPLED", "baseColor": {"r": 0.02, "g": 0.02, "b": 0.02}, "metallic": 1.0}
           ],
           "modifiers": [],
           "visible": true,
@@ -294,7 +451,180 @@
         }
       },
       {
-        "match": {"objectName": "Floor_Lamp"},
+        "match": {"object_name": "Dining_Table"},
+        "response": {
+          "name": "Dining_Table",
+          "type": "MESH",
+          "location": {"x": -3.0, "y": 2.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.8, "y": 0.9, "z": 0.75},
+          "vertices": 8500,
+          "edges": 17000,
+          "faces": 8400,
+          "materials": [
+            {"name": "Dining_Table_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.3, "g": 0.18, "b": 0.08}},
+            {"name": "Dining_Table_Legs", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.15, "b": 0.06}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Chair"},
+        "response": {
+          "name": "Chair",
+          "type": "MESH",
+          "location": {"x": -3.0, "y": 1.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.5, "y": 0.5, "z": 0.9},
+          "vertices": 6200,
+          "edges": 12400,
+          "faces": 6100,
+          "materials": [
+            {"name": "Chair_Seat", "type": "PRINCIPLED", "baseColor": {"r": 0.6, "g": 0.55, "b": 0.5}},
+            {"name": "Chair_Frame", "type": "PRINCIPLED", "baseColor": {"r": 0.2, "g": 0.12, "b": 0.05}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Desk"},
+        "response": {
+          "name": "Desk",
+          "type": "MESH",
+          "location": {"x": 4.0, "y": -3.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.4, "y": 0.7, "z": 0.75},
+          "vertices": 15000,
+          "edges": 30000,
+          "faces": 14800,
+          "materials": [
+            {"name": "Desk_Surface", "type": "PRINCIPLED", "baseColor": {"r": 0.22, "g": 0.18, "b": 0.15}},
+            {"name": "Desk_Drawers", "type": "PRINCIPLED", "baseColor": {"r": 0.2, "g": 0.16, "b": 0.12}},
+            {"name": "Desk_Legs", "type": "PRINCIPLED", "baseColor": {"r": 0.1, "g": 0.1, "b": 0.1}, "metallic": 0.8}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Bookshelf"},
+        "response": {
+          "name": "Bookshelf",
+          "type": "MESH",
+          "location": {"x": -4.5, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 1.5708},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.0, "y": 0.35, "z": 2.0},
+          "vertices": 18000,
+          "edges": 36000,
+          "faces": 17800,
+          "materials": [
+            {"name": "Bookshelf_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.28, "g": 0.2, "b": 0.12}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "TV_Stand"},
+        "response": {
+          "name": "TV_Stand",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": -4.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.6, "y": 0.45, "z": 0.5},
+          "vertices": 8000,
+          "edges": 16000,
+          "faces": 7900,
+          "materials": [
+            {"name": "TV_Stand_Body", "type": "PRINCIPLED", "baseColor": {"r": 0.1, "g": 0.1, "b": 0.1}},
+            {"name": "TV_Stand_Shelf", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.15, "b": 0.15}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Bed"},
+        "response": {
+          "name": "Bed",
+          "type": "MESH",
+          "location": {"x": 5.0, "y": 3.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.0, "y": 1.6, "z": 0.6},
+          "vertices": 35000,
+          "edges": 70000,
+          "faces": 34500,
+          "materials": [
+            {"name": "Bed_Frame", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.18, "b": 0.1}},
+            {"name": "Bed_Mattress", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.95, "b": 0.95}},
+            {"name": "Bed_Sheets", "type": "PRINCIPLED", "baseColor": {"r": 0.85, "g": 0.88, "b": 0.92}},
+            {"name": "Bed_Pillows", "type": "PRINCIPLED", "baseColor": {"r": 0.98, "g": 0.98, "b": 0.98}}
+          ],
+          "modifiers": [
+            {"name": "Subdivision", "type": "SUBSURF", "levels": 1}
+          ],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Nightstand"},
+        "response": {
+          "name": "Nightstand",
+          "type": "MESH",
+          "location": {"x": 6.2, "y": 3.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.5, "y": 0.4, "z": 0.55},
+          "vertices": 4500,
+          "edges": 9000,
+          "faces": 4400,
+          "materials": [
+            {"name": "Nightstand_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.25, "g": 0.18, "b": 0.1}},
+            {"name": "Nightstand_Handles", "type": "PRINCIPLED", "baseColor": {"r": 0.7, "g": 0.65, "b": 0.5}, "metallic": 1.0}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Wardrobe"},
+        "response": {
+          "name": "Wardrobe",
+          "type": "MESH",
+          "location": {"x": 5.0, "y": 4.8, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 1.8, "y": 0.6, "z": 2.2},
+          "vertices": 12000,
+          "edges": 24000,
+          "faces": 11800,
+          "materials": [
+            {"name": "Wardrobe_Body", "type": "PRINCIPLED", "baseColor": {"r": 0.9, "g": 0.88, "b": 0.85}},
+            {"name": "Wardrobe_Doors", "type": "PRINCIPLED", "baseColor": {"r": 0.88, "g": 0.86, "b": 0.82}},
+            {"name": "Wardrobe_Handles", "type": "PRINCIPLED", "baseColor": {"r": 0.75, "g": 0.75, "b": 0.75}, "metallic": 1.0}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Floor_Lamp"},
         "response": {
           "name": "Floor_Lamp",
           "type": "MESH",
@@ -318,7 +648,238 @@
         }
       },
       {
-        "match": {"objectName": "Character"},
+        "match": {"object_name": "Table_Lamp"},
+        "response": {
+          "name": "Table_Lamp",
+          "type": "MESH",
+          "location": {"x": 6.2, "y": 3.0, "z": 0.55},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.25, "y": 0.25, "z": 0.45},
+          "vertices": 3200,
+          "edges": 6400,
+          "faces": 3100,
+          "materials": [
+            {"name": "Table_Lamp_Base", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.12, "b": 0.1}},
+            {"name": "Table_Lamp_Shade", "type": "PRINCIPLED", "baseColor": {"r": 0.92, "g": 0.9, "b": 0.85}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Ceiling_Light"},
+        "response": {
+          "name": "Ceiling_Light",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 2.9},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.6, "y": 0.6, "z": 0.3},
+          "vertices": 5000,
+          "edges": 10000,
+          "faces": 4900,
+          "materials": [
+            {"name": "Ceiling_Light_Metal", "type": "PRINCIPLED", "baseColor": {"r": 0.85, "g": 0.85, "b": 0.85}, "metallic": 1.0},
+            {"name": "Ceiling_Light_Glass", "type": "PRINCIPLED", "baseColor": {"r": 1.0, "g": 1.0, "b": 1.0}, "transmission": 0.9}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Rug"},
+        "response": {
+          "name": "Rug",
+          "type": "MESH",
+          "location": {"x": 1.0, "y": 0.0, "z": 0.01},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 2.5, "y": 1.8, "z": 0.02},
+          "vertices": 10000,
+          "edges": 20000,
+          "faces": 9800,
+          "materials": [
+            {"name": "Rug_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.6, "g": 0.55, "b": 0.45}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Curtains"},
+        "response": {
+          "name": "Curtains",
+          "type": "MESH",
+          "location": {"x": -4.8, "y": 0.0, "z": 1.5},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.1, "y": 2.0, "z": 2.5},
+          "vertices": 25000,
+          "edges": 50000,
+          "faces": 24500,
+          "materials": [
+            {"name": "Curtain_Fabric", "type": "PRINCIPLED", "baseColor": {"r": 0.85, "g": 0.82, "b": 0.75}}
+          ],
+          "modifiers": [
+            {"name": "Cloth", "type": "CLOTH"}
+          ],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Window"},
+        "response": {
+          "name": "Window",
+          "type": "MESH",
+          "location": {"x": -4.9, "y": 0.0, "z": 1.5},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.1, "y": 1.5, "z": 1.8},
+          "vertices": 200,
+          "edges": 400,
+          "faces": 180,
+          "materials": [
+            {"name": "Window_Frame", "type": "PRINCIPLED", "baseColor": {"r": 0.9, "g": 0.9, "b": 0.9}},
+            {"name": "Window_Glass", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.98, "b": 1.0}, "transmission": 0.95}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Door"},
+        "response": {
+          "name": "Door",
+          "type": "MESH",
+          "location": {"x": 4.9, "y": -2.0, "z": 1.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.05, "y": 0.9, "z": 2.1},
+          "vertices": 120,
+          "edges": 240,
+          "faces": 100,
+          "materials": [
+            {"name": "Door_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.3, "g": 0.22, "b": 0.15}},
+            {"name": "Door_Handle", "type": "PRINCIPLED", "baseColor": {"r": 0.8, "g": 0.75, "b": 0.6}, "metallic": 1.0}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Plant"},
+        "response": {
+          "name": "Plant",
+          "type": "MESH",
+          "location": {"x": 3.8, "y": -3.5, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.6, "y": 0.6, "z": 1.2},
+          "vertices": 45000,
+          "edges": 90000,
+          "faces": 44000,
+          "materials": [
+            {"name": "Plant_Leaves", "type": "PRINCIPLED", "baseColor": {"r": 0.15, "g": 0.4, "b": 0.1}},
+            {"name": "Plant_Pot", "type": "PRINCIPLED", "baseColor": {"r": 0.5, "g": 0.35, "b": 0.25}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Vase"},
+        "response": {
+          "name": "Vase",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.45},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.15, "y": 0.15, "z": 0.3},
+          "vertices": 2000,
+          "edges": 4000,
+          "faces": 1950,
+          "materials": [
+            {"name": "Vase_Ceramic", "type": "PRINCIPLED", "baseColor": {"r": 0.9, "g": 0.88, "b": 0.85}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Picture_Frame"},
+        "response": {
+          "name": "Picture_Frame",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": -4.9, "z": 1.5},
+          "rotation": {"x": 1.5708, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.6, "y": 0.03, "z": 0.8},
+          "vertices": 80,
+          "edges": 160,
+          "faces": 70,
+          "materials": [
+            {"name": "Frame_Wood", "type": "PRINCIPLED", "baseColor": {"r": 0.2, "g": 0.15, "b": 0.1}},
+            {"name": "Frame_Glass", "type": "PRINCIPLED", "baseColor": {"r": 0.98, "g": 0.98, "b": 1.0}, "transmission": 0.9}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Mirror"},
+        "response": {
+          "name": "Mirror",
+          "type": "MESH",
+          "location": {"x": 4.9, "y": 0.0, "z": 1.4},
+          "rotation": {"x": 0.0, "y": 1.5708, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 0.03, "y": 0.8, "z": 1.2},
+          "vertices": 60,
+          "edges": 120,
+          "faces": 50,
+          "materials": [
+            {"name": "Mirror_Frame", "type": "PRINCIPLED", "baseColor": {"r": 0.75, "g": 0.7, "b": 0.6}, "metallic": 1.0},
+            {"name": "Mirror_Surface", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.95, "b": 0.95}, "metallic": 1.0, "roughness": 0.0}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Room"},
+        "response": {
+          "name": "Room",
+          "type": "MESH",
+          "location": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
+          "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
+          "dimensions": {"x": 10.0, "y": 10.0, "z": 3.0},
+          "vertices": 24,
+          "edges": 36,
+          "faces": 14,
+          "materials": [
+            {"name": "Room_Walls", "type": "PRINCIPLED", "baseColor": {"r": 0.95, "g": 0.95, "b": 0.92}},
+            {"name": "Room_Floor", "type": "PRINCIPLED", "baseColor": {"r": 0.35, "g": 0.2, "b": 0.1}},
+            {"name": "Room_Ceiling", "type": "PRINCIPLED", "baseColor": {"r": 1.0, "g": 1.0, "b": 1.0}}
+          ],
+          "modifiers": [],
+          "visible": true,
+          "selected": false
+        }
+      },
+      {
+        "match": {"object_name": "Character"},
         "response": {
           "name": "Character",
           "type": "MESH",
@@ -351,53 +912,30 @@
     ],
     "get_viewport_screenshot": [
       {
-        "match": {"filePath": "/tmp/viewport.png"},
+        "match": {},
         "response": {
           "success": true,
-          "filePath": "/tmp/viewport.png",
           "resolution": {"width": 1920, "height": 1080},
           "format": "PNG",
           "size": 3145728,
           "viewportShading": "MATERIAL",
           "cameraView": false
         }
-      },
-      {
-        "match": {"filePath": "/renders/final_render.png"},
-        "response": {
-          "success": true,
-          "filePath": "/renders/final_render.png",
-          "resolution": {"width": 3840, "height": 2160},
-          "format": "PNG",
-          "size": 12582912,
-          "viewportShading": "RENDERED",
-          "cameraView": true
-        }
       }
     ],
     "execute_blender_code": [
       {
-        "match": {"code": "bpy.ops.mesh.primitive_cube_add()"},
+        "match": {},
         "response": {
           "success": true,
-          "output": "Created cube at origin",
-          "executionTime": 0.02,
-          "createdObjects": ["Cube"]
-        }
-      },
-      {
-        "match": {"code": "bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(0, 0, 2))"},
-        "response": {
-          "success": true,
-          "output": "Created UV sphere at (0, 0, 2)",
-          "executionTime": 0.03,
-          "createdObjects": ["Sphere"]
+          "output": "",
+          "executionTime": 0.05
         }
       }
     ],
     "get_polyhaven_categories": [
       {
-        "match": {"assetType": "textures"},
+        "match": {"asset_type": "textures"},
         "response": {
           "assetType": "textures",
           "categories": [
@@ -413,7 +951,7 @@
         }
       },
       {
-        "match": {"assetType": "hdris"},
+        "match": {"asset_type": "hdris"},
         "response": {
           "assetType": "hdris",
           "categories": [
@@ -424,7 +962,7 @@
         }
       },
       {
-        "match": {"assetType": "models"},
+        "match": {"asset_type": "models"},
         "response": {
           "assetType": "models",
           "categories": [
@@ -439,9 +977,8 @@
     ],
     "search_polyhaven_assets": [
       {
-        "match": {"assetType": "textures", "query": "wood"},
+        "match": {"asset_type": "textures"},
         "response": {
-          "query": "wood",
           "assetType": "textures",
           "results": [
             {
@@ -463,31 +1000,30 @@
               "thumbnailUrl": "https://polyhaven.com/thumbs/wooden_planks.jpg"
             },
             {
-              "id": "oak_veneer",
-              "name": "Oak Veneer",
-              "category": "wood",
-              "tags": ["veneer", "oak", "furniture", "smooth"],
+              "id": "brick_wall_001",
+              "name": "Brick Wall",
+              "category": "architectural",
+              "tags": ["brick", "wall", "red"],
               "downloads": 87000,
               "resolution": "4K",
-              "thumbnailUrl": "https://polyhaven.com/thumbs/oak_veneer.jpg"
+              "thumbnailUrl": "https://polyhaven.com/thumbs/brick_wall_001.jpg"
             },
             {
-              "id": "weathered_wood",
-              "name": "Weathered Wood",
-              "category": "wood",
-              "tags": ["weathered", "aged", "barn", "rustic"],
+              "id": "concrete_floor",
+              "name": "Concrete Floor",
+              "category": "floor",
+              "tags": ["concrete", "industrial", "gray"],
               "downloads": 76000,
               "resolution": "8K",
-              "thumbnailUrl": "https://polyhaven.com/thumbs/weathered_wood.jpg"
+              "thumbnailUrl": "https://polyhaven.com/thumbs/concrete_floor.jpg"
             }
           ],
-          "totalCount": 201
+          "totalCount": 1200
         }
       },
       {
-        "match": {"assetType": "hdris", "query": "studio"},
+        "match": {"asset_type": "hdris"},
         "response": {
-          "query": "studio",
           "assetType": "hdris",
           "results": [
             {
@@ -509,22 +1045,21 @@
               "thumbnailUrl": "https://polyhaven.com/thumbs/photo_studio_loft_hall.jpg"
             },
             {
-              "id": "studio_small_03",
-              "name": "Studio Small 03",
-              "category": "indoor",
-              "tags": ["studio", "gradient", "minimal"],
+              "id": "sunflowers",
+              "name": "Sunflowers Field",
+              "category": "outdoor",
+              "tags": ["nature", "sunny", "field"],
               "downloads": 156000,
               "resolution": "8K",
-              "thumbnailUrl": "https://polyhaven.com/thumbs/studio_small_03.jpg"
+              "thumbnailUrl": "https://polyhaven.com/thumbs/sunflowers.jpg"
             }
           ],
-          "totalCount": 87
+          "totalCount": 450
         }
       },
       {
-        "match": {"assetType": "models", "query": "chair"},
+        "match": {"asset_type": "models"},
         "response": {
-          "query": "chair",
           "assetType": "models",
           "results": [
             {
@@ -548,52 +1083,25 @@
               "thumbnailUrl": "https://polyhaven.com/thumbs/wooden_dining_chair.jpg"
             }
           ],
-          "totalCount": 23
+          "totalCount": 600
         }
       }
     ],
     "download_polyhaven_asset": [
       {
-        "match": {"assetId": "wood_floor_deck"},
+        "match": {},
         "response": {
           "success": true,
-          "assetId": "wood_floor_deck",
-          "assetType": "texture",
-          "downloadPath": "/tmp/polyhaven/wood_floor_deck",
           "imported": true,
-          "files": [
-            {"name": "wood_floor_deck_diff_8k.jpg", "type": "diffuse", "size": 15728640},
-            {"name": "wood_floor_deck_nor_gl_8k.jpg", "type": "normal", "size": 12582912},
-            {"name": "wood_floor_deck_rough_8k.jpg", "type": "roughness", "size": 8388608},
-            {"name": "wood_floor_deck_ao_8k.jpg", "type": "ambient_occlusion", "size": 6291456}
-          ],
-          "materialCreated": "Wood_Floor_Deck_Material"
-        }
-      },
-      {
-        "match": {"assetId": "studio_small_09"},
-        "response": {
-          "success": true,
-          "assetId": "studio_small_09",
-          "assetType": "hdri",
-          "downloadPath": "/tmp/polyhaven/studio_small_09.exr",
-          "imported": true,
-          "files": [
-            {"name": "studio_small_09_16k.exr", "type": "hdri", "size": 268435456}
-          ],
-          "worldNodeCreated": true,
-          "worldBackgroundSet": true
+          "materialCreated": true
         }
       }
     ],
     "set_texture": [
       {
-        "match": {"objectName": "Floor", "texturePath": "/tmp/polyhaven/wood_floor_deck"},
+        "match": {},
         "response": {
           "success": true,
-          "objectName": "Floor",
-          "texturePath": "/tmp/polyhaven/wood_floor_deck",
-          "materialName": "Floor_Wood_Material",
           "mappingType": "UV",
           "textureScale": {"x": 1.0, "y": 1.0},
           "nodesCreated": ["Image Texture", "Normal Map", "Principled BSDF", "Material Output"]
@@ -602,43 +1110,39 @@
     ],
     "search_sketchfab_models": [
       {
-        "match": {"query": "robot"},
+        "match": {},
         "response": {
-          "query": "robot",
           "results": [
             {
               "uid": "abc123def456",
-              "name": "Sci-Fi Robot Character",
-              "author": "3d_artist_pro",
+              "name": "3D Model Asset",
+              "author": "3d_artist",
               "license": "CC-BY-4.0",
               "polyCount": 45000,
-              "animated": true,
+              "animated": false,
               "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/abc123def456/thumb.jpg",
               "viewCount": 125000,
               "likeCount": 3400
             },
             {
               "uid": "ghi789jkl012",
-              "name": "Industrial Robot Arm",
-              "author": "mech_designs",
+              "name": "Detailed Model",
+              "author": "designer_pro",
               "license": "CC-BY-4.0",
               "polyCount": 28000,
-              "animated": true,
+              "animated": false,
               "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/ghi789jkl012/thumb.jpg",
               "viewCount": 89000,
               "likeCount": 2100
             },
             {
               "uid": "mno345pqr678",
-              "name": "Cute Robot Companion",
-              "author": "cartoon_3d",
+              "name": "Simple Asset",
+              "author": "model_maker",
               "license": "CC-BY-NC-4.0",
               "polyCount": 12000,
               "animated": false,
               "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/mno345pqr678/thumb.jpg",
               "viewCount": 67000,
               "likeCount": 1800
             }
@@ -646,233 +1150,93 @@
           "totalCount": 15420,
           "nextCursor": "eyJwYWdlIjogMn0="
         }
-      },
-      {
-        "match": {"query": "car"},
-        "response": {
-          "query": "car",
-          "results": [
-            {
-              "uid": "car001abc",
-              "name": "Sports Car - Concept",
-              "author": "auto_designer",
-              "license": "CC-BY-4.0",
-              "polyCount": 125000,
-              "animated": false,
-              "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/car001abc/thumb.jpg",
-              "viewCount": 456000,
-              "likeCount": 12000
-            },
-            {
-              "uid": "car002def",
-              "name": "Vintage Classic Car",
-              "author": "retro_models",
-              "license": "CC-BY-4.0",
-              "polyCount": 89000,
-              "animated": false,
-              "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/car002def/thumb.jpg",
-              "viewCount": 234000,
-              "likeCount": 8500
-            }
-          ],
-          "totalCount": 45678,
-          "nextCursor": "eyJwYWdlIjogMn0="
-        }
-      },
-      {
-        "match": {"query": "tree"},
-        "response": {
-          "query": "tree",
-          "results": [
-            {
-              "uid": "tree001oak",
-              "name": "Realistic Oak Tree",
-              "author": "nature_3d",
-              "license": "CC-BY-4.0",
-              "polyCount": 234000,
-              "animated": false,
-              "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/tree001oak/thumb.jpg",
-              "viewCount": 178000,
-              "likeCount": 5600
-            },
-            {
-              "uid": "tree002pine",
-              "name": "Pine Tree Collection",
-              "author": "environment_artist",
-              "license": "CC-BY-4.0",
-              "polyCount": 156000,
-              "animated": false,
-              "downloadable": true,
-              "thumbnailUrl": "https://media.sketchfab.com/models/tree002pine/thumb.jpg",
-              "viewCount": 145000,
-              "likeCount": 4200
-            }
-          ],
-          "totalCount": 23456,
-          "nextCursor": "eyJwYWdlIjogMn0="
-        }
       }
     ],
     "download_sketchfab_model": [
       {
-        "match": {"modelUid": "abc123def456"},
+        "match": {},
         "response": {
           "success": true,
-          "modelUid": "abc123def456",
-          "modelName": "Sci-Fi Robot Character",
-          "importPath": "/tmp/sketchfab/abc123def456.glb",
           "imported": true,
-          "objectCount": 45,
+          "objectCount": 1,
           "totalVertices": 45000,
           "totalFaces": 42000,
-          "materials": ["Robot_Body", "Robot_Metal", "Robot_Emissive", "Robot_Glass"],
-          "hasAnimations": true,
-          "animations": ["Idle", "Walk", "Run", "Attack"]
-        }
-      },
-      {
-        "match": {"modelUid": "car001abc"},
-        "response": {
-          "success": true,
-          "modelUid": "car001abc",
-          "modelName": "Sports Car - Concept",
-          "importPath": "/tmp/sketchfab/car001abc.glb",
-          "imported": true,
-          "objectCount": 156,
-          "totalVertices": 125000,
-          "totalFaces": 118000,
-          "materials": ["Car_Body", "Car_Glass", "Car_Chrome", "Car_Interior", "Car_Tires", "Car_Lights"],
+          "materials": ["Material_1", "Material_2"],
           "hasAnimations": false
         }
       }
     ],
     "generate_hyper3d_model_via_text": [
       {
-        "match": {"prompt": "a medieval sword"},
+        "match": {},
         "response": {
           "success": true,
-          "jobId": "rodin_sword_12345",
-          "prompt": "a medieval sword",
-          "status": "processing",
-          "estimatedTime": 90,
-          "queuePosition": 3
-        }
-      },
-      {
-        "match": {"prompt": "a futuristic spaceship"},
-        "response": {
-          "success": true,
-          "jobId": "rodin_spaceship_67890",
-          "prompt": "a futuristic spaceship",
-          "status": "processing",
-          "estimatedTime": 150,
-          "queuePosition": 5
-        }
-      },
-      {
-        "match": {"prompt": "cute cartoon cat"},
-        "response": {
-          "success": true,
-          "jobId": "rodin_cat_11111",
-          "prompt": "cute cartoon cat",
+          "jobId": "rodin_job_12345",
           "status": "processing",
           "estimatedTime": 120,
-          "queuePosition": 2
+          "queuePosition": 3
         }
       }
     ],
     "generate_hyper3d_model_via_images": [
       {
-        "match": {"imageCount": 4},
+        "match": {},
         "response": {
           "success": true,
-          "jobId": "rodin_img_multi_22222",
-          "imageCount": 4,
+          "jobId": "rodin_img_job_22222",
           "status": "processing",
           "estimatedTime": 180,
-          "queuePosition": 4,
-          "imageAngles": ["front", "back", "left", "right"]
+          "queuePosition": 4
         }
       }
     ],
     "poll_rodin_job_status": [
       {
-        "match": {"jobId": "rodin_sword_12345"},
+        "match": {},
         "response": {
-          "jobId": "rodin_sword_12345",
           "status": "completed",
           "progress": 100,
           "modelReady": true,
-          "downloadUrl": "https://api.hyper3d.ai/models/rodin_sword_12345/download",
           "modelStats": {
             "vertices": 12500,
             "faces": 11800,
             "textured": true
           }
         }
-      },
-      {
-        "match": {"jobId": "rodin_spaceship_67890"},
-        "response": {
-          "jobId": "rodin_spaceship_67890",
-          "status": "processing",
-          "progress": 65,
-          "modelReady": false,
-          "currentStage": "geometry_refinement",
-          "remainingTime": 52
-        }
       }
     ],
     "import_generated_asset": [
       {
-        "match": {"jobId": "rodin_sword_12345"},
+        "match": {},
         "response": {
           "success": true,
-          "jobId": "rodin_sword_12345",
-          "objectName": "Medieval_Sword",
+          "objectName": "Generated_Model",
           "vertices": 12500,
           "faces": 11800,
           "imported": true,
-          "materials": ["Sword_Blade", "Sword_Handle", "Sword_Guard"],
+          "materials": ["Model_Material_1", "Model_Material_2"],
           "location": {"x": 0, "y": 0, "z": 0},
-          "dimensions": {"x": 0.15, "y": 0.1, "z": 1.2}
+          "dimensions": {"x": 1.0, "y": 1.0, "z": 1.0}
         }
       }
     ],
     "generate_hunyuan3d_model": [
       {
-        "match": {"prompt": "a wooden treasure chest"},
+        "match": {},
         "response": {
           "success": true,
-          "jobId": "hunyuan_chest_33333",
+          "jobId": "hunyuan_job_33333",
           "inputType": "text",
-          "prompt": "a wooden treasure chest",
           "status": "processing",
           "estimatedTime": 75,
-          "modelVersion": "hunyuan3d-2.0"
-        }
-      },
-      {
-        "match": {"prompt": "crystal potion bottle"},
-        "response": {
-          "success": true,
-          "jobId": "hunyuan_potion_44444",
-          "inputType": "text",
-          "prompt": "crystal potion bottle",
-          "status": "processing",
-          "estimatedTime": 60,
           "modelVersion": "hunyuan3d-2.0"
         }
       }
     ],
     "poll_hunyuan_job_status": [
       {
-        "match": {"jobId": "hunyuan_chest_33333"},
+        "match": {},
         "response": {
-          "jobId": "hunyuan_chest_33333",
           "status": "completed",
           "progress": 100,
           "modelReady": true,
@@ -882,32 +1246,20 @@
             "textured": true
           }
         }
-      },
-      {
-        "match": {"jobId": "hunyuan_potion_44444"},
-        "response": {
-          "jobId": "hunyuan_potion_44444",
-          "status": "processing",
-          "progress": 45,
-          "modelReady": false,
-          "currentStage": "texture_generation",
-          "remainingTime": 33
-        }
       }
     ],
     "import_generated_asset_hunyuan": [
       {
-        "match": {"jobId": "hunyuan_chest_33333"},
+        "match": {},
         "response": {
           "success": true,
-          "jobId": "hunyuan_chest_33333",
-          "objectName": "Treasure_Chest",
+          "objectName": "Hunyuan_Model",
           "vertices": 8500,
           "faces": 7200,
           "imported": true,
-          "materials": ["Chest_Wood", "Chest_Metal"],
+          "materials": ["Hunyuan_Material"],
           "location": {"x": 0, "y": 0, "z": 0},
-          "dimensions": {"x": 0.8, "y": 0.5, "z": 0.5}
+          "dimensions": {"x": 1.0, "y": 1.0, "z": 1.0}
         }
       }
     ]
