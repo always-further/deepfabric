@@ -1,8 +1,11 @@
 import ast
 import asyncio
+import importlib
 import json
 import os
 import re
+
+from typing import Any
 
 VALIDATION_ERROR_INDICATORS = [
     "validation error",
@@ -162,3 +165,33 @@ def get_bool_env(key: str, default: bool = False) -> bool:
     if val is None:
         return default
     return val.lower() in ("1", "true", "yes", "on")
+
+
+def import_optional_dependency(
+    module_name: str,
+    extra: str | None = None,
+) -> Any:
+    """
+    Import an optional dependency at runtime.
+
+    Args:
+        module_name (str): The name of the module to import.
+        extra (str | None): The optional dependency group providing this module.
+
+    Returns:
+        Any: The imported module.
+
+    Raises:
+        ImportError: If the module is not installed.
+    """
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        if extra:
+            msg = (
+                f"The '{module_name}' library is required for the '{extra}' features. "
+                f"Please install it using: pip install 'deepfabric[{extra}]'"
+            )
+        else:
+            msg = f"The '{module_name}' library is required but is not installed."
+        raise ImportError(msg) from None

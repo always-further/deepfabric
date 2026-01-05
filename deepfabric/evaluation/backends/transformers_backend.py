@@ -8,6 +8,7 @@ from typing import Any
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from ...schemas import ToolDefinition
+from ...utils import import_optional_dependency
 from ..inference import InferenceBackend, InferenceConfig, ModelResponse
 from .tool_call_parsers import ToolCallParser, get_parser
 
@@ -38,15 +39,7 @@ class TransformersBackend(InferenceBackend):
         Raises:
             ImportError: If 'torch' is not installed in the environment.
         """
-        try:
-            import torch  # noqa: PLC0415
-        except ImportError:
-            raise ImportError(
-                "The 'torch' library is required for training features. "
-                "Please install it using: pip install 'deepfabric[training]'"
-            ) from None
-        else:
-            return torch
+        return import_optional_dependency("torch", "training")
 
     @cached_property
     def _peft(self) -> Any:
@@ -58,15 +51,7 @@ class TransformersBackend(InferenceBackend):
         Raises:
             ImportError: If 'peft' is not installed in the environment.
         """
-        try:
-            import peft  # noqa: PLC0415
-        except ImportError:
-            raise ImportError(
-                "The 'peft' library is required for training features. "
-                "Please install it using: pip install 'deepfabric[training]'"
-            ) from None
-        else:
-            return peft
+        return import_optional_dependency("peft", "training")
 
     def __init__(self, config: InferenceConfig):
         """Initialize Transformers backend.
