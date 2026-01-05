@@ -39,13 +39,14 @@ class TransformersBackend(InferenceBackend):
             ImportError: If 'torch' is not installed in the environment.
         """
         try:
-            import torch
-            return torch
+            import torch  # noqa: PLC0415
         except ImportError:
             raise ImportError(
                 "The 'torch' library is required for training features. "
                 "Please install it using: pip install 'deepfabric[training]'"
             ) from None
+        else:
+            return torch
 
     @cached_property
     def _peft(self) -> Any:
@@ -58,13 +59,14 @@ class TransformersBackend(InferenceBackend):
             ImportError: If 'peft' is not installed in the environment.
         """
         try:
-            import peft
-            return peft
+            import peft  # noqa: PLC0415
         except ImportError:
             raise ImportError(
                 "The 'peft' library is required for training features. "
                 "Please install it using: pip install 'deepfabric[training]'"
             ) from None
+        else:
+            return peft
 
     def __init__(self, config: InferenceConfig):
         """Initialize Transformers backend.
