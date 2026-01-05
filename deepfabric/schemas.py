@@ -4,11 +4,12 @@ import logging
 import re
 import secrets
 import string
+import warnings
 
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -811,6 +812,20 @@ class ToolContext(BaseModel):
         default=None,
         description="Deprecated: Use top-level 'tools' field instead. Kept for backward compatibility.",
     )
+
+    @model_validator(mode="after")
+    def warn_on_deprecated_available_tools(self) -> "ToolContext":
+        """Warn if the deprecated `available_tools` field is used."""
+        if self.available_tools is not None:
+            warnings.warn(
+                (
+                    "'tool_context.available_tools' is deprecated and will be removed in a future version. "
+                    "Use the top-level 'tools' field in Conversation instead."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return self
 
     class Config:
         extra = "forbid"
