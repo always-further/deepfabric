@@ -2,9 +2,8 @@ import json
 import logging
 import sys
 
+from functools import cached_property
 from typing import Any
-
-import torch
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
@@ -29,6 +28,44 @@ logger = logging.getLogger(__name__)
 class TransformersBackend(InferenceBackend):
     """Inference backend using HuggingFace Transformers."""
 
+    @cached_property
+    def _torch(self) -> Any:
+        """Dynamically import 'torch' and verify its availability.
+
+        Returns:
+            The imported torch module.
+
+        Raises:
+            ImportError: If 'torch' is not installed in the environment.
+        """
+        try:
+            import torch
+            return torch
+        except ImportError:
+            raise ImportError(
+                "The 'torch' library is required for training features. "
+                "Please install it using: pip install 'deepfabric[training]'"
+            ) from None
+
+    @cached_property
+    def _peft(self) -> Any:
+        """Dynamically import 'peft' and verify its availability.
+
+        Returns:
+            The imported peft module.
+
+        Raises:
+            ImportError: If 'peft' is not installed in the environment.
+        """
+        try:
+            import peft
+            return peft
+        except ImportError:
+            raise ImportError(
+                "The 'peft' library is required for training features. "
+                "Please install it using: pip install 'deepfabric[training]'"
+            ) from None
+
     def __init__(self, config: InferenceConfig):
         """Initialize Transformers backend.
 
@@ -36,6 +73,12 @@ class TransformersBackend(InferenceBackend):
             config: Inference configuration
         """
         super().__init__(config)
+
+        # Get 'torch' from optional dependency
+        torch = self._torch
+
+        # Get 'peft' from optional dependency
+        peft = self._peft
 
         # Check if model is pre-loaded (not a string path)
         is_preloaded = not isinstance(config.model, str)
@@ -138,9 +181,7 @@ class TransformersBackend(InferenceBackend):
                         load_in_4bit=config.load_in_4bit,
                     )
                     # Load LoRA adapter using PEFT
-                    from peft import PeftModel  # noqa: PLC0415
-
-                    self.model = PeftModel.from_pretrained(self.model, config.adapter_path)
+                    self.model = peft.PeftModel.from_pretrained(self.model, config.adapter_path)
                 else:
                     # Load merged model or base model directly
                     self.model, self.tokenizer = FastLanguageModel.from_pretrained(
@@ -172,9 +213,7 @@ class TransformersBackend(InferenceBackend):
 
             # Load PEFT adapter if provided
             if config.adapter_path:
-                from peft import PeftModel  # noqa: PLC0415
-
-                self.model = PeftModel.from_pretrained(self.model, config.adapter_path)
+                self.model = peft.PeftModel.from_pretrained(self.model, config.adapter_path)
 
             # Move to device if not using device_map
             if self.device in ("cpu", "mps"):
@@ -205,6 +244,9 @@ class TransformersBackend(InferenceBackend):
         Returns:
             ModelResponse with generated content and parsed tool calls
         """
+        # Get 'torch' from optional dependency
+        torch = self._torch
+
         # Format messages using chat template
         prompt = self._format_prompt(messages, tools)
 
@@ -261,6 +303,9 @@ class TransformersBackend(InferenceBackend):
         Returns:
             List of ModelResponse objects
         """
+        # Get 'torch' from optional dependency
+        torch = self._torch
+
         # Format all prompts
         prompts = [self._format_prompt(msgs, tools) for msgs in batch_messages]
 
@@ -312,6 +357,9 @@ class TransformersBackend(InferenceBackend):
 
     def cleanup(self) -> None:
         """Clean up GPU memory."""
+        # Get 'torch' from optional dependency
+        torch = self._torch
+
         if hasattr(self, "model"):
             del self.model
         if hasattr(self, "tokenizer"):
