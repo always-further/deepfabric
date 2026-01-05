@@ -61,12 +61,6 @@ class TransformersBackend(InferenceBackend):
         """
         super().__init__(config)
 
-        # Get 'torch' from optional dependency
-        torch = self._torch
-
-        # Get 'peft' from optional dependency
-        peft = self._peft
-
         # Check if model is pre-loaded (not a string path)
         is_preloaded = not isinstance(config.model, str)
 
@@ -77,22 +71,22 @@ class TransformersBackend(InferenceBackend):
             # Get device from pre-loaded model
             self.device = str(next(config.model.parameters()).device)
         # Auto-detect best available device
-        elif torch.cuda.is_available():
+        elif self._torch.cuda.is_available():
             self.device = "cuda"
-        elif torch.backends.mps.is_available():
+        elif self._torch.backends.mps.is_available():
             self.device = "mps"
         else:
             self.device = "cpu"
 
         # Determine dtype based on device
         if self.device == "cuda" or self.device.startswith("cuda:"):
-            dtype = torch.float16
+            dtype = self._torch.float16
             device_map = "auto"
         elif self.device == "mps":
-            dtype = torch.float32  # MPS works best with float32
+            dtype = self._torch.float32  # MPS works best with float32
             device_map = None
         else:
-            dtype = torch.float32
+            dtype = self._torch.float32
             device_map = None
 
         # Handle pre-loaded model case - skip all loading logic
@@ -168,7 +162,7 @@ class TransformersBackend(InferenceBackend):
                         load_in_4bit=config.load_in_4bit,
                     )
                     # Load LoRA adapter using PEFT
-                    self.model = peft.PeftModel.from_pretrained(self.model, config.adapter_path)
+                    self.model = self._peft.PeftModel.from_pretrained(self.model, config.adapter_path)
                 else:
                     # Load merged model or base model directly
                     self.model, self.tokenizer = FastLanguageModel.from_pretrained(
@@ -200,7 +194,7 @@ class TransformersBackend(InferenceBackend):
 
             # Load PEFT adapter if provided
             if config.adapter_path:
-                self.model = peft.PeftModel.from_pretrained(self.model, config.adapter_path)
+                self.model = self._peft.PeftModel.from_pretrained(self.model, config.adapter_path)
 
             # Move to device if not using device_map
             if self.device in ("cpu", "mps"):
@@ -231,9 +225,6 @@ class TransformersBackend(InferenceBackend):
         Returns:
             ModelResponse with generated content and parsed tool calls
         """
-        # Get 'torch' from optional dependency
-        torch = self._torch
-
         # Format messages using chat template
         prompt = self._format_prompt(messages, tools)
 
@@ -246,7 +237,7 @@ class TransformersBackend(InferenceBackend):
         ).to(self.model.device)
 
         # Generate with optimizations
-        with torch.no_grad():
+        with self._torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=self.config.max_tokens,
@@ -290,9 +281,6 @@ class TransformersBackend(InferenceBackend):
         Returns:
             List of ModelResponse objects
         """
-        # Get 'torch' from optional dependency
-        torch = self._torch
-
         # Format all prompts
         prompts = [self._format_prompt(msgs, tools) for msgs in batch_messages]
 
@@ -305,7 +293,7 @@ class TransformersBackend(InferenceBackend):
         ).to(self.model.device)
 
         # Generate batch with optimizations
-        with torch.no_grad():
+        with self._torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=self.config.max_tokens,
@@ -344,15 +332,12 @@ class TransformersBackend(InferenceBackend):
 
     def cleanup(self) -> None:
         """Clean up GPU memory."""
-        # Get 'torch' from optional dependency
-        torch = self._torch
-
         if hasattr(self, "model"):
             del self.model
         if hasattr(self, "tokenizer"):
             del self.tokenizer
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        if self._torch.cuda.is_available():
+            self._torch.cuda.empty_cache()
 
     def _format_prompt(
         self,
