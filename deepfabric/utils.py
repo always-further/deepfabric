@@ -182,11 +182,11 @@ def import_optional_dependency(
         Any: The imported module.
 
     Raises:
-        ImportError: If the module is not installed.
+        ModuleNotFoundError: If the module is not installed.
     """
     try:
         return importlib.import_module(module_name)
-    except ImportError:
+    except ModuleNotFoundError:
         if extra:
             msg = (
                 f"The '{module_name}' library is required for the '{extra}' features. "
@@ -194,4 +194,4 @@ def import_optional_dependency(
             )
         else:
             msg = f"The '{module_name}' library is required but is not installed."
-        raise ImportError(msg) from None
+        raise ModuleNotFoundError(msg) from None

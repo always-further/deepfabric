@@ -37,7 +37,7 @@ class TransformersBackend(InferenceBackend):
             The imported torch module.
 
         Raises:
-            ImportError: If 'torch' is not installed in the environment.
+            ModuleNotFoundError: If 'torch' is not installed in the environment.
         """
         return import_optional_dependency("torch", "training")
 
@@ -49,7 +49,7 @@ class TransformersBackend(InferenceBackend):
             The imported peft module.
 
         Raises:
-            ImportError: If 'peft' is not installed in the environment.
+            ModuleNotFoundError: If 'peft' is not installed in the environment.
         """
         return import_optional_dependency("peft", "training")
 
