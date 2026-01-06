@@ -486,7 +486,6 @@ name = "deepfabric"
 version = "4.8.1"
 source = { editable = "." }
 dependencies = [
-    { name = "accelerate" },
     { name = "anthropic" },
     { name = "click" },
     { name = "componentize-py" },
@@ -500,7 +499,6 @@ dependencies = [
     { name = "openai" },
     { name = "outlines" },
     { name = "packaging" },
-    { name = "peft" },
     { name = "posthog" },
     { name = "protobuf" },
     { name = "pydantic" },
@@ -508,9 +506,7 @@ dependencies = [
     { name = "rich" },
     { name = "sentencepiece" },
     { name = "spin-sdk" },
-    { name = "torch" },
     { name = "transformers" },
-    { name = "trl" },
 ]
 
 [package.optional-dependencies]
@@ -528,10 +524,16 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
+training = [
+    { name = "accelerate" },
+    { name = "peft" },
+    { name = "torch" },
+    { name = "trl" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", specifier = ">=0.20.0" },
+    { name = "accelerate", marker = "extra == 'training'", specifier = ">=0.20.0" },
     { name = "anthropic", specifier = ">=0.75.0" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.10" },
     { name = "click", specifier = ">=8.1.7" },
@@ -549,7 +551,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.107.2" },
     { name = "outlines", specifier = "==1.2.9" },
     { name = "packaging", specifier = ">=25.0" },
-    { name = "peft", specifier = ">=0.7.0" },
+    { name = "peft", marker = "extra == 'training'", specifier = ">=0.7.0" },
     { name = "posthog", specifier = ">=3.0.0" },
     { name = "protobuf", specifier = ">=3.20.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
@@ -563,11 +565,11 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "sentencepiece", specifier = ">=0.1.99" },
     { name = "spin-sdk", specifier = ">=3.4.1" },
-    { name = "torch", specifier = ">=2.4.0" },
+    { name = "torch", marker = "extra == 'training'", specifier = ">=2.4.0" },
     { name = "transformers", specifier = ">=4.57.1" },
-    { name = "trl", specifier = ">=0.26.2" },
+    { name = "trl", marker = "extra == 'training'", specifier = ">=0.26.2" },
 ]
-provides-extras = ["dev", "docs"]
+provides-extras = ["dev", "docs", "training"]
 
 [[package]]
 name = "dill"
