@@ -6,7 +6,7 @@ authors = [{name = "DeepFabric Team", email = "oss@alwaysfurther.ai"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "huggingface-hub==0.36.0",
+    "huggingface-hub==1.2.4",
     "datasets>=3.0,<5.0",
     "kagglehub>=0.3.0",
     "outlines==1.2.9",
