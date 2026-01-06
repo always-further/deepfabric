@@ -7,6 +7,7 @@ This module tests:
 - Schema mixins and composition
 - Mathematical validation
 - DeepFabric Format tool call schemas
+- MCP tool definition conversion
 """
 
 import pytest
@@ -16,8 +17,10 @@ from deepfabric.schemas import (
     TOOL_CALL_ID_PATTERN,
     ChatMessage,
     Conversation,
+    MCPToolDefinition,
     ToolCall,
     ToolCallFunction,
+    ToolDefinition,
     ToolExecution,
     generate_tool_call_id,
     get_conversation_schema,
@@ -439,3 +442,168 @@ class TestToolCallFormat:
         for msg_data in data["messages"]:
             assert "tool_calls" not in msg_data
             assert "tool_call_id" not in msg_data
+
+
+class TestMCPToolConversion:
+    """Test conversion from MCP tool definitions to DeepFabric tool definitions."""
+
+    def test_mcp_tool_with_single_type(self):
+        """Test MCP tool with standard single-type properties."""
+        mcp_tool_dict = {
+            "name": "get_weather",
+            "description": "Get weather for a location",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string", "description": "City name"},
+                    "units": {"type": "string", "description": "Temperature units"},
+                },
+                "required": ["location"],
+            },
+        }
+
+        tool = ToolDefinition.from_mcp(mcp_tool_dict)
+
+        assert tool.name == "get_weather"
+        assert tool.description == "Get weather for a location"
+        assert len(tool.parameters) == 2  # noqa: PLR2004
+
+        # Check location parameter (required)
+        loc_param = next(p for p in tool.parameters if p.name == "location")
+        assert loc_param.type == "str"
+        assert loc_param.description == "City name"
+        assert loc_param.required is True
+
+        # Check units parameter (optional)
+        units_param = next(p for p in tool.parameters if p.name == "units")
+        assert units_param.type == "str"
+        assert units_param.description == "Temperature units"
+        assert units_param.required is False
+
+    def test_mcp_tool_with_nullable_types(self):
+        """Test MCP tool with nullable type arrays (DataForSEO case)."""
+        mcp_tool_dict = {
+            "name": "keywords_data_google_ads_search_volume",
+            "description": "Get search volume data",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "location_name": {
+                        "type": ["string", "null"],
+                        "description": "Location name (nullable)",
+                    },
+                    "language_code": {
+                        "type": ["string", "null"],
+                        "description": "Language code (nullable)",
+                    },
+                    "search_partners": {
+                        "type": ["boolean", "null"],
+                        "description": "Include search partners",
+                    },
+                    "date_from": {
+                        "type": ["string", "null"],
+                        "description": "Start date",
+                    },
+                },
+                "required": [],
+            },
+        }
+
+        tool = ToolDefinition.from_mcp(mcp_tool_dict)
+
+        assert tool.name == "keywords_data_google_ads_search_volume"
+        assert tool.description == "Get search volume data"
+        assert len(tool.parameters) == 4  # noqa: PLR2004
+
+        # All parameters should be optional (not in required list)
+        for param in tool.parameters:
+            assert param.required is False
+
+        # Check that nullable types are correctly parsed to primary types
+        location_param = next(p for p in tool.parameters if p.name == "location_name")
+        assert location_param.type == "str"  # Extracted from ["string", "null"]
+
+        language_param = next(p for p in tool.parameters if p.name == "language_code")
+        assert language_param.type == "str"
+
+        search_partners_param = next(p for p in tool.parameters if p.name == "search_partners")
+        assert search_partners_param.type == "bool"  # Extracted from ["boolean", "null"]
+
+    def test_mcp_tool_with_various_types(self):
+        """Test MCP tool with various JSON Schema types."""
+        mcp_tool_dict = {
+            "name": "complex_tool",
+            "description": "A tool with various types",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Name"},
+                    "age": {"type": "integer", "description": "Age"},
+                    "score": {"type": "number", "description": "Score"},
+                    "active": {"type": "boolean", "description": "Is active"},
+                    "tags": {"type": "array", "description": "Tags list"},
+                    "metadata": {"type": "object", "description": "Metadata object"},
+                },
+                "required": ["name", "age"],
+            },
+        }
+
+        tool = ToolDefinition.from_mcp(mcp_tool_dict)
+
+        assert len(tool.parameters) == 6  # noqa: PLR2004
+
+        # Check type mappings
+        name_param = next(p for p in tool.parameters if p.name == "name")
+        assert name_param.type == "str"
+        assert name_param.required is True
+
+        age_param = next(p for p in tool.parameters if p.name == "age")
+        assert age_param.type == "int"
+        assert age_param.required is True
+
+        score_param = next(p for p in tool.parameters if p.name == "score")
+        assert score_param.type == "float"
+        assert score_param.required is False
+
+        active_param = next(p for p in tool.parameters if p.name == "active")
+        assert active_param.type == "bool"
+
+        tags_param = next(p for p in tool.parameters if p.name == "tags")
+        assert tags_param.type == "list"
+
+        metadata_param = next(p for p in tool.parameters if p.name == "metadata")
+        assert metadata_param.type == "dict"
+
+    def test_mcp_tool_with_mcp_definition_instance(self):
+        """Test from_mcp with MCPToolDefinition instance instead of dict."""
+        mcp_tool = MCPToolDefinition(
+            name="test_tool",
+            description="Test",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "param1": {"type": ["string", "null"], "description": "Nullable param"}
+                },
+                "required": [],
+            },
+        )
+
+        tool = ToolDefinition.from_mcp(mcp_tool)
+
+        assert tool.name == "test_tool"
+        assert len(tool.parameters) == 1
+        assert tool.parameters[0].type == "str"
+        assert tool.parameters[0].required is False
+
+    def test_mcp_tool_without_input_schema(self):
+        """Test MCP tool with no input schema (parameterless tool)."""
+        mcp_tool_dict = {
+            "name": "no_params_tool",
+            "description": "A tool with no parameters",
+        }
+
+        tool = ToolDefinition.from_mcp(mcp_tool_dict)
+
+        assert tool.name == "no_params_tool"
+        assert tool.description == "A tool with no parameters"
+        assert len(tool.parameters) == 0

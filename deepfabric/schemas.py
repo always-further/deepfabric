@@ -136,7 +136,7 @@ class MCPInputSchemaProperty(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    type: str = Field(default="string", description="JSON Schema type")
+    type: str | list[str] = Field(default="string", description="JSON Schema type (string or array for nullable)")
     description: str = Field(default="", description="Property description")
     default: Any | None = Field(default=None, description="Default value")
 
@@ -159,7 +159,7 @@ class MCPToolDefinition(BaseModel):
     See: https://modelcontextprotocol.io/specification/2025-06-18/schema#tool
     """
 
-    model_config = {"extra": "allow"}
+    model_config = {"extra": "allow", "populate_by_name": True}
 
     name: str = Field(description="Tool name")
     description: str = Field(default="", description="Tool description")
@@ -367,7 +367,15 @@ class ToolDefinition(BaseModel):
         required_params = set(input_schema.required)
 
         for param_name, param_props in input_schema.properties.items():
-            df_type = type_mapping.get(param_props.type, "str")
+            # Handle type as either string or array (for nullable types like ["string", "null"])
+            param_type = param_props.type
+            if isinstance(param_type, list):
+                # Extract the primary type (non-null type from array)
+                primary_type = next((t for t in param_type if t != "null"), "string")
+            else:
+                primary_type = param_type
+
+            df_type = type_mapping.get(primary_type, "str")
             default_str = str(param_props.default) if param_props.default is not None else ""
 
             parameters.append(
