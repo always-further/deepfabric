@@ -19,8 +19,8 @@ except (ImportError, importlib.metadata.PackageNotFoundError):
 
 # Initialize PostHog client
 posthog = Posthog(
-    project_api_key="phc_Kn8hKQIXHm5OHp5OTxvMvFDUmT7HyOUNlJvWkduB9qO",
-    host="https://us.i.posthog.com",
+    project_api_key="phc_JZWiTzIDNnBp6Jj6uUb0JQKuIp3dv0gkay9aU50n38h",
+    host="https://eu.i.posthog.com",
 )
 
 logger = logging.getLogger(__name__)
