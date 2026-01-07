@@ -23,8 +23,8 @@
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to change)
 - [ ] Documentation (no code change)
-- [ ] Refactor (refactoring production code)
-- [ ] Other <!--- (provide information) -->
+- [ ] Refactor (code restructuring with no functional changes)
+- [ ] Other (please describe)
 
 ## Checklist:
 
