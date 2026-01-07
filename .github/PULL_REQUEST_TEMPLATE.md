@@ -6,6 +6,7 @@
 
 <!--- Why is this change required? What problem does it solve? -->
 <!--- If it fixes an open issue, please link to the issue here. -->
+<!--- You can use keywords like "Closes #123" or "Fixes #123" to automatically close the issue on merge. -->
 
 ## How Has This Been Tested?
 
