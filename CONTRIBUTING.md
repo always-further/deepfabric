@@ -134,7 +134,7 @@ ruff check . --exclude notebooks/
 
 ```sh
 uv run ruff format deepfabric/ tests/
-uv run check . --exclude notebooks/
+uv run ruff check . --exclude notebooks/
 ```
 </details>
 
@@ -154,3 +154,103 @@ Example:
 ```sh
 git commit -m "feat: add dataset validation pipeline"
 ```
+
+## Documentation
+
+### 1. Install documentation dependencies
+
+DeepFabric uses [MkDocs](https://www.mkdocs.org/) with the [Material theme](https://squidfunk.github.io/mkdocs-material/) for documentation.
+
+<details>
+<summary>Option A: Standard Python (`venv` + `pip`)</summary>
+
+```sh
+# Make sure your virtual environment is activated.
+pip install -U pip
+pip install -e '.[docs]'
+```
+</details>
+
+<details>
+<summary>Option B: Using `uv` (recommended)</summary>
+
+```sh
+uv sync --extra docs
+```
+</details>
+
+This installs:
+- MkDocs and the Material theme (`mkdocs-material`)
+- Python API documentation support via `mkdocstrings[python]`
+
+### 2. Writing documentation
+
+- User-facing documentation lives in the [docs](./docs) directory.
+- API documentation is generated from [Python docstrings](https://peps.python.org/pep-0257/) via `mkdocstrings`.
+- Please follow the existing style and structure when adding new pages.
+
+### 3. Docstring conventions
+
+DeepFabric enforces [Google-style docstrings](https://google.github.io/styleguide/pyguide.html), consistent with the `ruff` configuration:
+
+```toml
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+```
+
+Example:
+
+```python
+def load_dataset(path: str) -> Dataset:
+    """Load a dataset from disk.
+
+    Args:
+        path: Path to the dataset directory.
+
+    Returns:
+        The loaded dataset.
+    """
+    ...
+```
+
+### 4. Serve the documentation locally
+
+Ensure you can preview the documentation site locally before submitting changes.
+
+<details>
+<summary>Option A: Standard Python (`venv` + `pip`)</summary>
+
+```sh
+# Make sure your virtual environment is activated.
+mkdocs serve
+```
+</details>
+
+<details>
+<summary>Option B: Using `uv` (recommended)</summary>
+
+```sh
+uv run mkdocs serve
+```
+</details>
+
+### 5. Build the documentation
+
+Ensure you generate the static documentation site before publishing or submitting changes.
+
+<details>
+<summary>Option A: Standard Python (`venv` + `pip`)</summary>
+
+```sh
+# Make sure your virtual environment is activated.
+mkdocs build
+```
+</details>
+
+<details>
+<summary>Option B: Using `uv` (recommended)</summary>
+
+```sh
+uv run mkdocs build
+```
+</details>
