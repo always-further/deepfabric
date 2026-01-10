@@ -19,7 +19,7 @@ Note that we have a [Code of Conduct](./CODE_OF_CONDUCT.md), please follow it in
 Fork this repository and create your branch from `main`.
 
 ```sh
-git clone https://github.com/always-further/deepfabric
+git clone https://github.com/<YOUR-USERNAME>/deepfabric
 cd deepfabric
 ```
 
@@ -92,7 +92,7 @@ uv run pytest tests/unit/
 #### Integration tests (optional, but recommended)
 
 Integration tests cover interactions with external systems (e.g. LLM providers). They may require additional environment variables or credentials.
-Please refer to the [Makefile](./Makefile) for available integration test targets
+Please refer to the [Makefile](./Makefile) for available integration test targets.
 
 #### Security checks (optional)
 
@@ -191,7 +191,7 @@ This installs:
 
 ### 3. Docstring conventions
 
-DeepFabric enforces [Google-style docstrings](https://google.github.io/styleguide/pyguide.html), consistent with the `ruff` configuration:
+DeepFabric enforces [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings), consistent with the `ruff` configuration:
 
 ```toml
 [tool.ruff.lint.pydocstyle]
