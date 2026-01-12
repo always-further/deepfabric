@@ -5,7 +5,7 @@ import textwrap
 import uuid
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -74,7 +74,7 @@ class GraphConfig(BaseModel):
         default=None,
         description="Base URL for API endpoint (e.g., custom OpenAI-compatible servers)",
     )
-    prompt_style: str = Field(
+    prompt_style: Literal["default", "isolated", "anchored"] = Field(
         default="default",
         description="Prompt style: 'default' (cross-connections, generic), 'isolated' (no connections, generic), 'anchored' (no connections, domain-aware)",
     )
@@ -508,6 +508,8 @@ class Graph(TopicModel):
         current = node
         while current is not None:
             path.append(current.topic)
+            # First parent is the primary parent from tree expansion;
+            # cross-connections are added later and appear after index 0
             current = current.parents[0] if current.parents else None
         return list(reversed(path))
 

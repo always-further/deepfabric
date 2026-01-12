@@ -280,6 +280,19 @@ IMPORTANT: Do NOT create cross-connections between topics. Each subtopic should 
 class GraphPromptBuilder:
     """Build domain-aware prompts for graph topic expansion with anchoring examples."""
 
+    MAX_PROMPT_EXAMPLES = 3
+
+    SECURITY_KEYWORDS = frozenset({
+        "security",
+        "attack",
+        "credential",
+        "exfiltration",
+        "injection",
+        "malicious",
+        "adversarial",
+        "threat",
+    })
+
     # Domain-specific expansion examples - formatted to match GraphSubtopics schema
     EXAMPLES = {
         "security": [
@@ -365,7 +378,7 @@ Return focused subtopics that stay on-topic with the path above."""
     def _format_examples(cls, examples: list) -> str:
         """Format examples for inclusion in prompt."""
         formatted = []
-        for ex in examples[:3]:  # Limit to 3 examples
+        for ex in examples[: cls.MAX_PROMPT_EXAMPLES]:
             path_str = " -> ".join(f'"{topic}"' for topic in ex["path"])
             subtopics_str = str(ex["subtopics"])
             formatted.append(f"Path: {path_str}\nSubtopics: {subtopics_str}")
@@ -380,19 +393,7 @@ Return focused subtopics that stay on-topic with the path above."""
         """
         combined_text = f"{system_prompt} {' '.join(topic_path)}".lower()
 
-        if any(
-            word in combined_text
-            for word in [
-                "security",
-                "attack",
-                "credential",
-                "exfiltration",
-                "injection",
-                "malicious",
-                "adversarial",
-                "threat",
-            ]
-        ):
+        if any(word in combined_text for word in cls.SECURITY_KEYWORDS):
             return "security"
         return "technical"
 
