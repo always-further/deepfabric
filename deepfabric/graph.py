@@ -19,7 +19,11 @@ from .constants import (
 from .llm import LLMClient
 from .llm.rate_limit_detector import RateLimitDetector
 from .metrics import trace
-from .prompts import GRAPH_EXPANSION_PROMPT
+from .prompts import (
+    GRAPH_EXPANSION_PROMPT,
+    GRAPH_EXPANSION_PROMPT_NO_CONNECTIONS,
+    GraphPromptBuilder,
+)
 from .schemas import GraphSubtopics
 from .stream_simulator import simulate_stream
 from .topic_model import TopicModel
@@ -69,6 +73,10 @@ class GraphConfig(BaseModel):
     base_url: str | None = Field(
         default=None,
         description="Base URL for API endpoint (e.g., custom OpenAI-compatible servers)",
+    )
+    prompt_style: str = Field(
+        default="default",
+        description="Prompt style: 'default' (cross-connections, generic), 'isolated' (no connections, generic), 'anchored' (no connections, domain-aware)",
     )
 
 
@@ -148,6 +156,7 @@ class Graph(TopicModel):
         self.degree = self.config.degree
         self.depth = self.config.depth
         self.max_concurrent = self.config.max_concurrent
+        self.prompt_style = self.config.prompt_style
 
         # Initialize LLM client
         llm_kwargs = {}
@@ -493,6 +502,15 @@ class Graph(TopicModel):
         )
         return None
 
+    def _get_path_to_node(self, node: Node) -> list[str]:
+        """Get the topic path from root to the given node."""
+        path = []
+        current = node
+        while current is not None:
+            path.append(current.topic)
+            current = current.parents[0] if current.parents else None
+        return list(reversed(path))
+
     async def get_subtopics_and_connections(
         self, parent_node: Node, num_subtopics: int
     ) -> tuple[int, int]:
@@ -505,15 +523,35 @@ class Graph(TopicModel):
         Returns:
             A tuple of (subtopics_added, connections_added).
         """
-        graph_summary = (
-            self.to_json()
-            if len(self.nodes) <= TOPIC_GRAPH_SUMMARY
-            else "Graph too large to display"
-        )
-
-        graph_prompt = GRAPH_EXPANSION_PROMPT.replace("{{current_graph_summary}}", graph_summary)
-        graph_prompt = graph_prompt.replace("{{current_topic}}", parent_node.topic)
-        graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
+        # Choose prompt based on prompt_style setting
+        if self.prompt_style == "anchored":
+            # Domain-aware prompts with examples for focused generation
+            topic_path = self._get_path_to_node(parent_node)
+            domain = GraphPromptBuilder.detect_domain(self.model_system_prompt, topic_path)
+            graph_prompt = GraphPromptBuilder.build_anchored_prompt(
+                topic_path=topic_path,
+                num_subtopics=num_subtopics,
+                system_prompt=self.model_system_prompt,
+                domain=domain,
+            )
+        elif self.prompt_style == "isolated":
+            # No connections, generic prompt
+            graph_prompt = GRAPH_EXPANSION_PROMPT_NO_CONNECTIONS.replace(
+                "{{current_topic}}", parent_node.topic
+            )
+            graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
+        else:
+            # default: cross-connections enabled, generic prompt
+            graph_summary = (
+                self.to_json()
+                if len(self.nodes) <= TOPIC_GRAPH_SUMMARY
+                else "Graph too large to display"
+            )
+            graph_prompt = GRAPH_EXPANSION_PROMPT.replace(
+                "{{current_graph_summary}}", graph_summary
+            )
+            graph_prompt = graph_prompt.replace("{{current_topic}}", parent_node.topic)
+            graph_prompt = graph_prompt.replace("{{num_subtopics}}", str(num_subtopics))
 
         response = await self._generate_subtopics_with_retry(graph_prompt, parent_node)
         if response is None:

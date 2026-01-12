@@ -1,6 +1,6 @@
 [project]
 name = "DeepFabric"
-version = "4.8.2"
+version = "4.8.3"
 description = "Curate High Quality Datasets, Train, Evaluate and Ship"
 authors = [{name = "DeepFabric Team", email = "oss@alwaysfurther.ai"}]
 readme = "README.md"

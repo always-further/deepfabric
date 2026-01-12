@@ -264,6 +264,139 @@ Generate a list of {{num_subtopics}} subtopics. For each subtopic, provide:
 2. A "connections" list of IDs of existing topics it should connect to for creating cross-links (use empty list if no connections)
 """
 
+GRAPH_EXPANSION_PROMPT_NO_CONNECTIONS = """
+You are an expert in topic generation. Your task is to expand a topic into a set of focused subtopics.
+
+You are expanding the topic: "{{current_topic}}"
+
+Generate a list of {{num_subtopics}} subtopics. For each subtopic, provide:
+1. A "topic" string - the name of the new subtopic
+2. A "connections" list - ALWAYS use an empty list []
+
+IMPORTANT: Do NOT create cross-connections between topics. Each subtopic should be independent and directly related only to its parent topic. Always return connections as an empty list [].
+"""
+
+
+class GraphPromptBuilder:
+    """Build domain-aware prompts for graph topic expansion with anchoring examples."""
+
+    # Domain-specific expansion examples - formatted to match GraphSubtopics schema
+    EXAMPLES = {
+        "security": [
+            {
+                "path": ["Security Threats", "Credential Access"],
+                "subtopics": [
+                    {"topic": "reading .env files", "connections": []},
+                    {"topic": "extracting API keys", "connections": []},
+                    {"topic": "accessing SSH keys", "connections": []},
+                    {"topic": "dumping AWS credentials", "connections": []},
+                    {"topic": "stealing database passwords", "connections": []},
+                ],
+            },
+            {
+                "path": ["Security Threats", "Data Exfiltration"],
+                "subtopics": [
+                    {"topic": "sending to webhooks", "connections": []},
+                    {"topic": "encoding in base64", "connections": []},
+                    {"topic": "uploading to external URLs", "connections": []},
+                    {"topic": "email forwarding", "connections": []},
+                    {"topic": "DNS tunneling", "connections": []},
+                ],
+            },
+        ],
+        "technical": [
+            {
+                "path": ["Programming", "Python"],
+                "subtopics": [
+                    {"topic": "pandas", "connections": []},
+                    {"topic": "flask", "connections": []},
+                    {"topic": "pytest", "connections": []},
+                    {"topic": "asyncio", "connections": []},
+                    {"topic": "django", "connections": []},
+                ],
+            },
+            {
+                "path": ["Infrastructure", "Kubernetes"],
+                "subtopics": [
+                    {"topic": "pods", "connections": []},
+                    {"topic": "deployments", "connections": []},
+                    {"topic": "services", "connections": []},
+                    {"topic": "ingress", "connections": []},
+                    {"topic": "helm charts", "connections": []},
+                ],
+            },
+        ],
+    }
+
+    @classmethod
+    def build_anchored_prompt(
+        cls,
+        topic_path: list[str],
+        num_subtopics: int,
+        system_prompt: str = "",
+        domain: str = "technical",
+    ) -> str:
+        """Build a domain-anchored prompt for graph expansion.
+
+        Returns a prompt that produces focused, on-topic subtopics by providing
+        domain-specific examples and the full topic path context.
+        """
+        path_str = " -> ".join(f'"{topic}"' for topic in topic_path)
+        examples = cls._format_examples(cls.EXAMPLES.get(domain, cls.EXAMPLES["technical"]))
+
+        return f"""Generate {num_subtopics} subtopics for training data organization.
+
+Task: Create diverse but related subtopics that expand on the given topic path.
+
+Examples:
+{examples}
+
+Context: {system_prompt}
+
+Topic path: {path_str}
+
+Generate {num_subtopics} subtopics. For each subtopic, provide:
+1. A "topic" string - a specific, concrete subtopic directly related to the parent
+2. A "connections" list - ALWAYS use an empty list []
+
+Return focused subtopics that stay on-topic with the path above."""
+
+    @classmethod
+    def _format_examples(cls, examples: list) -> str:
+        """Format examples for inclusion in prompt."""
+        formatted = []
+        for ex in examples[:3]:  # Limit to 3 examples
+            path_str = " -> ".join(f'"{topic}"' for topic in ex["path"])
+            subtopics_str = str(ex["subtopics"])
+            formatted.append(f"Path: {path_str}\nSubtopics: {subtopics_str}")
+        return "\n\n".join(formatted)
+
+    @classmethod
+    def detect_domain(cls, system_prompt: str, topic_path: list[str]) -> str:
+        """Detect the appropriate domain for prompt examples based on context.
+
+        Returns 'security' or 'technical' based on keywords in the system prompt
+        and topic path. Defaults to 'technical' if no security keywords found.
+        """
+        combined_text = f"{system_prompt} {' '.join(topic_path)}".lower()
+
+        if any(
+            word in combined_text
+            for word in [
+                "security",
+                "attack",
+                "credential",
+                "exfiltration",
+                "injection",
+                "malicious",
+                "adversarial",
+                "threat",
+            ]
+        ):
+            return "security"
+        return "technical"
+
+
 # Chain of Thought prompts for reasoning-based dataset generation
 FREETEXT_COT_PROMPT = """Generate a reasoning problem that requires analytical thinking to solve.
 

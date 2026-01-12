@@ -14,10 +14,11 @@ llm:
 # Topic generation
 topics:
   prompt: "Python programming fundamentals"
-  mode: tree              # tree | graph
+  mode: graph             # tree | graph
+  prompt_style: anchored  # default | isolated | anchored (graph mode only)
   depth: 2
   degree: 3
-  save_as: "topics.jsonl"
+  save_as: "topics.json"
   llm:                    # Override shared LLM
     model: "gpt-4o-mini"
 
@@ -85,9 +86,33 @@ Controls topic tree/graph generation.
 | `depth` | int | 2 | Hierarchy depth (1-10) |
 | `degree` | int | 3 | Subtopics per node (1-50) |
 | `max_concurrent` | int | 4 | Max concurrent LLM calls (graph mode only, 1-20) |
+| `prompt_style` | string | "default" | Graph expansion prompt style (graph mode only, see below) |
 | `system_prompt` | string | "" | Custom instructions for topic LLM |
 | `save_as` | string | - | Path to save topics JSONL |
 | `llm` | object | - | Override shared LLM settings |
+
+#### topics.prompt_style (Graph Mode Only)
+
+Controls how subtopics are generated during graph expansion:
+
+| Style | Cross-connections | Examples | Use Case |
+|-------|-------------------|----------|----------|
+| `default` | Yes | Generic | General-purpose topic graphs with cross-links |
+| `isolated` | No | Generic | Independent subtopics without cross-connections |
+| `anchored` | No | Domain-aware | Focused generation with domain-specific examples |
+
+**`anchored`** is recommended for specialized domains (security, technical) where you want subtopics to stay tightly focused on the parent topic. It automatically detects the domain from your `system_prompt` and provides relevant examples to guide generation.
+
+```yaml title="Example: Security-focused topic generation"
+topics:
+  prompt: "Credential access attack scenarios"
+  mode: graph
+  prompt_style: anchored   # Uses security-domain examples
+  depth: 3
+  degree: 8
+  system_prompt: |
+    Generate adversarial security test cases for AI assistant hardening.
+```
 
 ### generation
 

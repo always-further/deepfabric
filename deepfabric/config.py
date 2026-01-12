@@ -109,6 +109,10 @@ class TopicsConfig(BaseModel):
         description="Maximum concurrent LLM calls during graph expansion (helps avoid rate limits)",
     )
     save_as: str | None = Field(default=None, description="Where to save the generated topics")
+    prompt_style: Literal["default", "isolated", "anchored"] = Field(
+        default="default",
+        description="For graph mode: 'default' enables cross-connections with generic prompts, 'isolated' disables connections with generic prompts, 'anchored' disables connections and uses domain-aware prompts with examples for focused topic generation",
+    )
 
     # Optional LLM overrides (inherits from top-level llm if not specified)
     llm: LLMConfig | None = Field(
@@ -603,6 +607,7 @@ See documentation for full examples.
             "depth": self.topics.depth,
             "degree": self.topics.degree,
             "max_concurrent": self.topics.max_concurrent,
+            "prompt_style": self.topics.prompt_style,
         }
 
         # Handle overrides

@@ -136,7 +136,9 @@ class MCPInputSchemaProperty(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    type: str | list[str] = Field(default="string", description="JSON Schema type (string or array for nullable)")
+    type: str | list[str] = Field(
+        default="string", description="JSON Schema type (string or array for nullable)"
+    )
     description: str = Field(default="", description="Property description")
     default: Any | None = Field(default=None, description="Default value")
 
