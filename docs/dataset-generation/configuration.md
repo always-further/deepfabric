@@ -107,7 +107,6 @@ Controls how subtopics are generated during graph expansion:
 topics:
   prompt: "Credential access attack scenarios"
   mode: graph
-  prompt_style: anchored
   prompt_style: anchored   # Uses security-domain examples
   depth: 3
   degree: 8
