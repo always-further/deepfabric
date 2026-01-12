@@ -23,6 +23,7 @@ topics:
       Has issues about PyTorch support and memory leaks.
 
   mode: graph
+  prompt_style: anchored
   system_prompt: |
     Generate specific, actionable topics for GitHub repository tasks.
     Focus on realistic developer workflows like:

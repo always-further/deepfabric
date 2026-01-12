@@ -12,6 +12,7 @@
 topics:
   prompt: "JavaScript programming fundamentals in react framework"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 3 
   degree: 3

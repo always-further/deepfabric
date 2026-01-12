@@ -27,6 +27,7 @@
 topics:
   prompt: "Tasks for a Figma design assistant that exports icons, downloads images, and helps developers implement visual assets from UI designs"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 3
   degree: 3

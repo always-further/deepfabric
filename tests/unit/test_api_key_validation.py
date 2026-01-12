@@ -292,6 +292,7 @@ output:
 topics:
   prompt: "Test"
   mode: graph
+  prompt_style: anchored
   depth: 2
   degree: 2
   llm:

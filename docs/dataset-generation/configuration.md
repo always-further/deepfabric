@@ -14,7 +14,8 @@ llm:
 # Topic generation
 topics:
   prompt: "Python programming fundamentals"
-  mode: graph             # tree | graph
+  mode: graph
+  prompt_style: anchored             # tree | graph
   prompt_style: anchored  # default | isolated | anchored (graph mode only)
   depth: 2
   degree: 3
@@ -107,6 +108,7 @@ Controls how subtopics are generated during graph expansion:
 topics:
   prompt: "Credential access attack scenarios"
   mode: graph
+  prompt_style: anchored
   prompt_style: anchored   # Uses security-domain examples
   depth: 3
   degree: 8

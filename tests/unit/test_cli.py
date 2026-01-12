@@ -625,6 +625,7 @@ def test_topic_only_flag_graph(mock_create_topic_generator, cli_runner):
 topics:
   prompt: "Test root prompt"
   mode: graph
+  prompt_style: anchored
   system_prompt: "Test topic system prompt"
   depth: 2
   degree: 3

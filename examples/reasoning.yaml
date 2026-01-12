@@ -12,6 +12,7 @@
 topics:
   prompt: "Quantum computing fundamentals"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 2
   degree: 2

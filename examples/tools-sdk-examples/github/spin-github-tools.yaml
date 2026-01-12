@@ -16,6 +16,7 @@
 topics:
   prompt: "GitHub repository analysis, code review, and issue management tasks"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 3
   degree: 3

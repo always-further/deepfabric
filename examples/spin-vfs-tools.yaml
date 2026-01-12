@@ -11,6 +11,7 @@
 topics:
   prompt: "File manipulation and code analysis tasks"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 3
   degree: 3

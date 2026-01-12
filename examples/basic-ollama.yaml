@@ -11,6 +11,7 @@
 topics:
   prompt: "Python programming fundamentals"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 3         # Graph depth
   degree: 3        # Number of subtopics per parent node

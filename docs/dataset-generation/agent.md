@@ -89,6 +89,7 @@ Multi-turn mode creates extended conversations with multiple tool interactions, 
 topics:
   prompt: "Platform engineering tasks requiring tool usage"
   mode: graph
+  prompt_style: anchored
   depth: 2
   degree: 3
 

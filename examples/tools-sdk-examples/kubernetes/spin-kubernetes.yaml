@@ -26,6 +26,7 @@
 topics:
   prompt: "Tasks for a Kubernetes cluster administrator including pod management, deployment troubleshooting, resource monitoring, Helm chart management, and cluster diagnostics"
   mode: graph
+  prompt_style: anchored
   system_prompt: ""
   depth: 5
   degree: 5

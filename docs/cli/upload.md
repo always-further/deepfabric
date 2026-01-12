@@ -125,6 +125,7 @@ You can specify upload settings in your YAML configuration file:
 topics:
   prompt: "Machine learning algorithms"
   mode: graph
+  prompt_style: anchored
 
 generation:
   system_prompt: "You are a helpful assistant..."
