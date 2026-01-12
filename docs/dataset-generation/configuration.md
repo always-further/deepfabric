@@ -14,8 +14,7 @@ llm:
 # Topic generation
 topics:
   prompt: "Python programming fundamentals"
-  mode: graph
-  prompt_style: anchored             # tree | graph
+  mode: graph             # tree | graph
   prompt_style: anchored  # default | isolated | anchored (graph mode only)
   depth: 2
   degree: 3
