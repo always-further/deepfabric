@@ -52,11 +52,13 @@ body:
     id: software-info
     attributes:
       label: Software information
-      description: Please provide the following information about your environment.
+      description: |
+        Please provide the following information about your environment.
+        Run `deepfabric --version` to get the DeepFabric version.
       value: |
         - Operating system:
         - Python version:
-        - Project version:
+        - DeepFabric version:
     validations:
       required: true
   - type: textarea
