@@ -139,7 +139,14 @@ def test_push_to_hub_file_not_found(uploader):
 @patch("deepfabric.hf_hub.login")
 def test_push_to_hub_repository_not_found(mock_login, uploader):
     """Test push to hub with non-existent repository."""
-    mock_login.side_effect = RepositoryNotFoundError("Repository not found")
+    # Create a mock response object with all required attributes
+    mock_response = Mock(spec=Response)
+    mock_response.headers = {"x-request-id": "test-id"}
+    mock_response.request = Mock(spec=Request)
+    mock_response.status_code = 404
+    mock_response.text = "Repository not found"
+
+    mock_login.side_effect = RepositoryNotFoundError("Repository not found", response=mock_response)
 
     result = uploader.push_to_hub("nonexistent/repo", "test.jsonl")
     assert result["status"] == "error"

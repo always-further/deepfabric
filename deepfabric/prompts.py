@@ -282,16 +282,18 @@ class GraphPromptBuilder:
 
     MAX_PROMPT_EXAMPLES = 3
 
-    SECURITY_KEYWORDS = frozenset({
-        "security",
-        "attack",
-        "credential",
-        "exfiltration",
-        "injection",
-        "malicious",
-        "adversarial",
-        "threat",
-    })
+    SECURITY_KEYWORDS = frozenset(
+        {
+            "security",
+            "attack",
+            "credential",
+            "exfiltration",
+            "injection",
+            "malicious",
+            "adversarial",
+            "threat",
+        }
+    )
 
     # Domain-specific expansion examples - formatted to match GraphSubtopics schema
     EXAMPLES = {
