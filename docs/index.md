@@ -57,6 +57,10 @@ hide:
 
 ## Quick Start
 
+For basic dataset generation, install DeepFabric with the default dependencies.
+
+If you plan to use the training or evaluation utilities described in the [Training](training/) or [Evaluation](evaluation/) sections, install the `training` extra instead.
+
 === "pip"
 
     ```bash

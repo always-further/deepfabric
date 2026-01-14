@@ -2,6 +2,22 @@
 
 DeepFabric datasets integrate directly with popular training frameworks. This section covers loading datasets, preparing them for efficient training, formatting with chat templates, and integrating with TRL and Unsloth.
 
+## Prerequisites
+
+The examples in this section require DeepFabric to be installed with the `training` extra, which includes optional dependencies such as PyTorch and TRL.
+
+=== "pip"
+
+    ```bash
+    pip install "deepfabric[training]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "deepfabric[training]"
+    ```
+
 ## Workflow
 
 ```mermaid
