@@ -2,6 +2,23 @@
 
 DeepFabric includes an evaluation system for testing fine-tuned models on tool-calling tasks.
 
+## Prerequisites
+
+The examples in this section require DeepFabric to be installed with the `training` extra, which includes optional dependencies such as PyTorch and PEFT.
+
+=== "pip"
+
+    ```bash
+    pip install "deepfabric[training]"
+    ```
+
+=== "uv"
+
+    ```bash
+    uv add "deepfabric[training]"
+    ```
+
+
 ## Workflow
 
 ```mermaid
