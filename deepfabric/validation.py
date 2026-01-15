@@ -30,7 +30,7 @@ def validate_path_requirements(
     mode: str,
     depth: int,
     degree: int,
-    num_steps: int,
+    num_steps: int | str,
     batch_size: int,
     loading_existing: bool = False,
 ) -> None:
@@ -41,7 +41,7 @@ def validate_path_requirements(
         mode: Generation mode ('tree' or 'graph')
         depth: Depth of the tree/graph
         degree: Branching factor
-        num_steps: Number of generation steps
+        num_steps: Number of generation steps, or "auto"/percentage string
         batch_size: Batch size for generation
         loading_existing: Whether loading existing topic model from file
 
@@ -50,6 +50,10 @@ def validate_path_requirements(
     """
     if loading_existing:
         # Can't validate existing files without loading them
+        return
+
+    # Skip validation for dynamic values - resolved later with actual topic count
+    if isinstance(num_steps, str):
         return
 
     expected_paths = calculate_expected_paths(mode, depth, degree)
@@ -110,7 +114,7 @@ def show_validation_success(
     mode: str,
     depth: int,
     degree: int,
-    num_steps: int,
+    num_steps: int | str,
     batch_size: int,
     loading_existing: bool = False,
 ) -> None:
@@ -121,7 +125,7 @@ def show_validation_success(
         mode: Generation mode ('tree' or 'graph')
         depth: Depth of the tree/graph
         degree: Branching factor
-        num_steps: Number of generation steps
+        num_steps: Number of generation steps, or "auto"/percentage string
         batch_size: Batch size for generation
         loading_existing: Whether loading existing topic model from file
     """
@@ -129,9 +133,29 @@ def show_validation_success(
         return
 
     expected_paths = calculate_expected_paths(mode, depth, degree)
+    tui = get_tui()
+
+    # Handle dynamic num_samples (auto or percentage)
+    if isinstance(num_steps, str):
+        tui.success("Path Validation Passed")
+        tui.info(f"  Expected {mode} paths: ~{expected_paths} (depth={depth}, degree={degree})")
+        if num_steps == "auto":
+            tui.info(f"  Requested samples: auto (will use all ~{expected_paths} paths)")
+        else:
+            # Percentage string like "50%"
+            pct = float(num_steps[:-1])
+            estimated_samples = max(1, int(expected_paths * pct / 100))
+            tui.info(
+                f"  Requested samples: {num_steps} (~{estimated_samples} of {expected_paths} paths)"
+            )
+        if mode == "graph":
+            tui.info("  Note: Graph paths may vary due to cross-connections")
+        print()  # Extra space before topic generation
+        time.sleep(0.5)  # Brief pause to allow user to see the information
+        return
+
     total_samples = num_steps * batch_size
 
-    tui = get_tui()
     tui.success("Path Validation Passed")
     tui.info(f"  Expected {mode} paths: ~{expected_paths} (depth={depth}, degree={degree})")
     tui.info(f"  Requested samples: {total_samples} ({num_steps} steps x {batch_size} batch size)")

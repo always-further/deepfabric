@@ -30,6 +30,38 @@ OverrideValue = str | int | float | bool | None
 OverrideMap = dict[str, OverrideValue]
 
 
+def parse_num_samples(value: str | None) -> int | str | None:
+    """Parse num_samples CLI argument: integer, 'auto', or percentage like '50%'.
+
+    Args:
+        value: Raw string from CLI, or None if not provided
+
+    Returns:
+        Parsed value: int, "auto", percentage string like "50%", or None
+    """
+    if value is None:
+        return None
+    value = value.strip().lower()
+    if value == "auto":
+        return "auto"
+    if value.endswith("%"):
+        # Validate percentage format, but keep as string
+        try:
+            pct = float(value[:-1])
+        except ValueError as e:
+            raise ValueError(f"Invalid percentage format: {value}") from e
+        if not (0 < pct <= 100):  # noqa: PLR2004
+            raise ValueError("Percentage must be between 0 and 100")
+        return value
+    # Try to parse as integer
+    try:
+        return int(value)
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid num_samples value: {value}. Use integer, 'auto', or percentage like '50%'"
+        ) from e
+
+
 def handle_error(ctx: click.Context, error: Exception) -> NoReturn:
     """Handle errors in CLI commands."""
     _ = ctx  # Unused but required for click context
@@ -89,7 +121,7 @@ class GenerateOptions(BaseModel):
     temperature: float | None = None
     degree: int | None = None
     depth: int | None = None
-    num_samples: int | None = None
+    num_samples: int | str | None = None
     batch_size: int | None = None
     base_url: str | None = None
     include_system_message: bool | None = None
@@ -123,7 +155,7 @@ class GenerationPreparation(BaseModel):
     config: DeepFabricConfig
     topics_overrides: OverrideMap = Field(default_factory=dict)
     generation_overrides: OverrideMap = Field(default_factory=dict)
-    num_samples: int
+    num_samples: int | str  # Can be int, "auto", or percentage like "50%"
     batch_size: int
     depth: int
     degree: int
@@ -131,7 +163,8 @@ class GenerationPreparation(BaseModel):
 
     @model_validator(mode="after")
     def validate_positive_dimensions(self) -> "GenerationPreparation":
-        if self.num_samples <= 0:
+        # Skip num_samples validation for dynamic values (auto or percentage)
+        if isinstance(self.num_samples, int) and self.num_samples <= 0:
             raise ValueError("num_samples must be greater than zero")
         if self.batch_size <= 0:
             raise ValueError("batch_size must be greater than zero")
@@ -426,7 +459,11 @@ def _run_generation(
 @click.option("--temperature", type=float, help="Temperature setting")
 @click.option("--degree", type=int, help="Degree (branching factor)")
 @click.option("--depth", type=int, help="Depth setting")
-@click.option("--num-samples", type=int, help="Number of samples to generate")
+@click.option(
+    "--num-samples",
+    type=str,
+    help="Number of samples: integer, 'auto' (all topics), or percentage like '50%'",
+)
 @click.option("--batch-size", type=int, help="Batch size")
 @click.option("--base-url", help="Base URL for LLM provider API endpoint")
 @click.option(
@@ -493,7 +530,7 @@ def generate(  # noqa: PLR0913
     temperature: float | None = None,
     degree: int | None = None,
     depth: int | None = None,
-    num_samples: int | None = None,
+    num_samples: str | None = None,
     batch_size: int | None = None,
     base_url: str | None = None,
     include_system_message: bool | None = None,
@@ -533,6 +570,9 @@ def generate(  # noqa: PLR0913
     )
 
     try:
+        # Parse num_samples from CLI string (could be int, "auto", or "50%")
+        parsed_num_samples = parse_num_samples(num_samples)
+
         options = GenerateOptions(
             config_file=config_file,
             output_system_prompt=output_system_prompt,
@@ -547,7 +587,7 @@ def generate(  # noqa: PLR0913
             temperature=temperature,
             degree=degree,
             depth=depth,
-            num_samples=num_samples,
+            num_samples=parsed_num_samples,
             batch_size=batch_size,
             base_url=base_url,
             include_system_message=include_system_message,
@@ -560,7 +600,7 @@ def generate(  # noqa: PLR0913
             cloud_upload=cloud_upload,
             tui=tui,
         )
-    except PydanticValidationError as error:
+    except (PydanticValidationError, ValueError) as error:
         handle_error(click.get_current_context(), ConfigurationError(str(error)))
         return
 

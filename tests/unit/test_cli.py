@@ -156,6 +156,14 @@ def test_generate_command_basic(
         ["root", "child1"],
         ["root", "child2"],
     ]  # Add tree_paths attribute
+    # Add get_all_paths for dataset_manager.resolve_num_samples
+    mock_tree_instance.get_all_paths.return_value = [
+        ["root", "child1"],
+        ["root", "child2"],
+        ["root", "child3"],
+        ["root", "child4"],
+        ["root", "child5"],
+    ]
     mock_engine_instance = Mock()
     mock_dataset = Mock(spec=HFDataset)  # Make dataset a proper HFDataset mock
     mock_dataset.__len__ = Mock(return_value=5)
@@ -205,6 +213,14 @@ def test_generate_command_with_sys_msg_override(
         [{"event": "build_complete", "total_paths": 9, "failed_generations": 0}]
     )
     mock_tree_instance.tree_paths = [["root", "child1"], ["root", "child2"]]
+    # Add get_all_paths for dataset_manager.resolve_num_samples
+    mock_tree_instance.get_all_paths.return_value = [
+        ["root", "child1"],
+        ["root", "child2"],
+        ["root", "child3"],
+        ["root", "child4"],
+        ["root", "child5"],
+    ]
     mock_engine_instance = Mock()
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
@@ -254,6 +270,14 @@ def test_generate_command_default_sys_msg(
         [{"event": "build_complete", "total_paths": 9, "failed_generations": 0}]
     )
     mock_tree_instance.tree_paths = [["root", "child1"], ["root", "child2"]]
+    # Add get_all_paths for dataset_manager.resolve_num_samples
+    mock_tree_instance.get_all_paths.return_value = [
+        ["root", "child1"],
+        ["root", "child2"],
+        ["root", "child3"],
+        ["root", "child4"],
+        ["root", "child5"],
+    ]
     mock_engine_instance = Mock()
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
@@ -292,6 +316,8 @@ def test_generate_command_with_overrides(
         [{"event": "build_complete", "total_paths": 9, "failed_generations": 0}]
     )
     mock_tree_instance.tree_paths = [["root", "child1"], ["root", "child2"]]
+    # Add get_all_paths for dataset_manager.resolve_num_samples (need enough for 10 samples)
+    mock_tree_instance.get_all_paths.return_value = [["root", f"child{i}"] for i in range(10)]
     mock_engine_instance = Mock()
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
@@ -363,6 +389,14 @@ def test_generate_command_with_jsonl(
 
     mock_tree_instance = Mock()
     mock_tree_instance.build = Mock()  # Add build method
+    # Add get_all_paths for dataset_manager.resolve_num_samples
+    mock_tree_instance.get_all_paths.return_value = [
+        ["root", "child1"],
+        ["root", "child2"],
+        ["root", "child3"],
+        ["root", "child4"],
+        ["root", "child5"],
+    ]
     mock_topic_tree.return_value = mock_tree_instance
     mock_read_topic_tree_from_jsonl.return_value = [{"path": ["root", "child"]}]
 

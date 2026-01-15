@@ -51,6 +51,39 @@ if TYPE_CHECKING:
 DEBUG_MAX_FAILURES_TO_SHOW = 10
 
 
+def resolve_num_samples(num_samples: int | str, topic_count: int) -> int:
+    """Resolve num_samples to an integer based on topic count.
+
+    Args:
+        num_samples: Integer, "auto", or percentage string like "50%"
+        topic_count: Number of available topic paths
+
+    Returns:
+        Resolved integer sample count
+
+    Raises:
+        ConfigurationError: If topic_count is 0 and dynamic sampling is requested
+    """
+    if isinstance(num_samples, int):
+        return num_samples
+
+    if topic_count == 0:
+        raise ConfigurationError(
+            "Cannot use 'auto' or percentage num_samples with empty topic model. "
+            "Ensure topic generation produced paths."
+        )
+
+    if num_samples == "auto":
+        return topic_count
+
+    if isinstance(num_samples, str) and num_samples.endswith("%"):
+        percentage = float(num_samples[:-1]) / 100.0
+        return max(1, int(topic_count * percentage))
+
+    # Fallback - try to parse as int (shouldn't reach here if validated properly)
+    return int(num_samples)
+
+
 async def handle_dataset_events_async(
     generator: AsyncIterator[dict | HFDataset], engine=None, debug: bool = False
 ) -> HFDataset | None:
@@ -219,7 +252,7 @@ def create_dataset(
     engine: DataSetGenerator,
     topic_model: "TopicModel",
     config: DeepFabricConfig,
-    num_samples: int | None = None,
+    num_samples: int | str | None = None,
     batch_size: int | None = None,
     include_system_message: bool | None = None,
     provider: str | None = None,  # noqa: ARG001
@@ -234,7 +267,7 @@ def create_dataset(
         engine: DataSetGenerator instance
         topic_model: TopicModel (Tree or Graph) to use for generation
         config: DeepFabricConfig object
-        num_samples: Override for number of samples
+        num_samples: Override for number of samples (int, "auto", or percentage like "50%")
         batch_size: Override for batch size
         include_system_message: Override for including system message
         provider: Override for LLM provider
@@ -268,7 +301,7 @@ async def create_dataset_async(
     engine: DataSetGenerator,
     topic_model: "TopicModel",
     config: DeepFabricConfig,
-    num_samples: int | None = None,
+    num_samples: int | str | None = None,
     batch_size: int | None = None,
     include_system_message: bool | None = None,
     provider: str | None = None,  # noqa: ARG001
@@ -278,15 +311,23 @@ async def create_dataset_async(
 ) -> HFDataset:
     output_config = config.get_output_config()
 
-    final_num_samples = num_samples or output_config["num_samples"]
+    raw_num_samples = num_samples if num_samples is not None else output_config["num_samples"]
     final_batch_size = batch_size or output_config["batch_size"]
+
+    # Resolve "auto" or percentage to actual count based on topic paths
+    topic_count = len(topic_model.get_all_paths())
+    final_num_samples = resolve_num_samples(raw_num_samples, topic_count)
+
+    # Log resolution for dynamic values
+    tui = get_dataset_tui()
+    if isinstance(raw_num_samples, str):
+        tui.info(f"Resolved num_samples: {raw_num_samples} → {final_num_samples} samples")
 
     generation_params = config.get_generation_params(**(generation_overrides or {}))
     final_model = model or generation_params.get("model_name", DEFAULT_MODEL)
 
     # Create progress reporter and attach TUI as observer for streaming feedback
     progress_reporter = ProgressReporter()
-    tui = get_dataset_tui()
     progress_reporter.attach(tui)
 
     # Attach progress reporter to engine

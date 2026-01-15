@@ -273,10 +273,9 @@ class OutputConfig(BaseModel):
         default=True,
         description="Whether to include system message in output format",
     )
-    num_samples: int = Field(
+    num_samples: int | str = Field(
         default=ENGINE_DEFAULT_NUM_EXAMPLES,
-        ge=1,
-        description="Number of training samples to generate",
+        description="Number of samples: integer, 'auto' (100% of topics), or percentage like '50%'",
     )
     batch_size: int = Field(
         default=ENGINE_DEFAULT_BATCH_SIZE,
@@ -284,6 +283,38 @@ class OutputConfig(BaseModel):
         description="Number of samples to process at a time",
     )
     save_as: str = Field(..., min_length=1, description="Where to save the final dataset")
+
+    @field_validator("num_samples", mode="before")
+    @classmethod
+    def validate_num_samples(cls, v: int | str) -> int | str:
+        """Validate num_samples: integer, 'auto', or percentage like '50%'."""
+        if isinstance(v, int):
+            if v < 1:
+                raise ValueError("num_samples must be at least 1")
+            return v
+        if isinstance(v, str):
+            v_normalized = v.strip().lower()
+            if v_normalized == "auto":
+                return "auto"
+            if v_normalized.endswith("%"):
+                try:
+                    pct = float(v_normalized[:-1])
+                except ValueError as e:
+                    raise ValueError(f"Invalid percentage format: {v}") from e
+                if not (0 < pct <= 100):  # noqa: PLR2004
+                    raise ValueError("Percentage must be between 0 and 100")
+                return v_normalized  # Keep as string like "50%"
+            # Try to parse as integer string
+            try:
+                parsed = int(v)
+            except ValueError as e:
+                raise ValueError(
+                    f"Invalid num_samples value: {v}. Use integer, 'auto', or percentage like '50%'"
+                ) from e
+            if parsed < 1:
+                raise ValueError("num_samples must be at least 1")
+            return parsed
+        raise ValueError(f"num_samples must be int or string, got {type(v).__name__}")
 
 
 class HuggingFaceConfig(BaseModel):

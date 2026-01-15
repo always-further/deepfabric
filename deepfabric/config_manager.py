@@ -140,7 +140,7 @@ def load_config(  # noqa: PLR0913
             "include_system_message": include_system_message
             if include_system_message is not None
             else True,
-            "num_samples": num_samples or ENGINE_DEFAULT_NUM_EXAMPLES,
+            "num_samples": num_samples if num_samples is not None else ENGINE_DEFAULT_NUM_EXAMPLES,
             "batch_size": batch_size or ENGINE_DEFAULT_BATCH_SIZE,
             "save_as": output_save_as or "dataset.jsonl",
         },
@@ -221,27 +221,29 @@ def apply_cli_overrides(
 
 def get_final_parameters(
     config: DeepFabricConfig,
-    num_samples: int | None = None,
+    num_samples: int | str | None = None,
     batch_size: int | None = None,
     depth: int | None = None,
     degree: int | None = None,
-) -> tuple[int, int, int, int]:
+) -> tuple[int | str, int, int, int]:
     """
     Get final parameters from config and CLI overrides.
 
     Args:
         config: DeepFabricConfig object
-        num_samples: CLI override for num_samples
+        num_samples: CLI override for num_samples (int, "auto", or percentage like "50%")
         batch_size: CLI override for batch_size
         depth: CLI override for depth
         degree: CLI override for degree
 
     Returns:
         Tuple of (num_samples, batch_size, depth, degree)
+        Note: num_samples may be int, "auto", or percentage string
     """
     output_config = config.get_output_config()
 
-    final_num_samples = num_samples or output_config["num_samples"]
+    # Use 'is not None' to allow passing through "auto" or percentage strings
+    final_num_samples = num_samples if num_samples is not None else output_config["num_samples"]
     final_batch_size = batch_size or output_config["batch_size"]
 
     # Get depth and degree from topics config
