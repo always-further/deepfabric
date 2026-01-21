@@ -252,6 +252,8 @@ def _validate_api_keys(
 
 def _load_and_prepare_generation_context(
     options: GenerateOptions,
+    *,
+    skip_path_validation: bool = False,
 ) -> GenerationPreparation:
     """Load configuration, compute overrides, and validate derived parameters."""
     tui = get_tui()
@@ -307,23 +309,25 @@ def _load_and_prepare_generation_context(
 
     loading_existing = bool(options.topics_load)
 
-    validate_path_requirements(
-        mode=options.mode,
-        depth=final_depth,
-        degree=final_degree,
-        num_steps=final_num_samples,
-        batch_size=final_batch_size,
-        loading_existing=loading_existing,
-    )
+    # Skip path validation for topic-only mode since we're not generating dataset samples
+    if not skip_path_validation:
+        validate_path_requirements(
+            mode=options.mode,
+            depth=final_depth,
+            degree=final_degree,
+            num_steps=final_num_samples,
+            batch_size=final_batch_size,
+            loading_existing=loading_existing,
+        )
 
-    show_validation_success(
-        mode=options.mode,
-        depth=final_depth,
-        degree=final_degree,
-        num_steps=final_num_samples,
-        batch_size=final_batch_size,
-        loading_existing=loading_existing,
-    )
+        show_validation_success(
+            mode=options.mode,
+            depth=final_depth,
+            degree=final_degree,
+            num_steps=final_num_samples,
+            batch_size=final_batch_size,
+            loading_existing=loading_existing,
+        )
 
     try:
         return GenerationPreparation(
@@ -613,7 +617,9 @@ def generate(  # noqa: PLR0913
         tui.info("Initializing DeepFabric...")  # type: ignore
         print()
 
-        preparation = _load_and_prepare_generation_context(options)
+        preparation = _load_and_prepare_generation_context(
+            options, skip_path_validation=topic_only
+        )
 
         topic_model = _initialize_topic_model(
             preparation=preparation,
