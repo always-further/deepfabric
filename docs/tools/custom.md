@@ -181,7 +181,6 @@ generation:
   conversation:
     type: chain_of_thought
     reasoning_style: agent
-    agent_mode: single_turn
 
   # Tool configuration
   tools:

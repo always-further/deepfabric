@@ -1,9 +1,6 @@
 # Agent Datasets
 
-Agent datasets train models to use tools. DeepFabric supports two modes: single-turn (one-shot tool calls) and multi-turn (extended conversations with multiple tool interactions).
-
-!!! tip "Start Simple"
-    If you're unsure which to use, start with single-turn. Multi-turn is more brittle and requires careful configuration.
+Agent datasets train models to use tools. DeepFabric uses single-turn agent mode where the model generates complete tool workflows in one assistant response, following a ReAct pattern.
 
 !!! warning "Prerequisites"
     Agent datasets require the Spin tool service. See [Tools](../tools/index.md) for setup, or just use Docker:
@@ -18,9 +15,9 @@ Agent datasets train models to use tools. DeepFabric supports two modes: single-
 - Building agents that interact with APIs or systems
 - ReAct-style reasoning with action-observation loops
 
-## Single-Turn Agent
+## Agent Configuration
 
-Single-turn mode generates complete tool workflows in one assistant response.
+Agent mode is automatically enabled when tools are configured. Create complete tool workflows with reasoning in a single response:
 
 ```yaml title="config.yaml"
 topics:
@@ -33,10 +30,10 @@ generation:
   system_prompt: "Generate tool usage examples with reasoning."
   instructions: "Create realistic scenarios requiring tools."
 
+  # Agent mode is implicit when tools are configured
   conversation:
     type: cot
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -56,7 +53,7 @@ output:
   save_as: "agent-dataset.jsonl"
 ```
 
-### Single-Turn Output
+### Sample Output
 
 ??? example "Sample Output"
 
@@ -78,102 +75,6 @@ output:
         ]
       },
       "tools": [...]
-    }
-    ```
-
-## Multi-Turn Agent
-
-Multi-turn mode creates extended conversations with multiple tool interactions, following a ReAct pattern.
-
-```yaml title="config.yaml"
-topics:
-  prompt: "Platform engineering tasks requiring tool usage"
-  mode: graph
-  prompt_style: anchored
-  depth: 2
-  degree: 3
-
-generation:
-  system_prompt: "Generate tool usage examples with reasoning."
-  instructions: "Create realistic scenarios requiring tools."
-
-  conversation:
-    type: cot
-    reasoning_style: agent
-    agent_mode: multi_turn
-
-  tools:
-    spin_endpoint: "http://localhost:3000"
-    components:
-      builtin:
-        - read_file
-        - write_file
-        - list_files
-    max_per_query: 3
-    max_agent_steps: 5
-
-output:
-  system_prompt: |
-    You are an AI with access to tools. Analyze tasks, execute tools, and interpret results.
-  num_samples: 4
-  batch_size: 2
-  save_as: "agent-platform-dataset.jsonl"
-```
-
-Multi-turn datasets include:
-
-- Multiple tool call rounds
-- Observation-based decisions
-- Extended reasoning traces
-- Planning over several steps
-
-??? example "Multi-Turn Sample Output (Long)"
-
-    ```json title="agent-platform-dataset.jsonl"
-    {
-        "messages": [
-            {
-                "content": "You are an AI with access to tools...",
-                "role": "system"
-            },
-            {
-                "content": "I need to update the CI/CD pipeline configuration...",
-                "role": "user"
-            },
-            {
-                "content": "",
-                "role": "assistant",
-                "tool_calls": [
-                    {
-                        "function": {
-                            "arguments": "{}",
-                            "name": "list_files"
-                        },
-                        "id": "5AgSQoude",
-                        "type": "function"
-                    }
-                ]
-            },
-            {
-                "content": "[]",
-                "role": "tool",
-                "tool_call_id": "5AgSQoude"
-            },
-            {
-                "content": "It seems there are no configuration files available...",
-                "role": "assistant"
-            }
-        ],
-        "reasoning": {
-            "content": [
-                {
-                    "action": "list_files({})",
-                    "step_number": 1,
-                    "thought": "To provide a list of configuration files..."
-                }
-            ],
-            "style": "agent"
-        }
     }
     ```
 
@@ -218,23 +119,11 @@ scenario_seed:
 
 ## CLI Usage
 
-=== "Single-Turn"
-
-    ```bash title="Single-turn agent"
-    deepfabric generate config.yaml \
-      --conversation-type cot \
-      --reasoning-style agent \
-      --agent-mode single_turn
-    ```
-
-=== "Multi-Turn"
-
-    ```bash title="Multi-turn agent"
-    deepfabric generate config.yaml \
-      --agent-mode multi_turn \
-      --min-turns 2 \
-      --max-turns 4
-    ```
+```bash title="Agent dataset generation"
+deepfabric generate config.yaml \
+  --conversation-type cot \
+  --reasoning-style agent
+```
 
 ## Next Steps
 

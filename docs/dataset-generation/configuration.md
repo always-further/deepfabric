@@ -28,10 +28,10 @@ generation:
     Generate clear, educational examples.
   instructions: "Create diverse, practical scenarios."
 
+  # Agent mode is implicit when tools are configured
   conversation:
     type: cot
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -135,10 +135,9 @@ Controls sample generation.
 |-------|------|---------|-------------|
 | `type` | string | basic, cot | Conversation format |
 | `reasoning_style` | string | freetext, agent | For cot only |
-| `agent_mode` | string | single_turn, multi_turn | For agent style only |
-| `min_turns` | int | 2 | Minimum turns (multi_turn) |
-| `max_turns` | int | 4 | Maximum turns (multi_turn) |
-| `min_tool_calls` | int | 2 | Minimum tool calls (multi_turn) |
+
+!!! note "Agent Mode"
+    Agent mode is automatically enabled when tools are configured. No explicit `agent_mode` setting is required.
 
 #### generation.tools
 

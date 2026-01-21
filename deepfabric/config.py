@@ -131,28 +131,6 @@ class ConversationConfig(BaseModel):
         default=None,
         description="Reasoning style for cot: freetext or agent. Note: 'structured' and 'hybrid' are deprecated.",
     )
-    agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
-        default=None,
-        description="Agent mode: single_turn (one-shot tool use), multi_turn (extended conversations)",
-    )
-    min_turns: int = Field(
-        default=2,
-        ge=1,
-        le=10,
-        description="Minimum conversation turns for multi_turn agent mode",
-    )
-    max_turns: int = Field(
-        default=4,
-        ge=1,
-        le=10,
-        description="Maximum conversation turns for multi_turn agent mode",
-    )
-    min_tool_calls: int = Field(
-        default=2,
-        ge=0,
-        le=20,
-        description="Minimum tool calls before allowing conversation conclusion",
-    )
 
     @field_validator("reasoning_style", mode="before")
     @classmethod
@@ -172,12 +150,6 @@ class ConversationConfig(BaseModel):
             raise ValueError(
                 "reasoning_style must be specified when type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
-            )
-
-        if self.agent_mode is not None and self.reasoning_style == "freetext":
-            raise ValueError(
-                "reasoning_style='freetext' is not compatible with agent_mode. "
-                "Agent mode requires structured reasoning. Use reasoning_style='agent' instead."
             )
 
         return self
@@ -289,23 +261,6 @@ class GenerationConfig(BaseModel):
         default=None, description="Optional LLM configuration overrides for generation"
     )
 
-    @model_validator(mode="after")
-    def validate_agent_requires_tools(self):
-        """Validate that agent_mode requires tools with Spin endpoint."""
-        if self.conversation.agent_mode is not None:
-            if self.tools is None:
-                raise ValueError(
-                    "agent_mode requires tools to be configured. "
-                    "Specify tools.spin_endpoint and optionally tools.available to filter tools."
-                )
-            if not self.tools.spin_endpoint:
-                raise ValueError(
-                    "agent_mode requires a Spin endpoint for tool execution. "
-                    "Set tools.spin_endpoint (e.g., 'http://localhost:3000'). "
-                    "See: cd tools-sdk && spin build && spin up"
-                )
-        return self
-
 
 class OutputConfig(BaseModel):
     """Configuration for final dataset output."""
@@ -388,10 +343,6 @@ class EvaluationConfig(BaseModel):
         """Normalize deprecated reasoning_style values."""
         return _normalize_reasoning_style(v)
 
-    agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
-        default=None,
-        description="Agent mode if tools are used",
-    )
     metrics: list[str] = Field(
         default_factory=lambda: [
             "tool_selection_accuracy",
@@ -453,12 +404,6 @@ class EvaluationConfig(BaseModel):
             raise ValueError(
                 "reasoning_style must be specified when conversation_type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
-            )
-
-        if self.agent_mode is not None and self.reasoning_style == "freetext":
-            raise ValueError(
-                "reasoning_style='freetext' is not compatible with agent_mode. "
-                "Agent mode requires structured reasoning. Use reasoning_style='agent' instead."
             )
 
         return self
@@ -640,10 +585,6 @@ See documentation for full examples.
             # Conversation config
             "conversation_type": self.generation.conversation.type,
             "reasoning_style": self.generation.conversation.reasoning_style,
-            "agent_mode": self.generation.conversation.agent_mode,
-            "min_turns": self.generation.conversation.min_turns,
-            "max_turns": self.generation.conversation.max_turns,
-            "min_tool_calls": self.generation.conversation.min_tool_calls,
             # Output config
             "sys_msg": self.output.include_system_message,
             "dataset_system_prompt": self.output.system_prompt or self.generation.system_prompt,
@@ -854,10 +795,6 @@ class DataEngineConfig(BaseModel):
     def normalize_reasoning_style(cls, v: str | None) -> str | None:
         return _normalize_reasoning_style(v)
 
-    agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
-        default=None,
-        description="Agent mode for tool use",
-    )
     available_tools: list[str] = Field(
         default_factory=list,
         description="List of tool names available",
@@ -882,14 +819,6 @@ class DataEngineConfig(BaseModel):
                 "reasoning_style must be specified when conversation_type='cot'. "
                 "Choose from: 'freetext' or 'agent'"
             )
-
-        if self.agent_mode is not None:
-            has_tools = bool(self.available_tools or self.custom_tools)
-            if not has_tools:
-                raise ValueError("agent_mode requires tools to be configured.")
-
-        if self.agent_mode is not None and self.reasoning_style == "freetext":
-            raise ValueError("reasoning_style='freetext' is not compatible with agent_mode.")
 
         return self
 

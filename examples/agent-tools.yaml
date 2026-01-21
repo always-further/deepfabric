@@ -5,7 +5,7 @@
 # topic generation and data generation engines.
 # The dataset focuses on Python programming fundamentals.
 # Advanced features like Tool Use with agent reasoning style.
-# A single-turn agent mode of tool usage occurs.
+# Tool-calling uses single-turn agent mode (one-shot tool use).
 #####################################################################
 
 # Topic generation - creates a tree of related topics
@@ -37,8 +37,7 @@ generation:
   conversation:
     type: cot
     reasoning_style: agent
-    # Single-turn: one-shot tool use in a single assistant response
-    agent_mode: single_turn
+    # Agent mode is implicit when tools are configured
 
   # Tool configuration - requires Spin service running
   # Start with: cd tools-sdk && spin build && spin up

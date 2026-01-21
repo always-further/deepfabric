@@ -55,7 +55,6 @@ generation:
   conversation:
     type: chain_of_thought
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"
@@ -195,10 +194,10 @@ More specific fixtures (more match fields) take precedence over less specific on
 
 ```yaml title="config.yaml"
 generation:
+  # Agent mode is implicit when tools are configured
   conversation:
-    type: chain_of_thought
+    type: cot
     reasoning_style: agent
-    agent_mode: single_turn  # or multi_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"

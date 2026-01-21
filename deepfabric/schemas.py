@@ -842,10 +842,11 @@ class ToolContext(BaseModel):
 
 
 class AgentContext(BaseModel):
-    """Agent capability - present when agent_mode is enabled."""
+    """Agent capability - present when tools are configured for agent mode."""
 
-    mode: Literal["single_turn", "multi_turn"] = Field(
-        description="Agent interaction mode: single_turn for one-shot tool use, multi_turn for extended conversations"
+    mode: Literal["single_turn"] = Field(
+        default="single_turn",
+        description="Agent interaction mode (single_turn is the only supported mode)",
     )
     planning_trace: str | None = Field(
         default=None, description="Agent's planning and reasoning about tool usage strategy"

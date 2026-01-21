@@ -83,11 +83,13 @@ class BuilderType(BaseModel):
 # Builder type constants
 SINGLE_SHOT_BUILDER = BuilderType(name="single_shot", requires_tools=False)
 SINGLE_TURN_AGENT_BUILDER = BuilderType(name="single_turn_agent", requires_tools=True)
-MULTI_TURN_AGENT_BUILDER = BuilderType(name="multi_turn_agent", requires_tools=True)
 
 
 def determine_builder_type(config: "DataSetGeneratorConfig") -> BuilderType:
     """Determine the appropriate builder type from configuration.
+
+    Agent mode is implicit when tools are configured (tool_components or custom_tools).
+    Single-turn agent mode is used for tool-calling conversations.
 
     Args:
         config: Generator configuration (Pydantic model)
@@ -98,20 +100,10 @@ def determine_builder_type(config: "DataSetGeneratorConfig") -> BuilderType:
     Raises:
         ValueError: If configuration is invalid or unsupported
     """
-    # Agent mode with tools requires specialized builder
-    if config.agent_mode:
-        # Check that tools are configured via tool_components or custom_tools
-        has_tools = config.tool_components or config.custom_tools
-        if not has_tools:
-            msg = "agent_mode requires tools to be configured via tool_components or custom_tools"
-            raise ValueError(msg)
-
-        if config.agent_mode == "multi_turn":
-            return MULTI_TURN_AGENT_BUILDER
-        if config.agent_mode == "single_turn":
-            return SINGLE_TURN_AGENT_BUILDER
-        msg = f"Unknown agent_mode: {config.agent_mode}"
-        raise ValueError(msg)
+    # Agent mode is implicit when tools are configured
+    has_tools = config.tool_components or config.custom_tools
+    if has_tools:
+        return SINGLE_TURN_AGENT_BUILDER
 
     # Non-agent conversations use single-shot generation
     if config.conversation_type in ("basic", "cot"):
@@ -291,12 +283,6 @@ class ConversationBuilderFactory:
             from .builders_agent import SingleTurnAgentBuilder  # noqa: PLC0415
 
             return SingleTurnAgentBuilder(
-                llm, config, cast("ToolRegistry", tool_registry), progress_reporter
-            )
-        if builder_type == MULTI_TURN_AGENT_BUILDER:
-            from .builders_agent import MultiTurnAgentBuilder  # noqa: PLC0415
-
-            return MultiTurnAgentBuilder(
                 llm, config, cast("ToolRegistry", tool_registry), progress_reporter
             )
         msg = f"Unknown builder type: {builder_type.name}"

@@ -65,7 +65,7 @@ def load_config(  # noqa: PLR0913
         mode: Topic generation mode (tree or graph)
         conversation_type: Base conversation type (basic, cot)
         reasoning_style: Reasoning style for cot (freetext, agent)
-        agent_mode: Agent mode (single_turn, multi_turn)
+        agent_mode: [Deprecated] Agent mode (single_turn only, multi_turn no longer supported)
 
     Returns:
         DeepFabricConfig object

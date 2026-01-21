@@ -93,7 +93,6 @@ generation:
   conversation:
     type: cot
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     # Spin service endpoint

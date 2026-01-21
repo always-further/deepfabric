@@ -56,9 +56,9 @@ class GroundTruth(BaseModel):
         default=None,
         description="Reasoning style if cot",
     )
-    agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
+    agent_mode: Literal["single_turn"] | None = Field(
         default=None,
-        description="Agent mode if tools are used",
+        description="Agent mode if tools are used (single_turn only)",
     )
     metadata: dict[str, str | int | float | bool] = Field(
         default_factory=dict,
@@ -77,20 +77,20 @@ class GroundTruthParser:
         self,
         conversation_type: Literal["basic", "cot"],
         reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None,
-        agent_mode: Literal["single_turn", "multi_turn"] | None = None,
+        agent_mode: Literal["single_turn"] | None = None,
     ):
         """Initialize parser with conversation configuration.
 
         Args:
             conversation_type: Type of conversation (basic, cot)
             reasoning_style: Reasoning style for cot
-            agent_mode: Agent mode if tools are used
+            agent_mode: Agent mode if tools are used (single_turn only)
         """
         self.conversation_type: Literal["basic", "cot"] = conversation_type
         self.reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = (
             reasoning_style
         )
-        self.agent_mode: Literal["single_turn", "multi_turn"] | None = agent_mode
+        self.agent_mode: Literal["single_turn"] | None = agent_mode
 
     def parse(self, conversation: Conversation) -> GroundTruth:
         """Extract ground truth from a conversation sample.
@@ -272,7 +272,7 @@ def parse_batch(
     conversations: list[Conversation],
     conversation_type: Literal["basic", "cot"],
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None,
-    agent_mode: Literal["single_turn", "multi_turn"] | None = None,
+    agent_mode: Literal["single_turn"] | None = None,
 ) -> list[GroundTruth]:
     """Parse a batch of conversations to extract ground truth.
 
@@ -280,7 +280,7 @@ def parse_batch(
         conversations: List of Conversation objects
         conversation_type: Type of conversation
         reasoning_style: Reasoning style if cot
-        agent_mode: Agent mode if tools are used
+        agent_mode: Agent mode if tools are used (single_turn only)
 
     Returns:
         List of GroundTruth objects

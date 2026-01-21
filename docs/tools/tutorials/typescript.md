@@ -210,7 +210,6 @@ generation:
   conversation:
     type: chain_of_thought
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"

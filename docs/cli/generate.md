@@ -128,10 +128,9 @@ deepfabric generate config.yaml \
 |--------|--------|-------------|
 | `--conversation-type` | `basic`, `cot` | Base conversation type |
 | `--reasoning-style` | `freetext`, `agent` | Reasoning style for cot |
-| `--agent-mode` | `single_turn`, `multi_turn` | Agent mode (requires tools) |
-| `--min-turns` | INT | Minimum turns for multi_turn mode |
-| `--max-turns` | INT | Maximum turns for multi_turn mode |
-| `--min-tool-calls` | INT | Minimum tool calls before conclusion |
+
+!!! note "Agent Mode"
+    Agent mode is automatically enabled when tools are configured. No explicit `--agent-mode` flag is required. The `--agent-mode` flag is deprecated.
 
 ## TUI Options
 

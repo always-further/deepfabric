@@ -38,30 +38,15 @@ class TestModularConfigValidation:
                 reasoning_style="freetext",  # Invalid for basic type
             )
 
-    def test_agent_mode_requires_tools(self):
-        """Test that agent_mode requires tools to be configured."""
-        with pytest.raises(ValueError, match="agent_mode requires tools"):
+    def test_agent_reasoning_requires_cot(self):
+        """Test that agent reasoning style requires cot conversation type."""
+        with pytest.raises(ValueError, match="reasoning_style can only be set"):
             DataEngineConfig(
                 generation_system_prompt="Test",
                 provider="test",
                 model="model",
-                conversation_type="cot",
+                conversation_type="basic",
                 reasoning_style="agent",
-                agent_mode="single_turn",
-                # Missing tools configuration
-            )
-
-    def test_freetext_not_compatible_with_agent_mode(self):
-        """Test that freetext reasoning style cannot be used with agent_mode."""
-        with pytest.raises(ValueError, match="freetext.*not compatible with agent_mode"):
-            DataEngineConfig(
-                generation_system_prompt="Test",
-                provider="test",
-                model="model",
-                conversation_type="cot",
-                reasoning_style="freetext",
-                agent_mode="single_turn",
-                available_tools=["get_weather"],
             )
 
 
@@ -79,7 +64,6 @@ class TestModularConfigCombinations:
 
         assert config.conversation_type == "basic"
         assert config.reasoning_style is None
-        assert config.agent_mode is None
 
     def test_cot_freetext(self):
         """Test cot with freetext reasoning."""
@@ -93,42 +77,22 @@ class TestModularConfigCombinations:
 
         assert config.conversation_type == "cot"
         assert config.reasoning_style == "freetext"
-        assert config.agent_mode is None
 
-    def test_cot_with_agent_single_turn(self):
-        """Test cot + agent_mode=single_turn."""
+    def test_cot_with_agent_reasoning(self):
+        """Test cot + agent reasoning style."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
             provider="test",
             model="model",
             conversation_type="cot",
             reasoning_style="agent",
-            agent_mode="single_turn",
             available_tools=["get_weather", "calculate"],
         )
 
         assert config.conversation_type == "cot"
         assert config.reasoning_style == "agent"
-        assert config.agent_mode == "single_turn"
         assert "get_weather" in config.available_tools
         assert "calculate" in config.available_tools
-
-    def test_cot_agent_multi_turn(self):
-        """Test full combination: CoT + agent + multi_turn."""
-        config = DataEngineConfig(
-            generation_system_prompt="Test",
-            provider="test",
-            model="model",
-            conversation_type="cot",
-            reasoning_style="agent",
-            agent_mode="multi_turn",
-            available_tools=["tool1", "tool2"],
-        )
-
-        assert config.conversation_type == "cot"
-        assert config.reasoning_style == "agent"
-        assert config.agent_mode == "multi_turn"
-        assert len(config.available_tools) == 2  # noqa: PLR2004
 
     def test_basic_conversation_explicit(self):
         """Test explicitly setting basic conversation type."""
@@ -141,7 +105,6 @@ class TestModularConfigCombinations:
 
         assert config.conversation_type == "basic"
         assert config.reasoning_style is None
-        assert config.agent_mode is None
 
 
 class TestModularConfigDefaultValues:
@@ -155,7 +118,6 @@ class TestModularConfigDefaultValues:
             model="model",
             conversation_type="cot",
             reasoning_style="agent",
-            agent_mode="single_turn",
             available_tools=["tool1"],
         )
 
@@ -240,33 +202,33 @@ class TestReasoningStyleOptions:
             assert "hybrid" in str(w[0].message)
 
 
-class TestAgentModeOptions:
-    """Test agent mode options with tools."""
+class TestAgentReasoningWithTools:
+    """Test agent reasoning style with tools."""
 
-    def test_single_turn_agent(self):
-        """Test single_turn agent mode."""
+    def test_agent_with_available_tools(self):
+        """Test agent reasoning with available_tools configured."""
         config = DataEngineConfig(
             generation_system_prompt="Test",
             provider="test",
             model="model",
             conversation_type="cot",
             reasoning_style="agent",
-            agent_mode="single_turn",
-            available_tools=["tool1"],
-        )
-
-        assert config.agent_mode == "single_turn"
-
-    def test_multi_turn_agent(self):
-        """Test multi_turn agent mode."""
-        config = DataEngineConfig(
-            generation_system_prompt="Test",
-            provider="test",
-            model="model",
-            conversation_type="cot",
-            reasoning_style="agent",
-            agent_mode="multi_turn",
             available_tools=["tool1", "tool2"],
         )
 
-        assert config.agent_mode == "multi_turn"
+        assert config.reasoning_style == "agent"
+        assert len(config.available_tools) == 2  # noqa: PLR2004
+
+    def test_agent_with_custom_tools(self):
+        """Test agent reasoning with custom_tools configured."""
+        config = DataEngineConfig(
+            generation_system_prompt="Test",
+            provider="test",
+            model="model",
+            conversation_type="cot",
+            reasoning_style="agent",
+            custom_tools=[{"name": "my_tool", "description": "A custom tool"}],
+        )
+
+        assert config.reasoning_style == "agent"
+        assert len(config.custom_tools) == 1

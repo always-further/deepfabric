@@ -125,12 +125,12 @@ generation:
     Provide context on when and why to use specific patterns or libraries.
     Ensure code is modular, testable, and maintainable.
 
+  # Agent mode is implicit when tools are configured
   conversation:
     type: cot      # basic | cot
     reasoning_style: agent      # freetext | agent (for cot)
-    agent_mode: single_turn     # single_turn | multi_turn (for agent)
-  
-  # Tool configuration (required for agent modes)
+
+  # Tool configuration (enables agent mode automatically)
   tools:
     spin_endpoint: "http://localhost:3000"  # Spin service for tool execution
     components:                 # Map component name to tool names
@@ -488,7 +488,6 @@ generation:
   conversation:
     type: cot
     reasoning_style: agent
-    agent_mode: single_turn
 
   tools:
     spin_endpoint: "http://localhost:3000"  # Spin service URL

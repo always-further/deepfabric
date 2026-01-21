@@ -919,18 +919,8 @@ class DatasetGenerationTUI(StreamObserver):
             type_map = {
                 "basic": "Basic Q&A",
                 "cot": "Chain of Thought",
-                "single_turn_agent": "Single-Turn Agent (Tool Calling)",
-                "multi_turn_agent": "Multi-Turn Agent (Tool Calling)",
             }
             self.current_sample_type = type_map.get(conv_type, conv_type)
-        elif "agent_mode" in metadata:
-            agent_mode = metadata["agent_mode"]
-            if agent_mode == "single_turn":
-                self.current_sample_type = "Single-Turn Agent (Tool Calling)"
-            elif agent_mode == "multi_turn":
-                self.current_sample_type = "Multi-Turn Agent (Tool Calling)"
-            else:
-                self.current_sample_type = f"Agent ({agent_mode})"
 
         # Update current topic path if provided
         topic_path = metadata.get("topic_path") if isinstance(metadata, dict) else None

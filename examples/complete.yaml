@@ -53,15 +53,10 @@ generation:
     Provide context on when and why to use specific patterns.
 
   # Conversation structure configuration
+  # Agent mode is implicit when tools are configured
   conversation:
     type: cot     # basic | cot
     reasoning_style: agent      # freetext | agent (for cot)
-    agent_mode: single_turn     # single_turn | multi_turn
-
-    # Multi-turn settings (only used with agent_mode: multi_turn)
-    # min_turns: 2
-    # max_turns: 4
-    # min_tool_calls: 2
 
   # Tool configuration (required for agent modes)
   # Start Spin service: cd tools-sdk && spin build && spin up

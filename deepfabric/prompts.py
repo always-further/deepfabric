@@ -165,35 +165,6 @@ ARGUMENT REQUIREMENTS:
 
 Generate a complete agent reasoning example using structured output with tool_executions list."""
 
-    @staticmethod
-    def build_multi_turn_context_prompt(tool_registry, max_tools_per_query: int = 3) -> str:
-        """Build context for multi-turn conversations.
-
-        Returns a template with {{{{instructions}}}} and {{{{subtopics}}}} placeholders
-        that will be filled in by build_prompt() with actual topic paths from the tree.
-        """
-        tool_signatures = []
-        for tool in tool_registry.tools:
-            tool_signatures.append(f"- {tool.to_signature()}")
-
-        return f"""Generate a multi-turn agent conversation with evolving tool usage.
-
-Available tools:
-{chr(10).join(tool_signatures)}
-
-You may use 1 to {max_tools_per_query} tools per query. Show tool dependencies and reasoning across conversation turns.
-
-ARGUMENT REQUIREMENTS:
-- All argument values must be concrete and realistic (e.g., owner="acme-corp", repo="web-app", issue_number=42)
-- Never use template placeholders like {{{{owner}}}} or {{{{repo}}}}
-- Never use null values - omit optional parameters entirely if not needed
-- String fields must contain actual content, not empty strings
-
-{{{{{{{{instructions}}}}}}}}
-{{{{{{{{subtopics}}}}}}}}
-
-Generate a complete multi-turn conversation using structured output with tool_executions list."""
-
 
 # Simplified prompts that delegate to structured generation
 AGENT_COT_TOOLS_PROMPT = """Generate an agent tool-calling training example using the available tool definitions.
@@ -219,16 +190,6 @@ Combine natural language reasoning with structured step-by-step traces that incl
 - Multiple tool executions with results
 
 Focus on teaching both the reasoning process AND multi-tool usage patterns.
-
-{{{{instructions}}}}
-{{{{examples}}}}
-{{{{subtopics}}}}"""
-
-AGENT_COT_MULTI_TURN_PROMPT = """Generate a multi-turn agent conversation with tool usage across turns.
-
-Show how reasoning evolves: tool dependencies, progressive refinement, and result synthesis.
-
-Create realistic tool chaining patterns and decision-making processes.
 
 {{{{instructions}}}}
 {{{{examples}}}}

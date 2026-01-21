@@ -1,6 +1,6 @@
 # Dataset Generation
 
-DeepFabric generates four types of synthetic training datasets, each designed for different model capabilities.
+DeepFabric generates three types of synthetic training datasets, each designed for different model capabilities.
 
 ## Dataset Types
 
@@ -22,21 +22,13 @@ DeepFabric generates four types of synthetic training datasets, each designed fo
 
     [:octicons-arrow-right-24: Learn more](reasoning.md)
 
--   :material-robot-outline: **Agent (Single-Turn)**
+-   :material-robot-outline: **Agent**
 
     ---
 
-    Tool calls in one response for simple tool use
+    Tool-calling datasets with ReAct-style reasoning
 
     [:octicons-arrow-right-24: Learn more](agent.md)
-
--   :material-robot-happy-outline: **Agent (Multi-Turn)**
-
-    ---
-
-    Extended tool conversations for complex multi-step tasks
-
-    [:octicons-arrow-right-24: Learn more](agent.md#multi-turn-agent)
 
 </div>
 
@@ -77,40 +69,29 @@ graph LR
 
     Includes step-by-step reasoning traces.
 
-=== "Agent Single-Turn"
+=== "Agent"
 
     ```yaml title="config.yaml"
+    # Agent mode is implicit when tools are configured
     conversation:
       type: cot
       reasoning_style: agent
-      agent_mode: single_turn
     ```
 
-    One-shot tool use in a single response.
-
-=== "Agent Multi-Turn"
-
-    ```yaml title="config.yaml"
-    conversation:
-      type: cot
-      reasoning_style: agent
-      agent_mode: multi_turn
-    ```
-
-    Extended conversations with multiple tool calls.
+    Tool-calling with ReAct-style reasoning.
 
 ## Choosing a Dataset Type
 
 !!! tip "Quick Selection Guide"
     - **Basic**: General instruction-following without explicit reasoning
     - **Reasoning**: Models that need to explain their logic
-    - **Agent**: Tool-calling capabilities (single or multi-turn)
+    - **Agent**: Tool-calling capabilities
 
 **Basic datasets** work for general instruction-following tasks. The model learns to answer questions directly without explicit reasoning.
 
 **Reasoning datasets** teach models to think before answering. The output includes a `reasoning` field with the model's thought process, useful for training models that explain their logic.
 
-**Agent datasets** train tool-calling capabilities. Single-turn generates complete tool workflows in one response. Multi-turn creates extended conversations with multiple tool calls and observations, following a ReAct-style pattern.
+**Agent datasets** train tool-calling capabilities. When tools are configured, agent mode is automatically enabled and generates complete tool workflows with ReAct-style reasoning.
 
 ## Next Steps
 

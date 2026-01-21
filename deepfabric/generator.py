@@ -30,7 +30,6 @@ from .llm import LLMClient
 from .metrics import trace
 from .progress import ProgressReporter
 from .prompts import (
-    AGENT_COT_MULTI_TURN_PROMPT,
     AGENT_COT_TOOLS_PROMPT,
     CONVERSATION_GENERATION_PROMPT,
     FREETEXT_COT_PROMPT,
@@ -143,12 +142,7 @@ class DataSetGeneratorConfig(BaseModel):
         """Normalize deprecated reasoning_style values."""
         return _normalize_reasoning_style(v)
 
-    agent_mode: Literal["single_turn", "multi_turn"] | None = Field(
-        default=None,
-        description="Agent mode: single_turn (one-shot tool use), multi_turn (extended agent conversations). Requires tools to be configured.",
-    )
-
-    # Tool configuration (used when agent_mode is enabled or for tool_calling)
+    # Tool configuration (used when tools are configured for agent mode)
     tool_components: dict[str, list[str]] = Field(
         default_factory=dict,
         description=(
@@ -194,25 +188,6 @@ class DataSetGeneratorConfig(BaseModel):
         description="Path for tool execution when using tools_endpoint (e.g., '/mock/execute'). Combined with spin_endpoint.",
     )
 
-    # Multi-turn configuration (used when agent_mode="multi_turn")
-    min_turns: int = Field(
-        default=2,
-        ge=1,
-        le=10,
-        description="Minimum number of conversation turns for multi-turn agent mode",
-    )
-    max_turns: int = Field(
-        default=4,
-        ge=1,
-        le=10,
-        description="Maximum number of conversation turns for multi-turn agent mode",
-    )
-    min_tool_calls: int = Field(
-        default=2,
-        ge=0,
-        le=20,
-        description="Minimum number of tool calls required before allowing early conversation conclusion",
-    )
     tool_inclusion_strategy: Literal["all", "used_only"] = Field(
         default="used_only",
         description="Which tools to include in each sample: 'all' includes full catalog, 'used_only' includes only tools actually called (recommended for training)",
@@ -260,13 +235,9 @@ class DataSetGenerator:
         # Store generation prompt for content generation
         self.generation_prompt = self.config.generation_system_prompt
 
-        # Initialize tool registry when agent_mode is enabled or tools are configured
+        # Initialize tool registry when tools are configured (enables agent mode)
         self.tool_registry = None
-        if (
-            self.config.agent_mode is not None
-            or self.config.tool_components
-            or self.config.custom_tools
-        ):
+        if self.config.tool_components or self.config.custom_tools:
             self._initialize_tool_registry()
 
         # Progress reporter for streaming feedback (set by external callers)
@@ -533,8 +504,8 @@ class DataSetGenerator:
                     return False, last_error or Exception("Sample generation failed")
 
                 else:
-                    # Validate tool execution count for agent modes
-                    if self.config.agent_mode is not None:
+                    # Validate tool execution count for agent mode (when tools configured)
+                    if self.tool_registry is not None:
                         if (
                             not conversation.tool_context
                             or not conversation.tool_context.executions
@@ -1015,7 +986,7 @@ class DataSetGenerator:
         return f"\nHere are output examples:\n<examples>\n{examples_text}\n</examples>\n"
 
     def build_tools_text(self) -> str:
-        """Build formatted tools text for XLAM multi-turn prompts."""
+        """Build formatted tools text for XLAM prompts."""
         if not self.tool_registry:
             return "No tools available"
 
@@ -1046,8 +1017,8 @@ class DataSetGenerator:
 
         # Handle chain of thought conversations
         if self.config.conversation_type == "cot":
-            # Agent mode with tools - use agent prompts
-            if self.config.agent_mode == "single_turn" and self.tool_registry:
+            # Agent mode with tools - use agent prompts (implicit when tools configured)
+            if self.tool_registry:
                 # Use agent prompt for single-turn tool calling
                 return (
                     AgentPromptBuilder.build_tool_context_prompt(
@@ -1055,16 +1026,6 @@ class DataSetGenerator:
                         max_tools_per_query=self.config.max_tools_per_query,
                     )
                     or AGENT_COT_TOOLS_PROMPT
-                )
-
-            if self.config.agent_mode == "multi_turn" and self.tool_registry:
-                # Standard multi-turn agent
-                return (
-                    AgentPromptBuilder.build_multi_turn_context_prompt(
-                        self.tool_registry,
-                        max_tools_per_query=self.config.max_tools_per_query,
-                    )
-                    or AGENT_COT_MULTI_TURN_PROMPT
                 )
 
             # Non-agent CoT - select based on reasoning style

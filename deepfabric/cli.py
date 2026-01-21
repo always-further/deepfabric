@@ -101,12 +101,9 @@ class GenerateOptions(BaseModel):
     # Modular conversation configuration
     conversation_type: Literal["basic", "cot"] | None = None
     reasoning_style: Literal["freetext", "agent", "structured", "hybrid"] | None = None
-    agent_mode: Literal["single_turn", "multi_turn"] | None = None
-
-    # Multi-turn configuration
-    min_turns: int | None = None
-    max_turns: int | None = None
-    min_tool_calls: int | None = None
+    agent_mode: Literal["single_turn", "multi_turn"] | None = (
+        None  # Deprecated, kept for backward compat
+    )
 
     # Cloud upload (experimental)
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None
@@ -473,22 +470,7 @@ def _run_generation(
 @click.option(
     "--agent-mode",
     type=click.Choice(["single_turn", "multi_turn"]),
-    help="Agent mode: single_turn (one-shot tool use), multi_turn (extended conversations). Requires tools.",
-)
-@click.option(
-    "--min-turns",
-    type=int,
-    help="Minimum conversation turns for multi_turn agent mode",
-)
-@click.option(
-    "--max-turns",
-    type=int,
-    help="Maximum conversation turns for multi_turn agent mode",
-)
-@click.option(
-    "--min-tool-calls",
-    type=int,
-    help="Minimum tool calls before allowing conversation conclusion",
+    help="[Deprecated] Agent mode is now implicit when tools are configured. 'multi_turn' is no longer supported.",
 )
 @click.option(
     "--cloud-upload",
@@ -521,13 +503,24 @@ def generate(  # noqa: PLR0913
     conversation_type: Literal["basic", "cot"] | None = None,
     reasoning_style: Literal["freetext", "agent"] | None = None,
     agent_mode: Literal["single_turn", "multi_turn"] | None = None,
-    min_turns: int | None = None,
-    max_turns: int | None = None,
-    min_tool_calls: int | None = None,
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None,
     tui: Literal["rich", "simple"] = "rich",
 ) -> None:
     """Generate training data from a YAML configuration file or CLI parameters."""
+    # Handle deprecated --agent-mode flag
+    if agent_mode == "multi_turn":
+        click.echo(
+            "Error: --agent-mode multi_turn is deprecated and no longer supported. "
+            "Omit --agent-mode and the default supported agent mode will be used.",
+            err=True,
+        )
+        sys.exit(1)
+    elif agent_mode == "single_turn":
+        click.echo(
+            "Note: --agent-mode single_turn is deprecated. "
+            "Single-turn agent mode is now implicit when tools are configured."
+        )
+
     set_trace_debug(debug)
     trace(
         "cli_generate",
@@ -564,9 +557,6 @@ def generate(  # noqa: PLR0913
             conversation_type=conversation_type,
             reasoning_style=reasoning_style,
             agent_mode=agent_mode,
-            min_turns=min_turns,
-            max_turns=max_turns,
-            min_tool_calls=min_tool_calls,
             cloud_upload=cloud_upload,
             tui=tui,
         )
