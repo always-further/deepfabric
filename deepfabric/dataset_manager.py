@@ -326,6 +326,17 @@ async def create_dataset_async(
     generation_params = config.get_generation_params(**(generation_overrides or {}))
     final_model = model or generation_params.get("model_name", DEFAULT_MODEL)
 
+    # Convert total samples to number of steps (batches)
+    # The generator expects num_steps where total_samples = num_steps * batch_size
+    import math  # noqa: PLC0415
+
+    final_num_steps = math.ceil(final_num_samples / final_batch_size)
+
+    tui.info(
+        f"Dataset generation: {final_num_samples} samples in {final_num_steps} steps "
+        f"(batch_size={final_batch_size})"
+    )
+
     # Create progress reporter and attach TUI as observer for streaming feedback
     progress_reporter = ProgressReporter()
     progress_reporter.attach(tui)
@@ -335,7 +346,7 @@ async def create_dataset_async(
 
     try:
         generator = engine.create_data_with_events_async(
-            num_steps=final_num_samples,
+            num_steps=final_num_steps,
             batch_size=final_batch_size,
             topic_model=topic_model,
             model_name=final_model,

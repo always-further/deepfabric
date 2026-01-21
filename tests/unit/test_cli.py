@@ -366,7 +366,8 @@ def test_generate_command_with_overrides(
     mock_save_dataset.assert_called_once()
 
     args, kwargs = mock_engine_instance.create_data_with_events_async.call_args
-    assert kwargs["num_steps"] == 10  # noqa: PLR2004
+    # num_steps = ceil(num_samples / batch_size) = ceil(10 / 2) = 5
+    assert kwargs["num_steps"] == 5  # noqa: PLR2004
     assert kwargs["batch_size"] == 2  # noqa: PLR2004
     assert kwargs["model_name"] == "model"  # Updated expectation based on current CLI behavior
     assert kwargs["sys_msg"] is False
