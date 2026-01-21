@@ -331,23 +331,11 @@ class DataSetGenerator:
             required_samples = num_steps * batch_size
 
             if required_samples > total_paths:
-                # Provide detailed error with recommendations
-                max_steps_for_batch = total_paths // batch_size
-                max_batch_for_steps = total_paths // num_steps if num_steps > 0 else total_paths
-
-                error_msg = (
-                    f"Insufficient topic paths for dataset generation:\n"
-                    f"  • Available paths: {total_paths}\n"
-                    f"  • Requested samples: {required_samples} ({num_steps} steps × {batch_size} batch size)\n"
-                    f"  • Shortfall: {required_samples - total_paths} samples\n\n"
-                    f"Recommendations:\n"
-                    f"  • Reduce --num-steps to {max_steps_for_batch} (with current batch size {batch_size})\n"
-                    f"  • Reduce --batch-size to {max_batch_for_steps} (with current {num_steps} steps)\n"
-                    f"  • Increase topic tree/graph depth or degree to generate more paths"
-                )
-                raise DataSetGeneratorError(error_msg)
-
-            if required_samples == total_paths:
+                # Cycle through topics to generate more samples than paths
+                # Each topic will be used multiple times for even coverage
+                multiplier = math.ceil(required_samples / total_paths)
+                topic_paths = (topic_paths * multiplier)[:required_samples]
+            elif required_samples == total_paths:
                 # Use all paths - no sampling needed (auto/100% case)
                 # This is an optimization for 1:1 topic-to-sample mapping
                 pass

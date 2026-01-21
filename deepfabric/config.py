@@ -301,9 +301,9 @@ class OutputConfig(BaseModel):
                     pct = float(v_normalized[:-1])
                 except ValueError as e:
                     raise ValueError(f"Invalid percentage format: {v}") from e
-                if not (0 < pct <= 100):  # noqa: PLR2004
-                    raise ValueError("Percentage must be between 0 and 100")
-                return v_normalized  # Keep as string like "50%"
+                if pct <= 0:
+                    raise ValueError("Percentage must be greater than 0")
+                return v_normalized  # Keep as string like "50%" or "500%"
             # Try to parse as integer string
             try:
                 parsed = int(v)

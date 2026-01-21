@@ -50,8 +50,8 @@ def parse_num_samples(value: str | None) -> int | str | None:
             pct = float(value[:-1])
         except ValueError as e:
             raise ValueError(f"Invalid percentage format: {value}") from e
-        if not (0 < pct <= 100):  # noqa: PLR2004
-            raise ValueError("Percentage must be between 0 and 100")
+        if pct <= 0:
+            raise ValueError("Percentage must be greater than 0")
         return value
     # Try to parse as integer
     try:
