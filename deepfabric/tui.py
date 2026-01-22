@@ -275,19 +275,19 @@ class DeepFabricTUI:
 
     def success(self, message: str) -> None:
         """Display a success message."""
-        self.console.print(f" {message}", style="green")
+        self.console.print(f"✓ {message}", style="green")
 
     def warning(self, message: str) -> None:
         """Display a warning message."""
-        self.console.print(f"⚠️  {message}", style="yellow")
+        self.console.print(f"⚠ {message}", style="yellow")
 
     def error(self, message: str) -> None:
         """Display an error message."""
-        self.console.print(f"❌ {message}", style="red")
+        self.console.print(f"✗ {message}", style="red")
 
     def info(self, message: str) -> None:
         """Display an info message."""
-        self.console.print(f" {message}", style="blue")
+        self.console.print(f"• {message}", style="blue")
 
 
 class TreeBuildingTUI(TopicBuildingMixin, StreamObserver):

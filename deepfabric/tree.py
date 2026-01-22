@@ -385,6 +385,9 @@ class Tree(TopicModel):
 
     def save(self, save_path: str) -> None:
         """Save the topic tree to a file."""
+        from pathlib import Path  # noqa: PLC0415
+
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w") as f:
             for path in self.tree_paths:
                 f.write(json.dumps({"path": path}) + "\n")

@@ -31,7 +31,7 @@ from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
 from .tui import configure_tui, get_tui
 from .update_checker import check_for_updates
-from .utils import get_bool_env, parse_num_samples
+from .utils import check_dir_writable, check_path_writable, get_bool_env, parse_num_samples
 from .validation import show_validation_success, validate_path_requirements
 
 OverrideValue = str | int | float | bool | None
@@ -1096,7 +1096,12 @@ def visualize(graph_file: str, output: str) -> None:
 
 @cli.command()
 @click.argument("config_file", type=click.Path(exists=True))
-def validate(config_file: str) -> None:  # noqa: PLR0912
+@click.option(
+    "--check-api/--no-check-api",
+    default=True,
+    help="Validate API keys by making test calls (default: enabled)",
+)
+def validate(config_file: str, check_api: bool) -> None:  # noqa: PLR0912
     """Validate a DeepFabric configuration file."""
     try:
         # Try to load the configuration
@@ -1135,13 +1140,35 @@ def validate(config_file: str) -> None:  # noqa: PLR0912
 
         # Print configuration summary
         tui.console.print("\nConfiguration Summary:", style="cyan bold")
+
+        # Topics summary with estimated paths
+        depth = config.topics.depth
+        degree = config.topics.degree
+        # Estimated paths = degree^depth (each level branches by degree)
+        estimated_paths = degree**depth
         tui.info(
-            f"Topics: mode={config.topics.mode}, depth={config.topics.depth}, degree={config.topics.degree}"
+            f"Topics: mode={config.topics.mode}, depth={depth}, degree={degree}, "
+            f"estimated_paths={estimated_paths} ({degree}^{depth})"
         )
 
-        tui.info(
-            f"Output: num_samples={config.output.num_samples}, batch_size={config.output.batch_size}"
-        )
+        # Output summary with step size and checkpoint info
+        num_samples = config.output.num_samples
+        batch_size = config.output.batch_size
+        # Calculate num_steps - handle 'auto' and percentage strings
+        if isinstance(num_samples, int):
+            import math  # noqa: PLC0415
+
+            num_steps = math.ceil(num_samples / batch_size)
+            output_info = f"Output: num_samples={num_samples}, batch_size={batch_size}, num_steps={num_steps}"
+        else:
+            # For 'auto' or percentage, we can't compute steps without topic count
+            output_info = f"Output: num_samples={num_samples}, batch_size={batch_size}"
+
+        # Add checkpoint info if enabled
+        if config.output.checkpoint:
+            checkpoint = config.output.checkpoint
+            output_info += f", checkpoint_interval={checkpoint.interval}"
+        tui.info(output_info)
 
         if config.huggingface:
             hf_config = config.get_huggingface_config()
@@ -1150,6 +1177,54 @@ def validate(config_file: str) -> None:  # noqa: PLR0912
         if config.kaggle:
             kaggle_config = config.get_kaggle_config()
             tui.info(f"Kaggle: handle={kaggle_config.get('handle', 'not set')}")
+
+        # Check path writability
+        tui.console.print("\nPath Writability:", style="cyan bold")
+        path_errors = []
+
+        # Check topics.save_as if configured
+        if config.topics.save_as:
+            is_writable, error_msg = check_path_writable(config.topics.save_as, "topics.save_as")
+            if is_writable:
+                tui.success(f"topics.save_as: {config.topics.save_as}")
+            else:
+                path_errors.append(error_msg)
+                tui.error(f"topics.save_as: {error_msg}")
+
+        # Check output.save_as
+        if config.output.save_as:
+            is_writable, error_msg = check_path_writable(config.output.save_as, "output.save_as")
+            if is_writable:
+                tui.success(f"output.save_as: {config.output.save_as}")
+            else:
+                path_errors.append(error_msg)
+                tui.error(f"output.save_as: {error_msg}")
+
+        # Check checkpoint directory if enabled
+        if config.output.checkpoint:
+            checkpoint_path = config.output.checkpoint.path
+            is_writable, error_msg = check_dir_writable(checkpoint_path, "checkpoint.path")
+            if is_writable:
+                tui.success(f"checkpoint.path: {checkpoint_path}")
+            else:
+                path_errors.append(error_msg)
+                tui.error(f"checkpoint.path: {error_msg}")
+
+        if path_errors:
+            tui.console.print()
+            tui.error("Some paths are not writable. Fix permissions or choose different paths.")
+            sys.exit(1)
+
+        # Validate API keys if requested
+        if check_api:
+            tui.console.print("\nAPI Keys:", style="cyan bold")
+            try:
+                _validate_api_keys(config)
+            except ConfigurationError as e:
+                tui.error(str(e))
+                sys.exit(1)
+        else:
+            tui.console.print("\nSkipping API key validation (use --check-api to enable)")
 
     except FileNotFoundError:
         handle_error(

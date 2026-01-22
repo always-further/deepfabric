@@ -6,6 +6,7 @@ import traceback
 
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from datasets import Dataset as HFDataset
@@ -523,6 +524,7 @@ def _strip_nulls(obj: Any) -> Any:
 
 def _save_jsonl_without_nulls(dataset: HFDataset, save_path: str) -> None:
     """Save HF Dataset to JSONL, stripping null values injected by Arrow schema."""
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "w") as f:
         for row in dataset:
             cleaned = _strip_nulls(dict(row))

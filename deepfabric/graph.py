@@ -231,6 +231,9 @@ class Graph(TopicModel):
 
     def save(self, save_path: str) -> None:
         """Save the topic graph to a file."""
+        from pathlib import Path  # noqa: PLC0415
+
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "w") as f:
             f.write(self.to_json())
 

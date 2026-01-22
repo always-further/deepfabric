@@ -5,6 +5,7 @@ import json
 import os
 import re
 
+from pathlib import Path
 from typing import Any
 
 VALIDATION_ERROR_INDICATORS = [
@@ -240,3 +241,87 @@ def import_optional_dependency(
         else:
             msg = f"The '{module_name}' library is required but is not installed."
         raise ModuleNotFoundError(msg) from None
+
+
+def check_path_writable(path: str, path_description: str) -> tuple[bool, str | None]:
+    """Check if a path is writable.
+
+    Checks whether the specified file path can be written to by verifying:
+    1. If the file exists, whether it's writable
+    2. If the file doesn't exist, whether the parent directory exists and is writable
+
+    Args:
+        path: The file path to check
+        path_description: Human-readable description for error messages
+
+    Returns:
+        Tuple of (is_writable, error_message). error_message is None if writable.
+    """
+    file_path = Path(path)
+    parent_dir = file_path.parent
+    error_msg: str | None = None
+
+    # If the file exists, check if it's writable
+    if file_path.exists():
+        if not os.access(file_path, os.W_OK):
+            error_msg = f"{path_description} exists but is not writable: {path}"
+    elif not parent_dir.exists():
+        # File doesn't exist and parent doesn't exist
+        # Walk up to find the first existing ancestor
+        ancestor = parent_dir
+        while not ancestor.exists() and ancestor != ancestor.parent:
+            ancestor = ancestor.parent
+
+        if not ancestor.exists():
+            error_msg = (
+                f"{path_description} parent directory does not exist "
+                f"and cannot be created: {parent_dir}"
+            )
+        elif not os.access(ancestor, os.W_OK):
+            error_msg = (
+                f"{path_description} cannot create parent directory "
+                f"(no write access to {ancestor}): {parent_dir}"
+            )
+    elif not os.access(parent_dir, os.W_OK):
+        # Parent exists but is not writable
+        error_msg = f"{path_description} parent directory is not writable: {parent_dir}"
+
+    return (error_msg is None, error_msg)
+
+
+def check_dir_writable(path: str, path_description: str) -> tuple[bool, str | None]:
+    """Check if a directory path is writable.
+
+    Checks whether files can be created in the specified directory by verifying:
+    1. If the directory exists, whether it's writable
+    2. If the directory doesn't exist, whether we can create it
+
+    Args:
+        path: The directory path to check
+        path_description: Human-readable description for error messages
+
+    Returns:
+        Tuple of (is_writable, error_message). error_message is None if writable.
+    """
+    dir_path = Path(path)
+
+    # If the directory exists, check if it's writable
+    if dir_path.exists():
+        if not dir_path.is_dir():
+            return False, f"{path_description} exists but is not a directory: {path}"
+        if not os.access(dir_path, os.W_OK):
+            return False, f"{path_description} directory is not writable: {path}"
+        return True, None
+
+    # Directory doesn't exist - check if we can create it
+    ancestor = dir_path
+    while not ancestor.exists() and ancestor != ancestor.parent:
+        ancestor = ancestor.parent
+
+    if not ancestor.exists():
+        return False, f"{path_description} cannot be created (root does not exist): {path}"
+
+    if not os.access(ancestor, os.W_OK):
+        return False, f"{path_description} cannot be created (no write access to {ancestor}): {path}"
+
+    return True, None
