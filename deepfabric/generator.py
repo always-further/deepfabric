@@ -1296,8 +1296,8 @@ class DataSetGenerator:
                     samples_since_checkpoint = 0
                     yield {
                         "event": "checkpoint_saved",
-                        "total_samples": len(self._samples),
-                        "total_failures": len(self.failed_samples),
+                        "total_samples": self._flushed_samples_count,
+                        "total_failures": self._flushed_failures_count,
                     }
 
                 failed_in_batch = len(self.failed_samples) - failed_before
@@ -1337,8 +1337,8 @@ class DataSetGenerator:
                 )
                 yield {
                     "event": "checkpoint_saved",
-                    "total_samples": len(self._samples),
-                    "total_failures": len(self.failed_samples),
+                    "total_samples": self._flushed_samples_count,
+                    "total_failures": self._flushed_failures_count,
                     "final": True,
                 }
 
