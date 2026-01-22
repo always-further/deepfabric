@@ -53,11 +53,11 @@ output:
   batch_size: 2
   save_as: "dataset.jsonl"
 
-# Optional: Checkpoint for resumable generation
-checkpoint:
-  interval: 500       # Save every 500 samples
-  path: ".checkpoints"
-  retry_failed: false
+  # Optional: Checkpoint for resumable generation
+  checkpoint:
+    interval: 500       # Save every 500 samples
+    path: ".checkpoints"
+    retry_failed: false
 
 # Optional: Upload to HuggingFace
 huggingface:
@@ -187,6 +187,7 @@ Controls final dataset.
 | `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
 | `batch_size` | int | 1 | Parallel generation batch size |
 | `save_as` | string | required | Output file path |
+| `checkpoint` | object | - | Checkpoint configuration (see below) |
 
 !!! tip "Auto and Percentage Samples"
     `num_samples` supports special values:
@@ -197,7 +198,7 @@ Controls final dataset.
 
     When `num_samples` exceeds the number of topic paths, topics cycle for even coverage. An integer larger than the path count is equivalent to a percentage—for example, with 50 paths, `num_samples: 100` behaves the same as `num_samples: "200%"`.
 
-### checkpoint (Optional)
+#### output.checkpoint (Optional)
 
 Configuration for checkpoint-based resume capability. Checkpoints allow pausing and resuming long-running dataset generation without losing progress.
 
@@ -208,10 +209,12 @@ Configuration for checkpoint-based resume capability. Checkpoints allow pausing 
 | `retry_failed` | bool | false | When resuming, retry previously failed samples |
 
 ```yaml title="Checkpoint configuration"
-checkpoint:
-  interval: 500     # Save every 500 samples
-  path: "./my-checkpoints"
-  retry_failed: false
+output:
+  save_as: "dataset.jsonl"
+  checkpoint:
+    interval: 500     # Save every 500 samples
+    path: "./my-checkpoints"
+    retry_failed: false
 ```
 
 Checkpointing creates three files in the checkpoint directory:

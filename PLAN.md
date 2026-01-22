@@ -341,11 +341,10 @@ output:
   num_samples: 5000
   batch_size: 5
   save_as: "final_dataset.jsonl"
-
-checkpoint:
-  interval: 500          # Checkpoint every 500 samples
-  path: "./my-checkpoints"
-  retry_failed: false    # Default: don't retry failures on resume
+  checkpoint:
+    interval: 500          # Checkpoint every 500 samples
+    path: "./my-checkpoints"
+    retry_failed: false    # Default: don't retry failures on resume
 ```
 
 ### CLI

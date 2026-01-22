@@ -422,9 +422,9 @@ generation:
   system_prompt: "Test system prompt"
 output:
   save_as: "test_dataset.jsonl"
-checkpoint:
-  interval: 10
-  path: "{temp_checkpoint_dir}"
+  checkpoint:
+    interval: 10
+    path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
@@ -451,9 +451,9 @@ output:
   save_as: "test_dataset.jsonl"
   num_samples: 100
   batch_size: 1
-checkpoint:
-  interval: 10
-  path: "{temp_checkpoint_dir}"
+  checkpoint:
+    interval: 10
+    path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
@@ -508,9 +508,9 @@ output:
   save_as: "test_dataset.jsonl"
   num_samples: 100
   batch_size: 1
-checkpoint:
-  interval: 10
-  path: "{temp_checkpoint_dir}"
+  checkpoint:
+    interval: 10
+    path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
