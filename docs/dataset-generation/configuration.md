@@ -178,9 +178,18 @@ Controls final dataset.
 |-------|------|---------|-------------|
 | `system_prompt` | string | - | System message in training data |
 | `include_system_message` | bool | true | Include system message |
-| `num_samples` | int | required | Total samples to generate |
+| `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
 | `batch_size` | int | 1 | Parallel generation batch size |
 | `save_as` | string | required | Output file path |
+
+!!! tip "Auto and Percentage Samples"
+    `num_samples` supports special values:
+
+    - **Integer** (e.g., `100`): Generate exactly this many samples
+    - **`"auto"`**: Generate one sample per topic path (100% coverage)
+    - **Percentage** (e.g., `"50%"`, `"200%"`): Generate samples relative to topic path count
+
+    When `num_samples` exceeds the number of topic paths, topics cycle for even coverage. An integer larger than the path count is equivalent to a percentage—for example, with 50 paths, `num_samples: 100` behaves the same as `num_samples: "200%"`.
 
 ### huggingface (Optional)
 

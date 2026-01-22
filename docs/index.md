@@ -146,7 +146,7 @@ deepfabric generate \
 The key steps in this example were as follows:
 
 1. **Topic Graph Generation**: A topic hierarchy was created starting from "DevOps and Platform Engineering". Topic graphs take a root prompt and recursively expand subtopics to form a DAG (Direct Acyclic Graph) structure. Here, we used a depth of 2 and degree of 2 to ensure coverage of subtopics.
-2. **Dataset Generation**: For each node topic in the graph, a synthetic dataset sample was generated using a chain-of-thought conversation style. Each example includes reasoning traces to illustrate the thought process behind the answers. With the above example, 2 samples were generated per topic as per the `--num-samples` flag.
+2. **Dataset Generation**: For each node topic in the graph, a synthetic dataset sample was generated using a chain-of-thought conversation style. Each example includes reasoning traces to illustrate the thought process behind the answers. With the above example, 2 total samples were generated as specified by `--num-samples 2`. You can also use `--num-samples auto` to generate one sample per topic path.
 3. **Conversation and Reasoning Style**: The `cot` conversation type with `freetext` reasoning style. This encourages the model to provide detailed explanations along with answers, enhancing the quality of the training data.
 
 So lets' break down this down visually:

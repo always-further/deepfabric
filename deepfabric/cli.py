@@ -283,7 +283,7 @@ def _load_and_prepare_generation_context(
             mode=options.mode,
             depth=final_depth,
             degree=final_degree,
-            num_steps=final_num_samples,
+            num_samples=final_num_samples,
             batch_size=final_batch_size,
             loading_existing=loading_existing,
         )
@@ -292,7 +292,7 @@ def _load_and_prepare_generation_context(
             mode=options.mode,
             depth=final_depth,
             degree=final_degree,
-            num_steps=final_num_samples,
+            num_samples=final_num_samples,
             batch_size=final_batch_size,
             loading_existing=loading_existing,
         )

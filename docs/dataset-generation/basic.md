@@ -96,13 +96,19 @@ deepfabric generate \
     - `output.system_prompt` - The system message included in training data
 
 !!! info "Sample Size"
-    Sample size controls the number of generation steps:
+    `num_samples` specifies the total number of samples to generate:
 
-    - `num_samples` is the number of generation steps to run
-    - `batch_size` is how many samples to generate per step
-    - Total samples = `num_samples` x `batch_size`
+    - `num_samples` - The target number of samples to generate
+    - `batch_size` - How many samples to generate per step (affects parallelism)
+    - Steps = ceil(`num_samples` / `batch_size`)
 
-    For example, `num_samples: 5` with `batch_size: 2` runs 5 steps, generating 2 samples each, for a total of 10 samples.
+    For example, `num_samples: 10` with `batch_size: 2` runs 5 steps, generating 2 samples each.
+
+    **Special values:**
+
+    - `"auto"` - Generate exactly one sample per topic path (100% coverage)
+    - `"50%"` - Generate samples for 50% of topic paths
+    - `"200%"` - Generate 2× the number of topic paths (cycles through topics twice)
 
 ## Graph to Sample Ratio
 
@@ -113,20 +119,12 @@ When configuring topic generation with a tree or graph, the total number of uniq
 
 For example, a tree with `depth: 2` and `degree: 2` yields 4 unique paths (`2^2 = 4`).
 
-!!! warning "Path Validation"
-    If the number of samples exceeds the number of unique paths, DeepFabric will warn and flag the discrepancy:
+!!! info "Topic Cycling"
+    When `num_samples` exceeds the number of unique topic paths, DeepFabric automatically cycles through topics to ensure even coverage. For example, with 4 paths and `num_samples: 8`, each topic is used twice.
 
-    ```
-    Path validation failed - stopping before topic generation
-    Error: Insufficient expected paths for dataset generation:
-      - Expected tree paths: ~4 (depth=2, degree=2)
-      - Requested samples: 5 (5 steps x 1 batch size)
-      - Shortfall: ~1 samples
+    This works with both integer values and percentages:
 
-    Recommendations:
-      - Use one of these combinations to utilize the 4 paths:
-        --num-samples 1 --batch-size 4  (generates 4 samples)
-        --num-samples 2 --batch-size 2  (generates 4 samples)
-        --num-samples 4 --batch-size 1  (generates 4 samples)
-      - Or increase --depth (currently 2) or --degree (currently 2)
-    ```
+    - `num_samples: 8` with 4 paths → 2x cycling
+    - `num_samples: "200%"` → 2x cycling (explicit)
+
+    An integer value larger than the number of paths is equivalent to using a percentage. For example, with 4 paths, `num_samples: 8` behaves identically to `num_samples: "200%"`.

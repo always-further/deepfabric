@@ -109,10 +109,15 @@ deepfabric generate config.yaml \
 
 | Parameter | Description |
 |-----------|-------------|
-| `--num-samples` | Controls dataset size |
+| `--num-samples` | Total samples: integer, `auto`, or percentage (e.g., `50%`, `200%`) |
 | `--batch-size` | Affects generation speed and resource usage |
 | `--include-system-message` | Include system prompts in training examples |
 | `--no-system-message` | Exclude system prompts from training examples |
+
+!!! tip "Automatic Sample Count"
+    Use `--num-samples auto` to generate exactly one sample per topic path. Use percentages like `--num-samples 50%` for partial coverage or `--num-samples 200%` to cycle through topics multiple times.
+
+    Integer values larger than the number of topic paths work the same way—`--num-samples 100` with 50 paths is equivalent to `--num-samples 200%`.
 
 ## Conversation Type Options
 
