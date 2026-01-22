@@ -1204,6 +1204,7 @@ class DataSetGenerator:
                 "topic_model_type": topic_model_type,
                 "resumed_from_checkpoint": len(self._processed_paths) > 0,
                 "previously_processed": len(self._processed_paths),
+                "checkpoint_enabled": self.config.checkpoint_samples is not None,
             }
 
             for step in range(num_steps):

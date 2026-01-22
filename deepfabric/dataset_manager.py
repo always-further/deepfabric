@@ -113,6 +113,7 @@ async def handle_dataset_events_async(
                         tui.init_status(
                             total_steps=event["num_steps"],
                             total_samples=event["total_samples"],
+                            checkpoint_enabled=event.get("checkpoint_enabled", False),
                         )
 
                         # Build layout with footer card
@@ -211,11 +212,12 @@ async def handle_dataset_events_async(
                     is_final = event.get("final", False)
 
                     if footer_prog and task is not None:
-                        # Rich mode: log to events panel
+                        # Rich mode: log to events panel and update status
                         if is_final:
                             tui.log_event(f"💾 Final checkpoint: {total_samples} samples")
                         else:
                             tui.log_event(f"💾 Checkpoint: {total_samples} samples")
+                        tui.status_checkpoint_saved(total_samples)
                     elif isinstance(simple_task, dict):
                         # Simple mode: print checkpoint notification
                         checkpoint_msg = f"Checkpoint saved: {total_samples} samples"

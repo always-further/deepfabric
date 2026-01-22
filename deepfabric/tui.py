@@ -846,6 +846,10 @@ class DatasetGenerationTUI(StreamObserver):
         self.status_samples_done = 0
         self.status_failed_total = 0
         self.status_step_started_at = 0.0
+        # Checkpoint tracking for status panel
+        self.checkpoint_enabled = False  # Set to True when checkpointing is configured
+        self.checkpoint_count = 0
+        self.last_checkpoint_samples = 0
         # Retry tracking for simple mode
         self.step_retries: list[dict] = []  # Retries in current step
 
@@ -1031,13 +1035,18 @@ class DatasetGenerationTUI(StreamObserver):
             return
 
     # --- Status Panel helpers ---
-    def init_status(self, total_steps: int, total_samples: int) -> None:
+    def init_status(
+        self, total_steps: int, total_samples: int, checkpoint_enabled: bool = False
+    ) -> None:
         self.status_total_steps = total_steps
         self.status_total_samples = total_samples
         self.status_current_step = 0
         self.status_samples_done = 0
         self.status_failed_total = 0
         self.status_step_started_at = 0.0
+        self.checkpoint_enabled = checkpoint_enabled
+        self.checkpoint_count = 0
+        self.last_checkpoint_samples = 0
 
     def status_step_start(self, step: int, total_steps: int | None = None) -> None:
         self.status_current_step = step
@@ -1049,6 +1058,12 @@ class DatasetGenerationTUI(StreamObserver):
     def status_step_complete(self, samples_generated: int, failed_in_step: int = 0) -> None:
         self.status_samples_done += max(0, int(samples_generated))
         self.status_failed_total += max(0, int(failed_in_step))
+        self.update_status_panel()
+
+    def status_checkpoint_saved(self, total_samples: int) -> None:
+        """Update checkpoint tracking when a checkpoint is saved."""
+        self.checkpoint_count += 1
+        self.last_checkpoint_samples = total_samples
         self.update_status_panel()
 
     def _status_panel(self) -> Panel:
@@ -1063,6 +1078,13 @@ class DatasetGenerationTUI(StreamObserver):
         table.add_row("Generated:", f"{self.status_samples_done}/{self.status_total_samples}")
         if self.status_failed_total:
             table.add_row("Failed:", str(self.status_failed_total))
+        if self.checkpoint_enabled:
+            if self.checkpoint_count > 0:
+                table.add_row(
+                    "Checkpoints:", f"{self.checkpoint_count} ({self.last_checkpoint_samples} samples)"
+                )
+            else:
+                table.add_row("Checkpoints:", "0 (enabled)")
         return Panel(table, title="Status", border_style="dim", padding=(0, 1))
 
     def update_status_panel(self) -> None:
