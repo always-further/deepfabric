@@ -117,8 +117,8 @@ class GenerateOptions(BaseModel):
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None
 
     # Checkpointing options
-    checkpoint_samples: int | None = None
-    checkpoint_dir: str | None = None
+    checkpoint_interval: int | None = None
+    checkpoint_path: str | None = None
     resume: bool = False
     retry_failed: bool = False
 
@@ -394,10 +394,12 @@ def _run_generation(
 
     # Apply CLI checkpoint overrides
     checkpoint_overrides = {}
-    if options.checkpoint_samples is not None:
-        checkpoint_overrides["checkpoint_samples"] = options.checkpoint_samples
-    if options.checkpoint_dir is not None:
-        checkpoint_overrides["checkpoint_dir"] = options.checkpoint_dir
+    if options.checkpoint_interval is not None:
+        checkpoint_overrides["checkpoint_interval"] = options.checkpoint_interval
+    if options.checkpoint_path is not None:
+        checkpoint_overrides["checkpoint_path"] = options.checkpoint_path
+    if options.retry_failed:
+        checkpoint_overrides["checkpoint_retry_failed"] = options.retry_failed
 
     generation_params = preparation.config.get_generation_params(
         **preparation.generation_overrides, **checkpoint_overrides
@@ -409,8 +411,8 @@ def _run_generation(
         if engine.load_checkpoint(retry_failed=options.retry_failed):
             retry_msg = " (retrying failed samples)" if options.retry_failed else ""
             tui.info(
-                f"Resuming from checkpoint: {len(engine._samples)} samples, "
-                f"{len(engine._processed_paths)} paths processed{retry_msg}"
+                f"Resuming from checkpoint: {engine._flushed_samples_count} samples, "
+                f"{len(engine._processed_ids)} IDs processed{retry_msg}"
             )
         else:
             tui.info("No checkpoint found, starting fresh generation")
@@ -433,7 +435,7 @@ def _run_generation(
     save_dataset(dataset, output_save_path, preparation.config, engine=engine)
 
     # Clean up checkpoint files after successful completion
-    if generation_params.get("checkpoint_samples") is not None:
+    if generation_params.get("checkpoint_interval") is not None:
         engine.clear_checkpoint()
         tui.info("Checkpoint files cleaned up after successful generation")
 
@@ -529,12 +531,12 @@ def _run_generation(
     "Enables headless mode for CI. Requires DEEPFABRIC_API_KEY or prior auth.",
 )
 @click.option(
-    "--checkpoint-samples",
+    "--checkpoint-interval",
     type=int,
     help="Save checkpoint every N samples. Enables resumable generation.",
 )
 @click.option(
-    "--checkpoint-dir",
+    "--checkpoint-path",
     type=click.Path(),
     help="Directory for checkpoint files (default: .checkpoints)",
 )
@@ -574,8 +576,8 @@ def generate(  # noqa: PLR0913
     agent_mode: Literal["single_turn", "multi_turn"] | None = None,
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None,
     tui: Literal["rich", "simple"] = "rich",
-    checkpoint_samples: int | None = None,
-    checkpoint_dir: str | None = None,
+    checkpoint_interval: int | None = None,
+    checkpoint_path: str | None = None,
     resume: bool = False,
     retry_failed: bool = False,
 ) -> None:
@@ -635,8 +637,8 @@ def generate(  # noqa: PLR0913
             agent_mode=agent_mode,
             cloud_upload=cloud_upload,
             tui=tui,
-            checkpoint_samples=checkpoint_samples,
-            checkpoint_dir=checkpoint_dir,
+            checkpoint_interval=checkpoint_interval,
+            checkpoint_path=checkpoint_path,
             resume=resume,
             retry_failed=retry_failed,
         )
@@ -1651,8 +1653,9 @@ def checkpoint_status(config_file: str) -> None:
         sys.exit(1)
 
     # Get checkpoint configuration
+    checkpoint_config = config.get_checkpoint_config()
     output_config = config.get_output_config()
-    checkpoint_dir = output_config.get("checkpoint_dir", DEFAULT_CHECKPOINT_DIR)
+    checkpoint_dir = checkpoint_config.get("path", DEFAULT_CHECKPOINT_DIR)
     save_as = output_config.get("save_as")
 
     if not save_as:
@@ -1661,16 +1664,16 @@ def checkpoint_status(config_file: str) -> None:
 
     # Derive checkpoint paths
     output_stem = Path(save_as).stem
-    checkpoint_path = Path(checkpoint_dir)
-    metadata_path = checkpoint_path / f"{output_stem}{CHECKPOINT_METADATA_SUFFIX}"
-    samples_path = checkpoint_path / f"{output_stem}{CHECKPOINT_SAMPLES_SUFFIX}"
-    failures_path = checkpoint_path / f"{output_stem}{CHECKPOINT_FAILURES_SUFFIX}"
+    checkpoint_dir_path = Path(checkpoint_dir)
+    metadata_path = checkpoint_dir_path / f"{output_stem}{CHECKPOINT_METADATA_SUFFIX}"
+    samples_path = checkpoint_dir_path / f"{output_stem}{CHECKPOINT_SAMPLES_SUFFIX}"
+    failures_path = checkpoint_dir_path / f"{output_stem}{CHECKPOINT_FAILURES_SUFFIX}"
 
     # Check if checkpoint exists
     if not metadata_path.exists():
         tui.info(f"No checkpoint found at: {metadata_path}")
         tui.info("\nTo enable checkpointing, run:")
-        tui.info(f"  deepfabric generate {config_file} --checkpoint-samples 10")
+        tui.info(f"  deepfabric generate {config_file} --checkpoint-interval 10")
         return
 
     # Load and display checkpoint metadata
@@ -1682,10 +1685,10 @@ def checkpoint_status(config_file: str) -> None:
         sys.exit(1)
 
     # Count samples in checkpoint file
-    checkpoint_samples = 0
+    checkpoint_sample_count = 0
     if samples_path.exists():
         with open(samples_path) as f:
-            checkpoint_samples = sum(1 for line in f if line.strip())
+            checkpoint_sample_count = sum(1 for line in f if line.strip())
 
     # Count failures
     checkpoint_failures = 0
@@ -1713,9 +1716,9 @@ def checkpoint_status(config_file: str) -> None:
     tui.console.print()
 
     # Progress
-    progress_pct = (checkpoint_samples / total_target * 100) if total_target > 0 else 0
+    progress_pct = (checkpoint_sample_count / total_target * 100) if total_target > 0 else 0
     tui.console.print(
-        f"  [cyan]Progress:[/cyan]     {checkpoint_samples}/{total_target} samples ({progress_pct:.1f}%)"
+        f"  [cyan]Progress:[/cyan]     {checkpoint_sample_count}/{total_target} samples ({progress_pct:.1f}%)"
     )
     tui.console.print(f"  [cyan]Failed:[/cyan]       {checkpoint_failures} samples")
 
@@ -1750,15 +1753,15 @@ def checkpoint_status(config_file: str) -> None:
 
     # Resume instructions
     tui.console.print()
-    checkpoint_samples_arg = metadata.get("checkpoint_samples", 10)
+    checkpoint_interval_arg = metadata.get("checkpoint_interval", 10)
     tui.console.print("[green]Resume with:[/green]")
     tui.console.print(
-        f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume"
+        f"  deepfabric generate {config_file} --checkpoint-interval {checkpoint_interval_arg} --resume"
     )
     if metadata.get("total_failures", 0) > 0:
         tui.console.print("[green]Retry failed:[/green]")
         tui.console.print(
-            f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume --retry-failed"
+            f"  deepfabric generate {config_file} --checkpoint-interval {checkpoint_interval_arg} --resume --retry-failed"
         )
 
 

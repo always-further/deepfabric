@@ -103,20 +103,28 @@ This allows users to:
 
 #### 1.1 Config Changes (`config.py`)
 
-Add to `OutputConfig`:
+Add new `CheckpointConfig` class:
 ```python
-checkpoint_samples: int | None = Field(
-    default=None,
-    ge=1,
-    description="Save checkpoint every N samples. None disables checkpointing."
-)
-checkpoint_dir: str = Field(
-    default=".checkpoints",
-    description="Directory to store checkpoint files"
-)
-retry_failed_samples: bool = Field(
-    default=False,
-    description="When resuming, retry previously failed samples"
+class CheckpointConfig(BaseModel):
+    interval: int = Field(
+        ...,
+        ge=1,
+        description="Save checkpoint every N samples"
+    )
+    path: str = Field(
+        default=".checkpoints",
+        description="Directory to store checkpoint files"
+    )
+    retry_failed: bool = Field(
+        default=False,
+        description="When resuming, retry previously failed samples"
+    )
+```
+
+Add to `DeepFabricConfig`:
+```python
+checkpoint: CheckpointConfig | None = Field(
+    None, description="Checkpoint configuration for resumable generation"
 )
 ```
 
@@ -201,9 +209,9 @@ for step in range(num_steps):
 #### 2.1 CLI Arguments (`cli.py`)
 
 ```python
-@click.option("--checkpoint-samples", type=int, help="Save checkpoint every N samples")
-@click.option("--checkpoint-dir", type=click.Path(), help="Checkpoint directory")
-@click.option("--resume", type=click.Path(exists=True), help="Resume from checkpoint file")
+@click.option("--checkpoint-interval", type=int, help="Save checkpoint every N samples")
+@click.option("--checkpoint-path", type=click.Path(), help="Checkpoint directory")
+@click.option("--resume", is_flag=True, help="Resume from existing checkpoint")
 @click.option("--retry-failed", is_flag=True, default=False, help="Retry failed samples when resuming")
 ```
 
@@ -262,13 +270,13 @@ Retry failed: deepfabric generate config.yaml --resume --retry-failed
 
 | File | Changes |
 |------|---------|
-| `deepfabric/config.py` | Add `checkpoint_samples`, `checkpoint_dir`, `retry_failed_samples` fields |
+| `deepfabric/config.py` | Add `CheckpointConfig` class with `interval`, `path`, `retry_failed` fields |
 | `deepfabric/constants.py` | Add checkpoint filename constants |
 | `deepfabric/generator.py` | Checkpoint save/load logic, modify generation loop |
-| `deepfabric/cli.py` | Add CLI arguments for checkpointing |
+| `deepfabric/cli.py` | Add CLI arguments for checkpointing (`--checkpoint-interval`, `--checkpoint-path`, `--resume`, `--retry-failed`) |
 | `deepfabric/dataset_manager.py` | Handle checkpoint paths in output flow |
-| `tests/unit/test_generator.py` | Add checkpoint tests |
-| `docs/configuration.md` | Document checkpoint config options |
+| `tests/unit/test_checkpoint.py` | Add checkpoint tests |
+| `docs/dataset-generation/configuration.md` | Document checkpoint config options |
 | `docs/cli.md` | Document `--checkpoint-samples`, `--resume`, `--retry-failed` flags |
 | `mkdocs.yml` | Add new docs pages if needed |
 
@@ -323,31 +331,33 @@ Samples per checkpoint: 500
 3. **Topic model changes**: Detect and fail gracefully
 4. **Disk full**: Handle checkpoint write failures
 5. **Corrupt checkpoint**: Validate on load, clear error message
-6. **batch_size doesn't divide evenly into checkpoint_samples**: Checkpoint after threshold exceeded
+6. **batch_size doesn't divide evenly into checkpoint interval**: Checkpoint after threshold exceeded
 
 ## Usage Examples
 
 ### YAML Config
 ```yaml
-dataset:
+output:
   num_samples: 5000
   batch_size: 5
-  checkpoint_samples: 500  # Checkpoint every 500 samples
-  checkpoint_dir: "./my-checkpoints"
-  retry_failed_samples: false  # Default: don't retry failures on resume
   save_as: "final_dataset.jsonl"
+
+checkpoint:
+  interval: 500          # Checkpoint every 500 samples
+  path: "./my-checkpoints"
+  retry_failed: false    # Default: don't retry failures on resume
 ```
 
 ### CLI
 ```bash
 # Generate with checkpoints every 500 samples
-deepfabric generate config.yaml --checkpoint-samples 500
+deepfabric generate config.yaml --checkpoint-interval 500
 
 # Resume from checkpoint (skips failed samples by default)
-deepfabric generate config.yaml --resume ./my-checkpoints/dataset.checkpoint.json
+deepfabric generate config.yaml --resume
 
 # Resume and retry previously failed samples
-deepfabric generate config.yaml --resume ./my-checkpoints/dataset.checkpoint.json --retry-failed
+deepfabric generate config.yaml --resume --retry-failed
 ```
 
 ## Success Criteria
@@ -357,8 +367,8 @@ deepfabric generate config.yaml --resume ./my-checkpoints/dataset.checkpoint.jso
 - [ ] Resume loads samples and continues from correct point
 - [ ] No duplicate samples in final dataset
 - [ ] Failed samples saved to checkpoint failures file
-- [ ] Resume with `retry_failed_samples=False` (default) skips failures
-- [ ] Resume with `retry_failed_samples=True` retries failed samples
+- [ ] Resume with `retry_failed=False` (default) skips failures
+- [ ] Resume with `retry_failed=True` retries failed samples
 - [ ] Memory optimization: constant memory usage regardless of dataset size
 - [ ] Performance: <0.1% overhead for checkpoint saves
 - [ ] Existing tests pass
@@ -366,44 +376,6 @@ deepfabric generate config.yaml --resume ./my-checkpoints/dataset.checkpoint.jso
 - [ ] Documentation updated (config options, CLI flags, usage examples)
 
 ## Future Enhancements
-
-### Add `max_concurrent` to Generator (parity with Graph)
-
-**Current state:** Graph has `max_concurrent` with semaphore throttling; Generator does not.
-
-**Problem:** With large `batch_size` (e.g., 50), all LLM calls fire simultaneously:
-- No throttling beyond batch size
-- Rate limit errors affect entire batch (thundering herd)
-- Retry storms when 429s occur
-
-**Proposed solution:** Add semaphore-based throttling to Generator:
-
-```python
-# Config
-max_concurrent: int = Field(
-    default=10,
-    ge=1,
-    le=50,
-    description="Maximum concurrent LLM calls (helps avoid rate limits)"
-)
-
-# In generation loop
-semaphore = asyncio.Semaphore(max_concurrent)
-
-async def throttled_generate(prompt):
-    async with semaphore:
-        return await llm.generate(prompt)
-
-# Use throttled_generate in asyncio.gather()
-```
-
-**Benefits:**
-- Smoother rate limit behavior
-- Allows large `batch_size` without overwhelming API
-- More predictable step completion times
-- Better alignment with checkpoint intervals
-
-**Checkpoint interaction:** None - this is orthogonal to checkpointing but improves overall reliability.
 
 ### Step-Level Parallelism (Future)
 

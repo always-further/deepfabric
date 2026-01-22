@@ -205,7 +205,7 @@ The generation process provides real-time feedback:
 For long-running generation jobs, enable checkpointing to save progress and allow resuming after interruptions:
 
 ```bash title="Enable checkpointing"
-deepfabric generate config.yaml --checkpoint-samples 500
+deepfabric generate config.yaml --checkpoint-interval 500
 ```
 
 If generation is interrupted, resume from the checkpoint:
@@ -222,8 +222,8 @@ deepfabric generate config.yaml --resume --retry-failed
 
 | Parameter | Description |
 |-----------|-------------|
-| `--checkpoint-samples N` | Save checkpoint every N samples |
-| `--checkpoint-dir PATH` | Directory for checkpoint files (default: `.checkpoints`) |
+| `--checkpoint-interval N` | Save checkpoint every N samples |
+| `--checkpoint-path PATH` | Directory for checkpoint files (default: `.checkpoints`) |
 | `--resume` | Resume from existing checkpoint |
 | `--retry-failed` | When resuming, retry previously failed samples |
 

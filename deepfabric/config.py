@@ -286,17 +286,6 @@ class OutputConfig(BaseModel):
     )
     save_as: str = Field(..., min_length=1, description="Where to save the final dataset")
 
-    # Checkpoint configuration
-    checkpoint_samples: int | None = Field(
-        default=None,
-        ge=1,
-        description="Save checkpoint every N samples. None disables checkpointing.",
-    )
-    checkpoint_dir: str = Field(
-        default=DEFAULT_CHECKPOINT_DIR,
-        description="Directory to store checkpoint files",
-    )
-
     @field_validator("num_samples", mode="before")
     @classmethod
     def validate_num_samples(cls, v: int | str) -> int | str:
@@ -305,6 +294,29 @@ class OutputConfig(BaseModel):
         if result is None:
             raise ValueError("num_samples cannot be None")
         return result
+
+
+class CheckpointConfig(BaseModel):
+    """Configuration for checkpoint-based resume capability.
+
+    Checkpoints allow pausing and resuming long-running dataset generation
+    without losing progress. When enabled, samples are periodically saved
+    to disk and can be resumed if generation is interrupted.
+    """
+
+    interval: int = Field(
+        ...,
+        ge=1,
+        description="Save checkpoint every N samples",
+    )
+    path: str = Field(
+        default=DEFAULT_CHECKPOINT_DIR,
+        description="Directory to store checkpoint files",
+    )
+    retry_failed: bool = Field(
+        default=False,
+        description="When resuming, retry previously failed samples",
+    )
 
 
 class HuggingFaceConfig(BaseModel):
@@ -442,6 +454,11 @@ class DeepFabricConfig(BaseModel):
     topics: TopicsConfig = Field(..., description="Topic generation configuration")
     generation: GenerationConfig = Field(..., description="Sample generation configuration")
     output: OutputConfig = Field(..., description="Output dataset configuration")
+
+    # Optional checkpoint configuration
+    checkpoint: CheckpointConfig | None = Field(
+        None, description="Checkpoint configuration for resumable generation"
+    )
 
     # Optional integrations
     evaluation: EvaluationConfig | None = Field(None, description="Evaluation configuration")
@@ -609,10 +626,11 @@ See documentation for full examples.
             # Output config
             "sys_msg": self.output.include_system_message,
             "dataset_system_prompt": self.output.system_prompt or self.generation.system_prompt,
-            # Checkpoint config
-            "checkpoint_samples": self.output.checkpoint_samples,
-            "checkpoint_dir": self.output.checkpoint_dir,
             "output_save_as": self.output.save_as,
+            # Checkpoint config (from dedicated checkpoint block)
+            "checkpoint_interval": self.checkpoint.interval if self.checkpoint else None,
+            "checkpoint_path": self.checkpoint.path if self.checkpoint else DEFAULT_CHECKPOINT_DIR,
+            "checkpoint_retry_failed": self.checkpoint.retry_failed if self.checkpoint else False,
         }
 
         # Tool config
@@ -647,9 +665,17 @@ See documentation for full examples.
             "num_samples": self.output.num_samples,
             "batch_size": self.output.batch_size,
             "save_as": self.output.save_as,
-            "checkpoint_samples": self.output.checkpoint_samples,
-            "checkpoint_dir": self.output.checkpoint_dir,
         }
+
+    def get_checkpoint_config(self) -> dict:
+        """Get checkpoint configuration."""
+        if self.checkpoint is None:
+            return {
+                "interval": None,
+                "path": DEFAULT_CHECKPOINT_DIR,
+                "retry_failed": False,
+            }
+        return self.checkpoint.model_dump()
 
     def get_huggingface_config(self) -> dict:
         """Get Hugging Face configuration."""

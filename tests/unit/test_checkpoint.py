@@ -38,8 +38,8 @@ def base_generator_params():
         "generation_system_prompt": "You are a helpful assistant.",
         "provider": "openai",
         "model_name": "gpt-4",
-        "checkpoint_samples": 5,
-        "checkpoint_dir": ".checkpoints",
+        "checkpoint_interval": 5,
+        "checkpoint_path": ".checkpoints",
         "output_save_as": "test_dataset.jsonl",
     }
 
@@ -47,7 +47,7 @@ def base_generator_params():
 @pytest.fixture
 def generator_with_checkpoint(temp_checkpoint_dir, base_generator_params):
     """Create a generator with checkpoint config and mocked LLM client."""
-    params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+    params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
     with patch("deepfabric.generator.LLMClient"):
         return DataSetGenerator(**params)
 
@@ -62,8 +62,9 @@ class TestCheckpointConfig:
             provider="openai",
             model_name="gpt-4",
         )
-        assert config.checkpoint_samples is None
-        assert config.checkpoint_dir == DEFAULT_CHECKPOINT_DIR
+        assert config.checkpoint_interval is None
+        assert config.checkpoint_path == DEFAULT_CHECKPOINT_DIR
+        assert config.checkpoint_retry_failed is False
         assert config.output_save_as is None
 
     def test_checkpoint_config_with_values(self):
@@ -72,22 +73,24 @@ class TestCheckpointConfig:
             generation_system_prompt="Test",
             provider="openai",
             model_name="gpt-4",
-            checkpoint_samples=10,
-            checkpoint_dir="/custom/dir",
+            checkpoint_interval=10,
+            checkpoint_path="/custom/dir",
+            checkpoint_retry_failed=True,
             output_save_as="output.jsonl",
         )
-        assert config.checkpoint_samples == 10  # noqa: PLR2004
-        assert config.checkpoint_dir == "/custom/dir"
+        assert config.checkpoint_interval == 10  # noqa: PLR2004
+        assert config.checkpoint_path == "/custom/dir"
+        assert config.checkpoint_retry_failed is True
         assert config.output_save_as == "output.jsonl"
 
-    def test_checkpoint_samples_must_be_positive(self):
-        """Test that checkpoint_samples must be >= 1."""
+    def test_checkpoint_interval_must_be_positive(self):
+        """Test that checkpoint_interval must be >= 1."""
         with pytest.raises(ValueError):
             DataSetGeneratorConfig(
                 generation_system_prompt="Test",
                 provider="openai",
                 model_name="gpt-4",
-                checkpoint_samples=0,
+                checkpoint_interval=0,
             )
 
 
@@ -96,7 +99,7 @@ class TestCheckpointPaths:
 
     def test_get_checkpoint_paths(self, temp_checkpoint_dir, base_generator_params):
         """Test that checkpoint paths are correctly derived from output_save_as."""
-        params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+        params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
         with patch("deepfabric.generator.LLMClient"):
             generator = DataSetGenerator(**params)
 
@@ -117,7 +120,7 @@ class TestCheckpointPaths:
     ):
         """Test that checkpoint directory is created if it doesn't exist."""
         nested_dir = os.path.join(temp_checkpoint_dir, "nested", "checkpoints")
-        params = {**base_generator_params, "checkpoint_dir": nested_dir}
+        params = {**base_generator_params, "checkpoint_path": nested_dir}
         with patch("deepfabric.generator.LLMClient"):
             generator = DataSetGenerator(**params)
 
@@ -132,8 +135,8 @@ class TestCheckpointPaths:
                 generation_system_prompt="Test",
                 provider="openai",
                 model_name="gpt-4",
-                checkpoint_samples=5,
-                checkpoint_dir=temp_checkpoint_dir,
+                checkpoint_interval=5,
+                checkpoint_path=temp_checkpoint_dir,
                 output_save_as=None,
             )
 
@@ -191,7 +194,7 @@ class TestCheckpointSaveLoad:
         Instead, we track counts via _flushed_samples_count/_flushed_failures_count.
         Samples remain on disk and are loaded only when building the final dataset.
         """
-        params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+        params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
             # Create and save checkpoint with TopicPath
@@ -225,7 +228,7 @@ class TestCheckpointSaveLoad:
         self, temp_checkpoint_dir, base_generator_params
     ):
         """Test that load_checkpoint returns False when no checkpoint exists."""
-        params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+        params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
         with patch("deepfabric.generator.LLMClient"):
             generator = DataSetGenerator(**params)
 
@@ -239,7 +242,7 @@ class TestCheckpointSaveLoad:
 
         Note: With memory optimization, failure counts are tracked via _flushed_failures_count.
         """
-        params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+        params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
             # Create and save checkpoint with failed samples that have topic_ids
@@ -286,8 +289,8 @@ class TestCheckpointSaveLoad:
                 generation_system_prompt="Test",
                 provider="openai",
                 model_name="gpt-4",
-                checkpoint_samples=None,
-                checkpoint_dir=temp_checkpoint_dir,
+                checkpoint_interval=None,
+                checkpoint_path=temp_checkpoint_dir,
             )
 
         loaded = generator.load_checkpoint()
@@ -298,7 +301,7 @@ class TestCheckpointSaveLoad:
         self, temp_checkpoint_dir, base_generator_params, caplog
     ):
         """Test that load_checkpoint warns when config differs from checkpoint."""
-        params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
+        params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
             # Create checkpoint with gpt-4 model
@@ -395,7 +398,7 @@ class TestCheckpointMetadata:
         assert "total_samples" in metadata
         assert "total_failures" in metadata
         assert "processed_ids" in metadata
-        assert "checkpoint_samples" in metadata
+        assert "checkpoint_interval" in metadata
 
         assert metadata["version"] == 2  # noqa: PLR2004
         assert metadata["provider"] == "openai"
@@ -419,7 +422,9 @@ generation:
   system_prompt: "Test system prompt"
 output:
   save_as: "test_dataset.jsonl"
-  checkpoint_dir: "{temp_checkpoint_dir}"
+checkpoint:
+  interval: 10
+  path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
@@ -446,7 +451,9 @@ output:
   save_as: "test_dataset.jsonl"
   num_samples: 100
   batch_size: 1
-  checkpoint_dir: "{temp_checkpoint_dir}"
+checkpoint:
+  interval: 10
+  path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
@@ -463,7 +470,7 @@ output:
             "total_samples": 25,
             "total_failures": 2,
             "processed_ids": ["uuid-1", "uuid-2"],
-            "checkpoint_samples": 10,
+            "checkpoint_interval": 10,
         }
 
         metadata_path = Path(temp_checkpoint_dir) / f"test_dataset{CHECKPOINT_METADATA_SUFFIX}"
@@ -501,7 +508,9 @@ output:
   save_as: "test_dataset.jsonl"
   num_samples: 100
   batch_size: 1
-  checkpoint_dir: "{temp_checkpoint_dir}"
+checkpoint:
+  interval: 10
+  path: "{temp_checkpoint_dir}"
 """
         config_path = os.path.join(temp_checkpoint_dir, "config.yaml")
         with open(config_path, "w") as f:
@@ -517,7 +526,7 @@ output:
             "total_samples": 10,
             "total_failures": 3,
             "processed_ids": [],
-            "checkpoint_samples": 10,
+            "checkpoint_interval": 10,
         }
 
         metadata_path = Path(temp_checkpoint_dir) / f"test_dataset{CHECKPOINT_METADATA_SUFFIX}"

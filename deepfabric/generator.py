@@ -201,14 +201,18 @@ class DataSetGeneratorConfig(BaseModel):
     )
 
     # Checkpoint configuration
-    checkpoint_samples: int | None = Field(
+    checkpoint_interval: int | None = Field(
         default=None,
         ge=1,
         description="Save checkpoint every N samples. None disables checkpointing.",
     )
-    checkpoint_dir: str = Field(
+    checkpoint_path: str = Field(
         default=DEFAULT_CHECKPOINT_DIR,
         description="Directory to store checkpoint files",
+    )
+    checkpoint_retry_failed: bool = Field(
+        default=False,
+        description="When resuming, retry previously failed samples",
     )
     output_save_as: str | None = Field(
         default=None,
@@ -343,7 +347,7 @@ class DataSetGenerator:
             )
 
         # Create checkpoint directory if needed
-        checkpoint_dir = Path(self.config.checkpoint_dir)
+        checkpoint_dir = Path(self.config.checkpoint_path)
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Derive checkpoint filenames from output filename
@@ -356,14 +360,14 @@ class DataSetGenerator:
 
     def _initialize_checkpoint_paths(self) -> None:
         """Initialize checkpoint file paths if checkpointing is enabled."""
-        if self.config.checkpoint_samples is not None:
+        if self.config.checkpoint_interval is not None:
             paths = self._get_checkpoint_paths()
             self._checkpoint_metadata_path = paths[0]
             self._checkpoint_samples_path = paths[1]
             self._checkpoint_failures_path = paths[2]
             logger.info(
                 "Checkpointing enabled: saving every %d samples to %s",
-                self.config.checkpoint_samples,
+                self.config.checkpoint_interval,
                 self._checkpoint_samples_path,
             )
 
@@ -441,7 +445,7 @@ class DataSetGenerator:
             "total_samples": total_samples,
             "total_failures": total_failures,
             "processed_ids": list(self._processed_ids),
-            "checkpoint_samples": self.config.checkpoint_samples,
+            "checkpoint_interval": self.config.checkpoint_interval,
         }
 
         with open(self._checkpoint_metadata_path, "w") as f:
@@ -564,7 +568,7 @@ class DataSetGenerator:
         Returns:
             True if checkpoint was loaded, False if no checkpoint exists
         """
-        if self.config.checkpoint_samples is None:
+        if self.config.checkpoint_interval is None:
             return False
 
         self._initialize_checkpoint_paths()
@@ -1197,7 +1201,7 @@ class DataSetGenerator:
     ) -> AsyncGenerator[dict | HFDataset, None]:
         """Run the main generation loop yielding progress events."""
         # Initialize checkpoint paths if checkpointing is enabled
-        if self.config.checkpoint_samples is not None:
+        if self.config.checkpoint_interval is not None:
             self._initialize_checkpoint_paths()
 
         # Track samples added in this run for checkpointing
@@ -1217,7 +1221,7 @@ class DataSetGenerator:
                 "topic_model_type": topic_model_type,
                 "resumed_from_checkpoint": len(self._processed_ids) > 0,
                 "previously_processed": len(self._processed_ids),
-                "checkpoint_enabled": self.config.checkpoint_samples is not None,
+                "checkpoint_enabled": self.config.checkpoint_interval is not None,
             }
 
             for step in range(num_steps):
@@ -1278,8 +1282,8 @@ class DataSetGenerator:
 
                 # Save checkpoint if we've reached the interval
                 if (
-                    self.config.checkpoint_samples is not None
-                    and samples_since_checkpoint >= self.config.checkpoint_samples
+                    self.config.checkpoint_interval is not None
+                    and samples_since_checkpoint >= self.config.checkpoint_interval
                 ):
                     self._save_checkpoint(
                         samples_in_current_batch,
@@ -1323,7 +1327,7 @@ class DataSetGenerator:
                     }
 
             # Save final checkpoint with any remaining samples
-            if self.config.checkpoint_samples is not None and (
+            if self.config.checkpoint_interval is not None and (
                 samples_in_current_batch or failures_in_current_batch
             ):
                 self._save_checkpoint(
@@ -1350,7 +1354,7 @@ class DataSetGenerator:
 
         except KeyboardInterrupt:
             # Save checkpoint on interrupt
-            if self.config.checkpoint_samples is not None and (
+            if self.config.checkpoint_interval is not None and (
                 samples_in_current_batch or failures_in_current_batch
             ):
                 self._save_checkpoint(
@@ -1367,7 +1371,7 @@ class DataSetGenerator:
 
         except Exception as e:  # noqa: BLE001
             # Save checkpoint on error
-            if self.config.checkpoint_samples is not None and (
+            if self.config.checkpoint_interval is not None and (
                 samples_in_current_batch or failures_in_current_batch
             ):
                 self._save_checkpoint(

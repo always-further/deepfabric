@@ -53,6 +53,12 @@ output:
   batch_size: 2
   save_as: "dataset.jsonl"
 
+# Optional: Checkpoint for resumable generation
+checkpoint:
+  interval: 500       # Save every 500 samples
+  path: ".checkpoints"
+  retry_failed: false
+
 # Optional: Upload to HuggingFace
 huggingface:
   repository: "org/dataset-name"
@@ -181,30 +187,6 @@ Controls final dataset.
 | `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
 | `batch_size` | int | 1 | Parallel generation batch size |
 | `save_as` | string | required | Output file path |
-| `checkpoint_samples` | int | - | Save checkpoint every N samples (enables resume) |
-| `checkpoint_dir` | string | ".checkpoints" | Directory to store checkpoint files |
-
-#### Checkpointing
-
-Enable checkpoint-based resume for long-running generation jobs:
-
-```yaml title="Checkpoint configuration"
-output:
-  num_samples: 5000
-  batch_size: 5
-  save_as: "large_dataset.jsonl"
-  checkpoint_samples: 500  # Save every 500 samples
-  checkpoint_dir: "./my-checkpoints"
-```
-
-Checkpointing creates three files in the checkpoint directory:
-
-- `{name}.checkpoint.json` - Metadata (progress, paths processed)
-- `{name}.checkpoint.jsonl` - Samples saved so far
-- `{name}.checkpoint.failures.jsonl` - Failed samples for debugging
-
-!!! tip "Memory Optimization"
-    When checkpointing is enabled, samples are flushed to disk periodically, keeping memory usage constant regardless of dataset size.
 
 !!! tip "Auto and Percentage Samples"
     `num_samples` supports special values:
@@ -214,6 +196,32 @@ Checkpointing creates three files in the checkpoint directory:
     - **Percentage** (e.g., `"50%"`, `"200%"`): Generate samples relative to topic path count
 
     When `num_samples` exceeds the number of topic paths, topics cycle for even coverage. An integer larger than the path count is equivalent to a percentage—for example, with 50 paths, `num_samples: 100` behaves the same as `num_samples: "200%"`.
+
+### checkpoint (Optional)
+
+Configuration for checkpoint-based resume capability. Checkpoints allow pausing and resuming long-running dataset generation without losing progress.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `interval` | int | required | Save checkpoint every N samples |
+| `path` | string | ".checkpoints" | Directory to store checkpoint files |
+| `retry_failed` | bool | false | When resuming, retry previously failed samples |
+
+```yaml title="Checkpoint configuration"
+checkpoint:
+  interval: 500     # Save every 500 samples
+  path: "./my-checkpoints"
+  retry_failed: false
+```
+
+Checkpointing creates three files in the checkpoint directory:
+
+- `{name}.checkpoint.json` - Metadata (progress, IDs processed)
+- `{name}.checkpoint.jsonl` - Samples saved so far
+- `{name}.checkpoint.failures.jsonl` - Failed samples for debugging
+
+!!! tip "Memory Optimization"
+    When checkpointing is enabled, samples are flushed to disk periodically, keeping memory usage constant regardless of dataset size.
 
 ### huggingface (Optional)
 
