@@ -200,10 +200,58 @@ The generation process provides real-time feedback:
 - :material-alert: Error reporting with retry attempts and failure categorization
 - :material-chart-bar: Final statistics including success rates and output file locations
 
+## Checkpoint and Resume
+
+For long-running generation jobs, enable checkpointing to save progress and allow resuming after interruptions:
+
+```bash title="Enable checkpointing"
+deepfabric generate config.yaml --checkpoint-samples 500
+```
+
+If generation is interrupted, resume from the checkpoint:
+
+```bash title="Resume from checkpoint"
+deepfabric generate config.yaml --resume
+```
+
+To retry previously failed samples when resuming:
+
+```bash title="Resume with retry"
+deepfabric generate config.yaml --resume --retry-failed
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `--checkpoint-samples N` | Save checkpoint every N samples |
+| `--checkpoint-dir PATH` | Directory for checkpoint files (default: `.checkpoints`) |
+| `--resume` | Resume from existing checkpoint |
+| `--retry-failed` | When resuming, retry previously failed samples |
+
+!!! tip "Checkpoint Status"
+    Use `deepfabric checkpoint-status config.yaml` to inspect checkpoint progress without resuming.
+
+### How Checkpointing Works
+
+Checkpointing saves progress at regular intervals:
+
+1. **Samples file** - Incrementally appends successful samples (no write amplification)
+2. **Failures file** - Records failed samples with error details
+3. **Metadata file** - Tracks progress, processed paths, and generation config
+
+On resume, the generator:
+
+- Loads previously processed topic paths
+- Skips already-completed work
+- Continues from where it left off
+- Optionally retries failed samples with `--retry-failed`
+
+!!! info "Memory Optimization"
+    When checkpointing is enabled, samples are flushed to disk periodically, keeping memory usage constant regardless of dataset size. This allows generating datasets with 50,000+ samples without memory issues.
+
 ## Error Recovery
 
 !!! warning "Partial Failures"
-    When generation fails partway through, the system saves intermediate results where possible. Topic trees are saved incrementally, enabling recovery by loading partial results and continuing from the dataset generation stage.
+    When generation fails partway through, the system saves intermediate results where possible. Topic trees are saved incrementally, enabling recovery by loading partial results and continuing from the dataset generation stage. With checkpointing enabled, dataset generation progress is also preserved.
 
 ??? tip "Optimizing Generation Performance"
     Balance `batch-size` with your API rate limits and system resources. Larger batches increase throughput but consume more memory and may trigger rate limiting. Start with smaller batches and increase based on your provider's capabilities.

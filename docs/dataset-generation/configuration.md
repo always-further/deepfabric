@@ -181,6 +181,30 @@ Controls final dataset.
 | `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
 | `batch_size` | int | 1 | Parallel generation batch size |
 | `save_as` | string | required | Output file path |
+| `checkpoint_samples` | int | - | Save checkpoint every N samples (enables resume) |
+| `checkpoint_dir` | string | ".checkpoints" | Directory to store checkpoint files |
+
+#### Checkpointing
+
+Enable checkpoint-based resume for long-running generation jobs:
+
+```yaml title="Checkpoint configuration"
+output:
+  num_samples: 5000
+  batch_size: 5
+  save_as: "large_dataset.jsonl"
+  checkpoint_samples: 500  # Save every 500 samples
+  checkpoint_dir: "./my-checkpoints"
+```
+
+Checkpointing creates three files in the checkpoint directory:
+
+- `{name}.checkpoint.json` - Metadata (progress, paths processed)
+- `{name}.checkpoint.jsonl` - Samples saved so far
+- `{name}.checkpoint.failures.jsonl` - Failed samples for debugging
+
+!!! tip "Memory Optimization"
+    When checkpointing is enabled, samples are flushed to disk periodically, keeping memory usage constant regardless of dataset size.
 
 !!! tip "Auto and Percentage Samples"
     `num_samples` supports special values:

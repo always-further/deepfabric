@@ -271,6 +271,9 @@ class DataSetGenerator:
         self._checkpoint_metadata_path: Path | None = None
         self._checkpoint_samples_path: Path | None = None
         self._checkpoint_failures_path: Path | None = None
+        # Memory optimization: track flushed counts for checkpoint mode
+        self._flushed_samples_count = 0
+        self._flushed_failures_count = 0
 
     def _initialize_tool_registry(self):
         """Initialize tool registry from component configuration.
@@ -369,6 +372,7 @@ class DataSetGenerator:
         new_samples: list[dict],
         new_failures: list[dict],
         processed_paths: list[list[str] | None],
+        flush_memory: bool = True,
     ) -> None:
         """Save checkpoint data incrementally.
 
@@ -376,6 +380,7 @@ class DataSetGenerator:
             new_samples: New successful samples to append
             new_failures: New failed samples to append
             processed_paths: Topic paths that were processed in this batch
+            flush_memory: If True, clear flushed samples from memory (memory optimization)
         """
         if self._checkpoint_samples_path is None:
             return
@@ -398,20 +403,34 @@ class DataSetGenerator:
                 path_key = " -> ".join(path)
                 self._processed_paths.add(path_key)
 
-        # Update metadata
+        # Memory optimization: track flushed counts and clear in-memory lists
+        # Must happen BEFORE saving metadata so counts are accurate
+        if flush_memory:
+            self._flushed_samples_count += len(new_samples)
+            self._flushed_failures_count += len(new_failures)
+            # Clear the in-memory lists since data is now on disk
+            self._samples.clear()
+            self.failed_samples.clear()
+
+        # Update metadata (after flush counts are updated)
         self._save_checkpoint_metadata()
 
         logger.debug(
-            "Checkpoint saved: %d samples, %d failures, %d total paths processed",
+            "Checkpoint saved: %d samples, %d failures, %d total paths processed (flushed=%s)",
             len(new_samples),
             len(new_failures),
             len(self._processed_paths),
+            flush_memory,
         )
 
     def _save_checkpoint_metadata(self) -> None:
         """Save checkpoint metadata file."""
         if self._checkpoint_metadata_path is None:
             return
+
+        # Total counts include both flushed (on disk) and in-memory samples
+        total_samples = self._flushed_samples_count + len(self._samples)
+        total_failures = self._flushed_failures_count + len(self.failed_samples)
 
         metadata = {
             "version": 1,
@@ -420,8 +439,8 @@ class DataSetGenerator:
             "model_name": self.model_name,
             "conversation_type": self.config.conversation_type,
             "reasoning_style": self.config.reasoning_style,
-            "total_samples": len(self._samples),
-            "total_failures": len(self.failed_samples),
+            "total_samples": total_samples,
+            "total_failures": total_failures,
             "processed_paths": list(self._processed_paths),
             "checkpoint_samples": self.config.checkpoint_samples,
         }
@@ -442,7 +461,9 @@ class DataSetGenerator:
         # Check provider
         checkpoint_provider = metadata.get("provider")
         if checkpoint_provider and checkpoint_provider != self.provider:
-            mismatches.append(f"provider: checkpoint={checkpoint_provider}, current={self.provider}")
+            mismatches.append(
+                f"provider: checkpoint={checkpoint_provider}, current={self.provider}"
+            )
 
         # Check model
         checkpoint_model = metadata.get("model_name")
@@ -474,6 +495,67 @@ class DataSetGenerator:
                 "; ".join(mismatches),
             )
 
+    def _validate_checkpoint_integrity(self, metadata: dict) -> tuple[bool, str | None]:
+        """Validate checkpoint file integrity.
+
+        Checks that:
+        1. Metadata version is supported
+        2. Required metadata fields are present
+        3. Sample count in metadata matches actual file line count
+        4. Sample file contains valid JSON on each line
+
+        Args:
+            metadata: Checkpoint metadata dictionary
+
+        Returns:
+            Tuple of (is_valid, error_message). error_message is None if valid.
+        """
+        error_msg: str | None = None
+
+        # Check version
+        version = metadata.get("version")
+        if version is None:
+            error_msg = "Missing 'version' field in checkpoint metadata"
+        elif version != 1:
+            error_msg = f"Unsupported checkpoint version: {version} (expected 1)"
+
+        # Check required fields
+        if error_msg is None:
+            required_fields = ["created_at", "total_samples", "processed_paths"]
+            for field in required_fields:
+                if field not in metadata:
+                    error_msg = f"Missing required field in checkpoint metadata: {field}"
+                    break
+
+        # Validate sample count matches file
+        if error_msg is None:
+            expected_samples = metadata.get("total_samples", 0)
+            if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
+                actual_count = 0
+                try:
+                    with open(self._checkpoint_samples_path) as f:
+                        for line_num, raw_line in enumerate(f, 1):
+                            stripped = raw_line.strip()
+                            if stripped:
+                                try:
+                                    json.loads(stripped)
+                                    actual_count += 1
+                                except json.JSONDecodeError as e:
+                                    error_msg = f"Invalid JSON on line {line_num} of checkpoint samples: {e}"
+                                    break
+                except OSError as e:
+                    error_msg = f"Failed to read checkpoint samples file: {e}"
+
+                if error_msg is None and actual_count != expected_samples:
+                    error_msg = (
+                        f"Sample count mismatch: metadata says {expected_samples}, "
+                        f"file has {actual_count} samples"
+                    )
+            elif expected_samples > 0:
+                error_msg = f"Checkpoint metadata expects {expected_samples} samples but samples file missing"
+
+        return (error_msg is None, error_msg)
+
     def load_checkpoint(self, retry_failed: bool = False) -> bool:
         """Load checkpoint data if it exists.
 
@@ -496,32 +578,42 @@ class DataSetGenerator:
             with open(self._checkpoint_metadata_path) as f:
                 metadata = json.load(f)
 
+            # Validate checkpoint integrity
+            is_valid, error_msg = self._validate_checkpoint_integrity(metadata)
+            if not is_valid:
+                logger.error("Checkpoint integrity check failed: %s", error_msg)
+                return False
+
             # Validate config compatibility
             self._validate_checkpoint_compatibility(metadata)
 
             # Restore processed paths
             self._processed_paths = set(metadata.get("processed_paths", []))
 
-            # Load existing samples
+            # Count existing samples (don't load into memory - they're already on disk)
+            # Memory optimization: track as flushed counts instead of loading into RAM
             if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
+                sample_count = 0
                 with open(self._checkpoint_samples_path) as f:
                     for raw_line in f:
-                        stripped = raw_line.strip()
-                        if stripped:
-                            self._samples.append(json.loads(stripped))
+                        if raw_line.strip():
+                            sample_count += 1
+                self._flushed_samples_count = sample_count
 
-            # Load existing failures
+            # Load failure paths for retry logic (these are small)
             failed_paths: set[str] = set()
             if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
+                failure_count = 0
                 with open(self._checkpoint_failures_path) as f:
                     for raw_line in f:
                         stripped = raw_line.strip()
                         if stripped:
                             failure = json.loads(stripped)
-                            self.failed_samples.append(failure)
+                            failure_count += 1
                             # Track the path that failed for potential retry
                             if "path" in failure:
                                 failed_paths.add(failure["path"])
+                self._flushed_failures_count = failure_count
 
             # If retry_failed is True, remove failed paths from processed set
             # so they will be retried during generation
@@ -531,7 +623,7 @@ class DataSetGenerator:
                 # Clear failures file since we're retrying
                 if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
                     os.remove(self._checkpoint_failures_path)
-                self.failed_samples.clear()
+                self._flushed_failures_count = 0
                 logger.info(
                     "Retry mode: %d failed paths will be retried",
                     len(paths_to_retry),
@@ -539,8 +631,8 @@ class DataSetGenerator:
 
             logger.info(
                 "Loaded checkpoint: %d samples, %d failures, %d paths processed",
-                len(self._samples),
-                len(self.failed_samples),
+                self._flushed_samples_count,
+                self._flushed_failures_count,
                 len(self._processed_paths),
             )
         except Exception as e:  # noqa: BLE001
@@ -558,7 +650,27 @@ class DataSetGenerator:
         if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
             os.remove(self._checkpoint_failures_path)
         self._processed_paths.clear()
+        self._flushed_samples_count = 0
+        self._flushed_failures_count = 0
         logger.info("Checkpoint files cleared")
+
+    def _load_all_samples_from_checkpoint(self) -> list[dict]:
+        """Load all samples from checkpoint file.
+
+        Used at end of generation to build final dataset when memory
+        optimization has flushed samples to disk.
+
+        Returns:
+            List of all sample dictionaries from checkpoint file
+        """
+        all_samples: list[dict] = []
+        if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
+            with open(self._checkpoint_samples_path) as f:
+                for raw_line in f:
+                    stripped = raw_line.strip()
+                    if stripped:
+                        all_samples.append(json.loads(stripped))
+        return all_samples
 
     def _is_path_processed(self, path: list[str] | None) -> bool:
         """Check if a topic path has already been processed.
@@ -1212,10 +1324,14 @@ class DataSetGenerator:
                     "final": True,
                 }
 
+            # Calculate total counts including flushed data
+            total_samples = self._flushed_samples_count + len(self._samples)
+            total_failures = self._flushed_failures_count + len(self.failed_samples)
+
             yield {
                 "event": "generation_complete",
-                "total_samples": len(self._samples),
-                "failed_samples": len(self.failed_samples),
+                "total_samples": total_samples,
+                "failed_samples": total_failures,
             }
 
         except KeyboardInterrupt:
@@ -1250,7 +1366,12 @@ class DataSetGenerator:
             self._save_samples_to_file(ERROR_DATASET_FILENAME)
             raise DataSetGeneratorError("failed") from e
 
-        yield (HFDataset.from_list(self._samples) if self._samples else HFDataset.from_list([]))
+        # Build final dataset: if samples were flushed to disk, load them from checkpoint
+        if self._flushed_samples_count > 0:
+            all_samples = self._load_all_samples_from_checkpoint()
+            yield HFDataset.from_list(all_samples) if all_samples else HFDataset.from_list([])
+        else:
+            yield (HFDataset.from_list(self._samples) if self._samples else HFDataset.from_list([]))
 
     async def _process_batch_with_retries_async(
         self,

@@ -182,7 +182,12 @@ class TestCheckpointSaveLoad:
         assert json.loads(lines[1])["question"] == "Q2"
 
     def test_load_checkpoint_restores_state(self, temp_checkpoint_dir, base_generator_params):
-        """Test that loading a checkpoint restores samples and processed paths."""
+        """Test that loading a checkpoint restores sample counts and processed paths.
+
+        Note: With memory optimization, samples are NOT loaded into memory on resume.
+        Instead, we track counts via _flushed_samples_count/_flushed_failures_count.
+        Samples remain on disk and are loaded only when building the final dataset.
+        """
         params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
@@ -199,10 +204,18 @@ class TestCheckpointSaveLoad:
             loaded = generator2.load_checkpoint()
 
         assert loaded is True
-        assert len(generator2._samples) == 1
-        assert generator2._samples[0]["question"] == "Q1"
-        assert len(generator2.failed_samples) == 1
+        # Memory optimization: samples stay on disk, we track counts
+        assert generator2._flushed_samples_count == 1
+        assert generator2._flushed_failures_count == 1
+        # In-memory lists should be empty (samples are on disk)
+        assert len(generator2._samples) == 0
+        assert len(generator2.failed_samples) == 0
         assert "Topic1 -> Subtopic1" in generator2._processed_paths
+
+        # Verify we can load samples from disk when needed
+        all_samples = generator2._load_all_samples_from_checkpoint()
+        assert len(all_samples) == 1
+        assert all_samples[0]["question"] == "Q1"
 
     def test_load_checkpoint_returns_false_when_no_checkpoint(
         self, temp_checkpoint_dir, base_generator_params
@@ -218,7 +231,10 @@ class TestCheckpointSaveLoad:
         assert len(generator._samples) == 0
 
     def test_load_checkpoint_with_retry_failed(self, temp_checkpoint_dir, base_generator_params):
-        """Test that load_checkpoint with retry_failed=True re-queues failed paths."""
+        """Test that load_checkpoint with retry_failed=True re-queues failed paths.
+
+        Note: With memory optimization, failure counts are tracked via _flushed_failures_count.
+        """
         params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
@@ -239,7 +255,8 @@ class TestCheckpointSaveLoad:
             loaded = generator2.load_checkpoint(retry_failed=False)
             assert loaded is True
             assert "Topic2 -> Subtopic1" in generator2._processed_paths
-            assert len(generator2.failed_samples) == 1
+            # Memory optimization: failures stay on disk, we track count
+            assert generator2._flushed_failures_count == 1
 
             # Load checkpoint with retry_failed=True - failed path removed from processed
             generator3 = DataSetGenerator(**params)
@@ -249,8 +266,8 @@ class TestCheckpointSaveLoad:
             assert "Topic2 -> Subtopic1" not in generator3._processed_paths
             # Successfully processed path should still be there
             assert "Topic1 -> Subtopic1" in generator3._processed_paths
-            # Failures should be cleared when retrying
-            assert len(generator3.failed_samples) == 0
+            # Failures count should be cleared when retrying
+            assert generator3._flushed_failures_count == 0
 
     def test_load_checkpoint_returns_false_when_disabled(self, temp_checkpoint_dir):
         """Test that load_checkpoint returns False when checkpointing is disabled."""

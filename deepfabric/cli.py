@@ -653,9 +653,7 @@ def generate(  # noqa: PLR0913
         tui.info("Initializing DeepFabric...")  # type: ignore
         print()
 
-        preparation = _load_and_prepare_generation_context(
-            options, skip_path_validation=topic_only
-        )
+        preparation = _load_and_prepare_generation_context(options, skip_path_validation=topic_only)
 
         topic_model = _initialize_topic_model(
             preparation=preparation,
@@ -1716,7 +1714,9 @@ def checkpoint_status(config_file: str) -> None:
 
     # Progress
     progress_pct = (checkpoint_samples / total_target * 100) if total_target > 0 else 0
-    tui.console.print(f"  [cyan]Progress:[/cyan]     {checkpoint_samples}/{total_target} samples ({progress_pct:.1f}%)")
+    tui.console.print(
+        f"  [cyan]Progress:[/cyan]     {checkpoint_samples}/{total_target} samples ({progress_pct:.1f}%)"
+    )
     tui.console.print(f"  [cyan]Failed:[/cyan]       {checkpoint_failures} samples")
 
     # Paths processed
@@ -1752,10 +1752,14 @@ def checkpoint_status(config_file: str) -> None:
     tui.console.print()
     checkpoint_samples_arg = metadata.get("checkpoint_samples", 10)
     tui.console.print("[green]Resume with:[/green]")
-    tui.console.print(f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume")
+    tui.console.print(
+        f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume"
+    )
     if metadata.get("total_failures", 0) > 0:
         tui.console.print("[green]Retry failed:[/green]")
-        tui.console.print(f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume --retry-failed")
+        tui.console.print(
+            f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume --retry-failed"
+        )
 
 
 if __name__ == "__main__":

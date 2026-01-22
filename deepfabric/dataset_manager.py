@@ -204,6 +204,27 @@ async def handle_dataset_events_async(
                     total = int(event.get("total_steps", 0))
                     tui.status_step_start(step, total)
 
+                elif event["event"] == "checkpoint_saved":
+                    # Display checkpoint save notification
+                    total_samples = event.get("total_samples", 0)
+                    total_failures = event.get("total_failures", 0)
+                    is_final = event.get("final", False)
+
+                    if footer_prog and task is not None:
+                        # Rich mode: log to events panel
+                        if is_final:
+                            tui.log_event(f"💾 Final checkpoint: {total_samples} samples")
+                        else:
+                            tui.log_event(f"💾 Checkpoint: {total_samples} samples")
+                    elif isinstance(simple_task, dict):
+                        # Simple mode: print checkpoint notification
+                        checkpoint_msg = f"Checkpoint saved: {total_samples} samples"
+                        if total_failures > 0:
+                            checkpoint_msg += f" ({total_failures} failures)"
+                        if is_final:
+                            checkpoint_msg = "Final " + checkpoint_msg.lower()
+                        tui.info(checkpoint_msg)
+
                 elif event["event"] == "generation_complete":
                     if live:
                         live.stop()
