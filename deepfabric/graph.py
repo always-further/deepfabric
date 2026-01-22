@@ -26,7 +26,7 @@ from .prompts import (
 )
 from .schemas import GraphSubtopics
 from .stream_simulator import simulate_stream
-from .topic_model import TopicModel
+from .topic_model import TopicModel, TopicPath
 
 if TYPE_CHECKING:  # only for type hints to avoid runtime cycles
     from .progress import ProgressReporter
@@ -569,6 +569,48 @@ class Graph(TopicModel):
         visited: set[int] = set()
         self._dfs_paths(self.root, [self.root.topic], paths, visited)
         return paths
+
+    def get_all_paths_with_ids(self) -> list[TopicPath]:
+        """Returns all paths from root to leaf nodes with their leaf node UUIDs.
+
+        Returns:
+            List of TopicPath namedtuples containing (path, topic_id).
+            The topic_id is the UUID of the leaf node for each path.
+        """
+        result: list[TopicPath] = []
+        visited: set[int] = set()
+        self._dfs_paths_with_ids(self.root, [self.root.topic], result, visited)
+        return result
+
+    def _dfs_paths_with_ids(
+        self,
+        node: Node,
+        current_path: list[str],
+        result: list[TopicPath],
+        visited: set[int],
+    ) -> None:
+        """Helper function for DFS traversal to find all paths with leaf node UUIDs.
+
+        Args:
+            node: Current node being visited
+            current_path: Path from root to current node
+            result: Accumulated list of TopicPath namedtuples
+            visited: Set of node IDs already visited in current path to prevent cycles
+        """
+        if node.id in visited:
+            return
+
+        visited.add(node.id)
+
+        if not node.children:
+            # Leaf node - add path with this node's UUID
+            topic_id = node.metadata.get("uuid", str(node.id))
+            result.append(TopicPath(path=current_path, topic_id=topic_id))
+
+        for child in node.children:
+            self._dfs_paths_with_ids(child, current_path + [child.topic], result, visited)
+
+        visited.remove(node.id)
 
     def _dfs_paths(
         self, node: Node, current_path: list[str], paths: list[list[str]], visited: set[int]

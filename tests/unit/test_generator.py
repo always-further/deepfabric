@@ -4,6 +4,7 @@ import pytest  # type: ignore
 
 from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.generator import DataSetGenerator
+from deepfabric.topic_model import TopicPath
 
 
 @pytest.fixture
@@ -77,6 +78,9 @@ def test_create_data_success(data_engine):
         "path10",
     ]
     topic_tree.get_all_paths.return_value = [[p] for p in topic_tree.tree_paths]
+    topic_tree.get_all_paths_with_ids.return_value = [
+        TopicPath(path=[p], topic_id=f"uuid-{i}") for i, p in enumerate(topic_tree.tree_paths)
+    ]
 
     # Define a constant for the expected number of samples
     expected_num_samples = 10
@@ -104,6 +108,7 @@ def test_create_data_with_sys_msg_default(data_engine):
     topic_tree = MagicMock()
     topic_tree.tree_paths = ["path1"]
     topic_tree.get_all_paths.return_value = [["path1"]]
+    topic_tree.get_all_paths_with_ids.return_value = [TopicPath(path=["path1"], topic_id="uuid-1")]
 
     # Generate data with default sys_msg (True)
     dataset = data_engine.create_data(num_steps=1, batch_size=1, topic_model=topic_tree)
@@ -132,6 +137,7 @@ def test_create_data_without_sys_msg(data_engine):
     topic_tree = MagicMock()
     topic_tree.tree_paths = ["path1"]
     topic_tree.get_all_paths.return_value = [["path1"]]
+    topic_tree.get_all_paths_with_ids.return_value = [TopicPath(path=["path1"], topic_id="uuid-1")]
 
     # Generate data with sys_msg=False
     dataset = data_engine.create_data(
@@ -179,6 +185,7 @@ def test_create_data_sys_msg_override():
     topic_tree = MagicMock()
     topic_tree.tree_paths = ["path1"]
     topic_tree.get_all_paths.return_value = [["path1"]]
+    topic_tree.get_all_paths_with_ids.return_value = [TopicPath(path=["path1"], topic_id="uuid-1")]
 
     # Override sys_msg=False with True in create_data
     dataset = engine.create_data(num_steps=1, batch_size=1, topic_model=topic_tree, sys_msg=True)

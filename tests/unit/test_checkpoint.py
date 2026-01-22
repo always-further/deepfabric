@@ -21,6 +21,7 @@ from deepfabric.constants import (
 )
 from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.generator import DataSetGenerator, DataSetGeneratorConfig
+from deepfabric.topic_model import TopicPath
 
 
 @pytest.fixture
@@ -148,12 +149,12 @@ class TestCheckpointSaveLoad:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Save some samples
+        # Save some samples using TopicPath objects
         samples = [{"question": "Q1", "answer": "A1"}]
         failures = [{"error": "Failed sample"}]
-        paths = [["Topic1", "Subtopic1"]]
+        topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="uuid-1")]
 
-        generator._save_checkpoint(samples, failures, paths)
+        generator._save_checkpoint(samples, failures, topic_paths)
 
         # Check files exist
         assert generator._checkpoint_samples_path.exists()
@@ -165,13 +166,15 @@ class TestCheckpointSaveLoad:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Save first batch
+        # Save first batch with TopicPath
         samples1 = [{"question": "Q1", "answer": "A1"}]
-        generator._save_checkpoint(samples1, [], [["Topic1"]])
+        topic_path1 = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
+        generator._save_checkpoint(samples1, [], topic_path1)
 
-        # Save second batch
+        # Save second batch with TopicPath
         samples2 = [{"question": "Q2", "answer": "A2"}]
-        generator._save_checkpoint(samples2, [], [["Topic2"]])
+        topic_path2 = [TopicPath(path=["Topic2"], topic_id="uuid-2")]
+        generator._save_checkpoint(samples2, [], topic_path2)
 
         # Read samples file
         with open(generator._checkpoint_samples_path) as f:
@@ -182,7 +185,7 @@ class TestCheckpointSaveLoad:
         assert json.loads(lines[1])["question"] == "Q2"
 
     def test_load_checkpoint_restores_state(self, temp_checkpoint_dir, base_generator_params):
-        """Test that loading a checkpoint restores sample counts and processed paths.
+        """Test that loading a checkpoint restores sample counts and processed IDs.
 
         Note: With memory optimization, samples are NOT loaded into memory on resume.
         Instead, we track counts via _flushed_samples_count/_flushed_failures_count.
@@ -191,13 +194,13 @@ class TestCheckpointSaveLoad:
         params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
-            # Create and save checkpoint
+            # Create and save checkpoint with TopicPath
             generator1 = DataSetGenerator(**params)
             generator1._initialize_checkpoint_paths()
             samples = [{"question": "Q1", "answer": "A1"}]
             failures = [{"error": "Failed"}]
-            paths = [["Topic1", "Subtopic1"]]
-            generator1._save_checkpoint(samples, failures, paths)
+            topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="test-uuid-123")]
+            generator1._save_checkpoint(samples, failures, topic_paths)
 
             # Create new generator and load checkpoint
             generator2 = DataSetGenerator(**params)
@@ -210,7 +213,8 @@ class TestCheckpointSaveLoad:
         # In-memory lists should be empty (samples are on disk)
         assert len(generator2._samples) == 0
         assert len(generator2.failed_samples) == 0
-        assert "Topic1 -> Subtopic1" in generator2._processed_paths
+        # Check processed IDs instead of paths
+        assert "test-uuid-123" in generator2._processed_ids
 
         # Verify we can load samples from disk when needed
         all_samples = generator2._load_all_samples_from_checkpoint()
@@ -231,41 +235,47 @@ class TestCheckpointSaveLoad:
         assert len(generator._samples) == 0
 
     def test_load_checkpoint_with_retry_failed(self, temp_checkpoint_dir, base_generator_params):
-        """Test that load_checkpoint with retry_failed=True re-queues failed paths.
+        """Test that load_checkpoint with retry_failed=True re-queues failed IDs.
 
         Note: With memory optimization, failure counts are tracked via _flushed_failures_count.
         """
         params = {**base_generator_params, "checkpoint_dir": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
-            # Create and save checkpoint with failed samples that have paths
+            # Create and save checkpoint with failed samples that have topic_ids
             generator1 = DataSetGenerator(**params)
             generator1._initialize_checkpoint_paths()
             samples = [{"question": "Q1", "answer": "A1"}]
-            # Failures include the path for retry functionality
-            failures = [{"error": "Rate limit exceeded", "path": "Topic2 -> Subtopic1"}]
-            paths = [["Topic1", "Subtopic1"]]
-            generator1._save_checkpoint(samples, failures, paths)
-            # Also mark the failed path as processed
-            generator1._processed_paths.add("Topic2 -> Subtopic1")
+            # Failures include the topic_id for retry functionality
+            failures = [
+                {
+                    "error": "Rate limit exceeded",
+                    "topic_id": "failed-uuid-456",
+                    "path": "Topic2 -> Subtopic1",
+                }
+            ]
+            topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="success-uuid-123")]
+            generator1._save_checkpoint(samples, failures, topic_paths)
+            # Also mark the failed topic_id as processed
+            generator1._processed_ids.add("failed-uuid-456")
             generator1._save_checkpoint_metadata()
 
-            # Load checkpoint without retry_failed - failed path stays processed
+            # Load checkpoint without retry_failed - failed ID stays processed
             generator2 = DataSetGenerator(**params)
             loaded = generator2.load_checkpoint(retry_failed=False)
             assert loaded is True
-            assert "Topic2 -> Subtopic1" in generator2._processed_paths
+            assert "failed-uuid-456" in generator2._processed_ids
             # Memory optimization: failures stay on disk, we track count
             assert generator2._flushed_failures_count == 1
 
-            # Load checkpoint with retry_failed=True - failed path removed from processed
+            # Load checkpoint with retry_failed=True - failed ID removed from processed
             generator3 = DataSetGenerator(**params)
             loaded = generator3.load_checkpoint(retry_failed=True)
             assert loaded is True
-            # Failed path should be removed from processed so it can be retried
-            assert "Topic2 -> Subtopic1" not in generator3._processed_paths
-            # Successfully processed path should still be there
-            assert "Topic1 -> Subtopic1" in generator3._processed_paths
+            # Failed ID should be removed from processed so it can be retried
+            assert "failed-uuid-456" not in generator3._processed_ids
+            # Successfully processed ID should still be there
+            assert "success-uuid-123" in generator3._processed_ids
             # Failures count should be cleared when retrying
             assert generator3._flushed_failures_count == 0
 
@@ -295,7 +305,8 @@ class TestCheckpointSaveLoad:
             generator1 = DataSetGenerator(**params)
             generator1._initialize_checkpoint_paths()
             samples = [{"question": "Q1", "answer": "A1"}]
-            generator1._save_checkpoint(samples, [], [["Topic1"]])
+            topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
+            generator1._save_checkpoint(samples, [], topic_paths)
 
             # Create generator with different model and load checkpoint
             different_params = {**params, "model_name": "gpt-3.5-turbo"}
@@ -317,9 +328,10 @@ class TestCheckpointClear:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Create checkpoint files
+        # Create checkpoint files with TopicPath
         samples = [{"question": "Q1", "answer": "A1"}]
-        generator._save_checkpoint(samples, [], [["Topic1"]])
+        topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
+        generator._save_checkpoint(samples, [], topic_paths)
 
         # Verify files exist
         assert generator._checkpoint_samples_path.exists()
@@ -331,30 +343,32 @@ class TestCheckpointClear:
         # Verify files are removed
         assert not generator._checkpoint_samples_path.exists()
         assert not generator._checkpoint_metadata_path.exists()
-        assert len(generator._processed_paths) == 0
+        assert len(generator._processed_ids) == 0
 
 
-class TestIsPathProcessed:
-    """Tests for checking if a path has been processed."""
+class TestIsTopicProcessed:
+    """Tests for checking if a topic has been processed."""
 
-    def test_is_path_processed_returns_true_for_processed(self, generator_with_checkpoint):
-        """Test that is_path_processed returns True for processed paths."""
+    def test_is_topic_processed_returns_true_for_processed(self, generator_with_checkpoint):
+        """Test that is_topic_processed returns True for processed topics."""
         generator = generator_with_checkpoint
-        generator._processed_paths.add("Topic1 -> Subtopic1")
+        generator._processed_ids.add("test-uuid-123")
 
-        assert generator._is_path_processed(["Topic1", "Subtopic1"]) is True
+        topic_path = TopicPath(path=["Topic1", "Subtopic1"], topic_id="test-uuid-123")
+        assert generator._is_topic_processed(topic_path) is True
 
-    def test_is_path_processed_returns_false_for_unprocessed(self, generator_with_checkpoint):
-        """Test that is_path_processed returns False for unprocessed paths."""
-        generator = generator_with_checkpoint
-
-        assert generator._is_path_processed(["Topic1", "Subtopic1"]) is False
-
-    def test_is_path_processed_handles_none(self, generator_with_checkpoint):
-        """Test that is_path_processed returns False for None paths."""
+    def test_is_topic_processed_returns_false_for_unprocessed(self, generator_with_checkpoint):
+        """Test that is_topic_processed returns False for unprocessed topics."""
         generator = generator_with_checkpoint
 
-        assert generator._is_path_processed(None) is False
+        topic_path = TopicPath(path=["Topic1", "Subtopic1"], topic_id="new-uuid-456")
+        assert generator._is_topic_processed(topic_path) is False
+
+    def test_is_topic_processed_handles_none(self, generator_with_checkpoint):
+        """Test that is_topic_processed returns False for None topics."""
+        generator = generator_with_checkpoint
+
+        assert generator._is_topic_processed(None) is False
 
 
 class TestCheckpointMetadata:
@@ -367,7 +381,8 @@ class TestCheckpointMetadata:
 
         samples = [{"question": "Q1", "answer": "A1"}]
         generator._samples = samples
-        generator._save_checkpoint(samples, [], [["Topic1"]])
+        topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
+        generator._save_checkpoint(samples, [], topic_paths)
 
         # Read metadata
         with open(generator._checkpoint_metadata_path) as f:
@@ -379,12 +394,13 @@ class TestCheckpointMetadata:
         assert "model_name" in metadata
         assert "total_samples" in metadata
         assert "total_failures" in metadata
-        assert "processed_paths" in metadata
+        assert "processed_ids" in metadata
         assert "checkpoint_samples" in metadata
 
-        assert metadata["version"] == 1
+        assert metadata["version"] == 2  # noqa: PLR2004
         assert metadata["provider"] == "openai"
         assert metadata["model_name"] == "gpt-4"
+        assert "uuid-1" in metadata["processed_ids"]
 
 
 class TestCheckpointStatusCommand:
@@ -421,7 +437,7 @@ output:
         config_content = f"""
 topics:
   prompt: "Test topic"
-  mode: tree
+  mode: graph
   depth: 2
   degree: 2
 generation:
@@ -436,9 +452,9 @@ output:
         with open(config_path, "w") as f:
             f.write(config_content)
 
-        # Create checkpoint files
+        # Create checkpoint files with version 2 format
         metadata = {
-            "version": 1,
+            "version": 2,
             "created_at": "2024-01-01T00:00:00Z",
             "provider": "openai",
             "model_name": "gpt-4",
@@ -446,7 +462,7 @@ output:
             "reasoning_style": None,
             "total_samples": 25,
             "total_failures": 2,
-            "processed_paths": ["Topic1", "Topic2"],
+            "processed_ids": ["uuid-1", "uuid-2"],
             "checkpoint_samples": 10,
         }
 
@@ -476,7 +492,7 @@ output:
         config_content = f"""
 topics:
   prompt: "Test topic"
-  mode: tree
+  mode: graph
   depth: 2
   degree: 2
 generation:
@@ -491,16 +507,16 @@ output:
         with open(config_path, "w") as f:
             f.write(config_content)
 
-        # Create checkpoint metadata
+        # Create checkpoint metadata with version 2 format
         metadata = {
-            "version": 1,
+            "version": 2,
             "created_at": "2024-01-01T00:00:00Z",
             "provider": "openai",
             "model_name": "gpt-4",
             "conversation_type": "basic",
             "total_samples": 10,
             "total_failures": 3,
-            "processed_paths": [],
+            "processed_ids": [],
             "checkpoint_samples": 10,
         }
 

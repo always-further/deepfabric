@@ -46,7 +46,7 @@ from .prompts import (
 from .schemas import Conversation, ToolRegistry, get_conversation_schema
 from .tools import BUILTIN_TOOL_REGISTRY
 from .tools.loader import load_tools_from_dict, load_tools_from_endpoint
-from .topic_model import TopicModel
+from .topic_model import TopicModel, TopicPath
 from .utils import ensure_not_running_loop, is_validation_error
 
 # Handle circular import for type hints
@@ -267,7 +267,7 @@ class DataSetGenerator:
 
         # Checkpoint state
         self._checkpoint_samples_since_save = 0
-        self._processed_paths: set[str] = set()  # Track processed topic paths
+        self._processed_ids: set[str] = set()  # Track processed topic IDs (UUIDs)
         self._checkpoint_metadata_path: Path | None = None
         self._checkpoint_samples_path: Path | None = None
         self._checkpoint_failures_path: Path | None = None
@@ -371,7 +371,7 @@ class DataSetGenerator:
         self,
         new_samples: list[dict],
         new_failures: list[dict],
-        processed_paths: list[list[str] | None],
+        processed_topic_paths: list[TopicPath | None],
         flush_memory: bool = True,
     ) -> None:
         """Save checkpoint data incrementally.
@@ -379,7 +379,7 @@ class DataSetGenerator:
         Args:
             new_samples: New successful samples to append
             new_failures: New failed samples to append
-            processed_paths: Topic paths that were processed in this batch
+            processed_topic_paths: TopicPath objects that were processed in this batch
             flush_memory: If True, clear flushed samples from memory (memory optimization)
         """
         if self._checkpoint_samples_path is None:
@@ -397,11 +397,10 @@ class DataSetGenerator:
                 for failure in new_failures:
                     f.write(json.dumps(failure, separators=(",", ":")) + "\n")
 
-        # Track processed paths
-        for path in processed_paths:
-            if path:
-                path_key = " -> ".join(path)
-                self._processed_paths.add(path_key)
+        # Track processed topic IDs
+        for topic_path in processed_topic_paths:
+            if topic_path is not None:
+                self._processed_ids.add(topic_path.topic_id)
 
         # Memory optimization: track flushed counts and clear in-memory lists
         # Must happen BEFORE saving metadata so counts are accurate
@@ -416,10 +415,10 @@ class DataSetGenerator:
         self._save_checkpoint_metadata()
 
         logger.debug(
-            "Checkpoint saved: %d samples, %d failures, %d total paths processed (flushed=%s)",
+            "Checkpoint saved: %d samples, %d failures, %d total IDs processed (flushed=%s)",
             len(new_samples),
             len(new_failures),
-            len(self._processed_paths),
+            len(self._processed_ids),
             flush_memory,
         )
 
@@ -433,7 +432,7 @@ class DataSetGenerator:
         total_failures = self._flushed_failures_count + len(self.failed_samples)
 
         metadata = {
-            "version": 1,
+            "version": 2,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "provider": self.provider,
             "model_name": self.model_name,
@@ -441,7 +440,7 @@ class DataSetGenerator:
             "reasoning_style": self.config.reasoning_style,
             "total_samples": total_samples,
             "total_failures": total_failures,
-            "processed_paths": list(self._processed_paths),
+            "processed_ids": list(self._processed_ids),
             "checkpoint_samples": self.config.checkpoint_samples,
         }
 
@@ -516,12 +515,12 @@ class DataSetGenerator:
         version = metadata.get("version")
         if version is None:
             error_msg = "Missing 'version' field in checkpoint metadata"
-        elif version != 1:
-            error_msg = f"Unsupported checkpoint version: {version} (expected 1)"
+        elif version != 2:  # noqa: PLR2004
+            error_msg = f"Unsupported checkpoint version: {version} (expected 2)"
 
         # Check required fields
         if error_msg is None:
-            required_fields = ["created_at", "total_samples", "processed_paths"]
+            required_fields = ["created_at", "total_samples", "processed_ids"]
             for field in required_fields:
                 if field not in metadata:
                     error_msg = f"Missing required field in checkpoint metadata: {field}"
@@ -560,7 +559,7 @@ class DataSetGenerator:
         """Load checkpoint data if it exists.
 
         Args:
-            retry_failed: If True, remove failed paths from processed set to retry them
+            retry_failed: If True, remove failed IDs from processed set to retry them
 
         Returns:
             True if checkpoint was loaded, False if no checkpoint exists
@@ -587,8 +586,8 @@ class DataSetGenerator:
             # Validate config compatibility
             self._validate_checkpoint_compatibility(metadata)
 
-            # Restore processed paths
-            self._processed_paths = set(metadata.get("processed_paths", []))
+            # Restore processed IDs
+            self._processed_ids = set(metadata.get("processed_ids", []))
 
             # Count existing samples (don't load into memory - they're already on disk)
             # Memory optimization: track as flushed counts instead of loading into RAM
@@ -600,8 +599,8 @@ class DataSetGenerator:
                             sample_count += 1
                 self._flushed_samples_count = sample_count
 
-            # Load failure paths for retry logic (these are small)
-            failed_paths: set[str] = set()
+            # Load failure IDs for retry logic (these are small)
+            failed_ids: set[str] = set()
             if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
                 failure_count = 0
                 with open(self._checkpoint_failures_path) as f:
@@ -610,30 +609,30 @@ class DataSetGenerator:
                         if stripped:
                             failure = json.loads(stripped)
                             failure_count += 1
-                            # Track the path that failed for potential retry
-                            if "path" in failure:
-                                failed_paths.add(failure["path"])
+                            # Track the topic_id that failed for potential retry
+                            if "topic_id" in failure:
+                                failed_ids.add(failure["topic_id"])
                 self._flushed_failures_count = failure_count
 
-            # If retry_failed is True, remove failed paths from processed set
+            # If retry_failed is True, remove failed IDs from processed set
             # so they will be retried during generation
-            if retry_failed and failed_paths:
-                paths_to_retry = self._processed_paths & failed_paths
-                self._processed_paths -= paths_to_retry
+            if retry_failed and failed_ids:
+                ids_to_retry = self._processed_ids & failed_ids
+                self._processed_ids -= ids_to_retry
                 # Clear failures file since we're retrying
                 if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
                     os.remove(self._checkpoint_failures_path)
                 self._flushed_failures_count = 0
                 logger.info(
-                    "Retry mode: %d failed paths will be retried",
-                    len(paths_to_retry),
+                    "Retry mode: %d failed IDs will be retried",
+                    len(ids_to_retry),
                 )
 
             logger.info(
-                "Loaded checkpoint: %d samples, %d failures, %d paths processed",
+                "Loaded checkpoint: %d samples, %d failures, %d IDs processed",
                 self._flushed_samples_count,
                 self._flushed_failures_count,
-                len(self._processed_paths),
+                len(self._processed_ids),
             )
         except Exception as e:  # noqa: BLE001
             logger.warning("Failed to load checkpoint: %s", e)
@@ -649,7 +648,7 @@ class DataSetGenerator:
             os.remove(self._checkpoint_samples_path)
         if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
             os.remove(self._checkpoint_failures_path)
-        self._processed_paths.clear()
+        self._processed_ids.clear()
         self._flushed_samples_count = 0
         self._flushed_failures_count = 0
         logger.info("Checkpoint files cleared")
@@ -672,19 +671,18 @@ class DataSetGenerator:
                         all_samples.append(json.loads(stripped))
         return all_samples
 
-    def _is_path_processed(self, path: list[str] | None) -> bool:
-        """Check if a topic path has already been processed.
+    def _is_topic_processed(self, topic_path: TopicPath | None) -> bool:
+        """Check if a topic has already been processed.
 
         Args:
-            path: Topic path to check
+            topic_path: TopicPath to check
 
         Returns:
-            True if path was already processed in a previous run
+            True if topic was already processed in a previous run
         """
-        if path is None:
+        if topic_path is None:
             return False
-        path_key = " -> ".join(path)
-        return path_key in self._processed_paths
+        return topic_path.topic_id in self._processed_ids
 
     def _validate_create_data_params(
         self,
@@ -709,11 +707,11 @@ class DataSetGenerator:
         num_steps: int,
         batch_size: int,
         topic_model: "TopicModel | None" = None,
-    ) -> tuple[list | None, int]:
+    ) -> tuple[list[TopicPath] | None, int]:
         """Prepare and validate topic paths for data generation."""
-        topic_paths = None
+        topic_paths: list[TopicPath] | None = None
         if topic_model is not None:
-            topic_paths = topic_model.get_all_paths()
+            topic_paths = topic_model.get_all_paths_with_ids()
             total_paths = len(topic_paths)
             required_samples = num_steps * batch_size
 
@@ -734,23 +732,25 @@ class DataSetGenerator:
         self,
         batch_size: int,
         start_idx: int,
-        topic_paths: list,
+        topic_paths: list[TopicPath],
         data_creation_prompt: str,
         num_example_demonstrations: int,
-    ) -> tuple[list[str], list[list[str] | None]]:
-        """Generate prompts for a batch and return the associated paths used.
+    ) -> tuple[list[str], list[TopicPath | None]]:
+        """Generate prompts for a batch and return the associated TopicPaths used.
 
         Returns:
-            (prompts, used_paths) where used_paths aligns with prompts order.
+            (prompts, used_topic_paths) where used_topic_paths aligns with prompts order.
         """
         prompts: list[str] = []
-        used_paths: list[list[str] | None] = []
+        used_topic_paths: list[TopicPath | None] = []
         for i in range(batch_size):
-            path = None
+            topic_path: TopicPath | None = None
+            path: list[str] | None = None
             if topic_paths:
                 current_idx = start_idx + i
                 if current_idx < len(topic_paths):
-                    path = topic_paths[current_idx]
+                    topic_path = topic_paths[current_idx]
+                    path = topic_path.path
                 else:
                     break
 
@@ -760,8 +760,8 @@ class DataSetGenerator:
                 subtopics_list=path,
             )
             prompts.append(sample_prompt)
-            used_paths.append(path)
-        return prompts, used_paths
+            used_topic_paths.append(topic_path)
+        return prompts, used_topic_paths
 
     def _get_minimal_schema(self) -> type:
         """Get the conversation schema for the current config."""
@@ -795,7 +795,7 @@ class DataSetGenerator:
         prompts: list[str],
         include_sys_msg: bool,
         start_sample_idx: int = 0,
-        paths_for_batch: list[list[str] | None] | None = None,
+        topic_paths_for_batch: list[TopicPath | None] | None = None,
     ) -> tuple[list, list]:
         """Generate structured samples using builder pattern.
 
@@ -803,6 +803,7 @@ class DataSetGenerator:
             prompts: List of topic prompts to generate samples for
             include_sys_msg: Whether to include system message in output
             start_sample_idx: Starting sample index for progress reporting
+            topic_paths_for_batch: TopicPath objects for each sample (includes topic_id)
 
         Returns:
             Tuple of (successful samples, failed responses)
@@ -818,7 +819,7 @@ class DataSetGenerator:
             config = self.config.model_copy(update={"sys_msg": include_sys_msg})
 
         async def _generate_with_retry(
-            prompt: str, sample_idx: int, path_info: list[str] | None
+            prompt: str, sample_idx: int, topic_path_info: TopicPath | None
         ) -> tuple[bool, Exception | Conversation]:
             """Generate a single sample with per-sample retry for validation errors.
 
@@ -843,6 +844,9 @@ class DataSetGenerator:
                 max_attempts,
                 self.config.sample_retries,
             )
+
+            # Extract path for progress reporting
+            path_info = topic_path_info.path if topic_path_info else None
 
             for attempt in range(max_attempts):
                 # Notify progress reporter about which sample we're working on
@@ -914,6 +918,12 @@ class DataSetGenerator:
                                 ]
                             )
 
+                    # Add topic_id to conversation metadata for traceability
+                    if topic_path_info and hasattr(conversation, "metadata"):
+                        if conversation.metadata is None:
+                            conversation.metadata = {}
+                        conversation.metadata["topic_id"] = topic_path_info.topic_id
+
                     return True, conversation
 
             return False, last_error or Exception("Sample generation failed")
@@ -921,11 +931,13 @@ class DataSetGenerator:
         # Generate all samples concurrently with sample indices
         tasks = []
         for idx, prompt in enumerate(prompts):
-            path_info = None
-            if paths_for_batch and idx < len(paths_for_batch):
-                path_info = paths_for_batch[idx]
+            topic_path_info = None
+            if topic_paths_for_batch and idx < len(topic_paths_for_batch):
+                topic_path_info = topic_paths_for_batch[idx]
             tasks.append(
-                asyncio.create_task(_generate_with_retry(prompt, start_sample_idx + idx, path_info))
+                asyncio.create_task(
+                    _generate_with_retry(prompt, start_sample_idx + idx, topic_path_info)
+                )
             )
         results = await asyncio.gather(*tasks)
 
@@ -935,17 +947,18 @@ class DataSetGenerator:
             else:
                 error = payload
                 error_msg = f"Generation failed: {error}"
-                # Build failure record with raw content and path if available
+                # Build failure record with raw content and topic_id if available
                 failure_record: dict[str, str | None] = {"error": error_msg}
                 if isinstance(error, Exception):
                     context = getattr(error, "context", None)
                     if isinstance(context, dict) and "raw_content" in context:
                         failure_record["raw_content"] = context["raw_content"]
-                # Include path for checkpoint retry functionality
-                if paths_for_batch and idx < len(paths_for_batch):
-                    path = paths_for_batch[idx]
-                    if path:
-                        failure_record["path"] = " -> ".join(path)
+                # Include topic_id and path for checkpoint retry functionality
+                if topic_paths_for_batch and idx < len(topic_paths_for_batch):
+                    tp = topic_paths_for_batch[idx]
+                    if tp:
+                        failure_record["topic_id"] = tp.topic_id
+                        failure_record["path"] = " -> ".join(tp.path)
                 failed_responses.append(failure_record)
                 failure_type = self.analyze_failure(
                     str(error), error=error if isinstance(error, Exception) else None
@@ -1175,7 +1188,7 @@ class DataSetGenerator:
         num_steps: int,
         batch_size: int,
         total_samples: int,
-        topic_paths: list,
+        topic_paths: list[TopicPath],
         data_creation_prompt: str,
         num_example_demonstrations: int,
         include_sys_msg: bool,
@@ -1191,7 +1204,7 @@ class DataSetGenerator:
         samples_since_checkpoint = 0
         samples_in_current_batch: list[dict] = []
         failures_in_current_batch: list[dict] = []
-        paths_in_current_batch: list[list[str] | None] = []
+        topic_paths_in_current_batch: list[TopicPath | None] = []
 
         try:
             yield {
@@ -1202,8 +1215,8 @@ class DataSetGenerator:
                 "total_samples": total_samples,
                 "root_topic_prompt": root_topic_prompt,
                 "topic_model_type": topic_model_type,
-                "resumed_from_checkpoint": len(self._processed_paths) > 0,
-                "previously_processed": len(self._processed_paths),
+                "resumed_from_checkpoint": len(self._processed_ids) > 0,
+                "previously_processed": len(self._processed_ids),
                 "checkpoint_enabled": self.config.checkpoint_samples is not None,
             }
 
@@ -1215,7 +1228,7 @@ class DataSetGenerator:
                 }
 
                 start_idx = step * batch_size
-                prompts, used_paths = self._generate_batch_prompts(
+                prompts, used_topic_paths = self._generate_batch_prompts(
                     batch_size,
                     start_idx,
                     topic_paths,
@@ -1223,17 +1236,17 @@ class DataSetGenerator:
                     num_example_demonstrations,
                 )
 
-                # Filter out already-processed paths when resuming
-                if self._processed_paths:
+                # Filter out already-processed topics when resuming
+                if self._processed_ids:
                     filtered_prompts = []
-                    filtered_paths = []
-                    for prompt, path in zip(prompts, used_paths, strict=False):
-                        if not self._is_path_processed(path):
+                    filtered_topic_paths: list[TopicPath | None] = []
+                    for prompt, tp in zip(prompts, used_topic_paths, strict=False):
+                        if not self._is_topic_processed(tp):
                             filtered_prompts.append(prompt)
-                            filtered_paths.append(path)
+                            filtered_topic_paths.append(tp)
 
                     if not filtered_prompts:
-                        # All paths in this batch were already processed
+                        # All topics in this batch were already processed
                         yield {
                             "event": "step_complete",
                             "step": step + 1,
@@ -1246,13 +1259,13 @@ class DataSetGenerator:
                         continue
 
                     prompts = filtered_prompts
-                    used_paths = filtered_paths
+                    used_topic_paths = filtered_topic_paths
 
                 failed_before = len(self.failed_samples)
                 samples_before = len(self._samples)
 
                 success, samples_generated = await self._process_batch_with_retries_async(
-                    prompts, include_sys_msg, start_idx, used_paths
+                    prompts, include_sys_msg, start_idx, used_topic_paths
                 )
 
                 # Track new samples and failures for checkpointing
@@ -1260,7 +1273,7 @@ class DataSetGenerator:
                 new_failures = self.failed_samples[failed_before:]
                 samples_in_current_batch.extend(new_samples)
                 failures_in_current_batch.extend(new_failures)
-                paths_in_current_batch.extend(used_paths)
+                topic_paths_in_current_batch.extend(used_topic_paths)
                 samples_since_checkpoint += samples_generated
 
                 # Save checkpoint if we've reached the interval
@@ -1271,11 +1284,11 @@ class DataSetGenerator:
                     self._save_checkpoint(
                         samples_in_current_batch,
                         failures_in_current_batch,
-                        paths_in_current_batch,
+                        topic_paths_in_current_batch,
                     )
                     samples_in_current_batch = []
                     failures_in_current_batch = []
-                    paths_in_current_batch = []
+                    topic_paths_in_current_batch = []
                     samples_since_checkpoint = 0
                     yield {
                         "event": "checkpoint_saved",
@@ -1316,7 +1329,7 @@ class DataSetGenerator:
                 self._save_checkpoint(
                     samples_in_current_batch,
                     failures_in_current_batch,
-                    paths_in_current_batch,
+                    topic_paths_in_current_batch,
                 )
                 yield {
                     "event": "checkpoint_saved",
@@ -1343,7 +1356,7 @@ class DataSetGenerator:
                 self._save_checkpoint(
                     samples_in_current_batch,
                     failures_in_current_batch,
-                    paths_in_current_batch,
+                    topic_paths_in_current_batch,
                 )
             yield {
                 "event": "generation_interrupted",
@@ -1360,7 +1373,7 @@ class DataSetGenerator:
                 self._save_checkpoint(
                     samples_in_current_batch,
                     failures_in_current_batch,
-                    paths_in_current_batch,
+                    topic_paths_in_current_batch,
                 )
             yield {"event": "generation_error", "error": str(e)}
             self.print_failure_summary()
@@ -1379,13 +1392,13 @@ class DataSetGenerator:
         prompts: list[str],
         include_sys_msg: bool,
         start_sample_idx: int = 0,
-        paths_for_batch: list[list[str] | None] | None = None,
+        topic_paths_for_batch: list[TopicPath | None] | None = None,
     ) -> tuple[bool, int]:
         """Process a batch with retry logic."""
         for attempt in range(self.config.max_retries):
             try:
                 samples, failed_responses = await self._generate_structured_samples_async(
-                    prompts, include_sys_msg, start_sample_idx, paths_for_batch
+                    prompts, include_sys_msg, start_sample_idx, topic_paths_for_batch
                 )
 
                 # Update failed samples
@@ -1415,12 +1428,13 @@ class DataSetGenerator:
                     error_msg = f"API error for provider '{self.provider}': {str(e)[:100]}..."
                     self.failure_analysis["api_errors"].append(error_msg)
 
-                # Build failure records for each path in the batch
-                if paths_for_batch:
-                    for path in paths_for_batch:
+                # Build failure records for each topic path in the batch
+                if topic_paths_for_batch:
+                    for tp in topic_paths_for_batch:
                         failure_record: dict[str, str | None] = {"error": error_msg}
-                        if path:
-                            failure_record["path"] = " -> ".join(path)
+                        if tp:
+                            failure_record["topic_id"] = tp.topic_id
+                            failure_record["path"] = " -> ".join(tp.path)
                         self.failed_samples.append(failure_record)
                 else:
                     self.failed_samples.append({"error": error_msg})
@@ -1429,12 +1443,13 @@ class DataSetGenerator:
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
                     error_msg = str(e)
-                    # Build failure records for each path in the batch
-                    if paths_for_batch:
-                        for path in paths_for_batch:
+                    # Build failure records for each topic path in the batch
+                    if topic_paths_for_batch:
+                        for tp in topic_paths_for_batch:
                             failure_record_exc: dict[str, str | None] = {"error": error_msg}
-                            if path:
-                                failure_record_exc["path"] = " -> ".join(path)
+                            if tp:
+                                failure_record_exc["topic_id"] = tp.topic_id
+                                failure_record_exc["path"] = " -> ".join(tp.path)
                             self.failed_samples.append(failure_record_exc)
                     else:
                         self.failed_samples.append({"error": error_msg})

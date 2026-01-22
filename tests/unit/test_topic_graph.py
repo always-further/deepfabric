@@ -350,6 +350,50 @@ class TestGraph:
         ]
         assert sorted(paths) == sorted(expected_paths)
 
+    def test_get_all_paths_with_ids(self, topic_graph):
+        """Test getting all paths with their leaf node UUIDs."""
+        node1 = topic_graph.add_node("Child 1")
+        node2 = topic_graph.add_node("Child 2")
+        node3 = topic_graph.add_node("Grandchild")
+
+        topic_graph.add_edge(0, node1.id)
+        topic_graph.add_edge(0, node2.id)
+        topic_graph.add_edge(node1.id, node3.id)
+
+        topic_paths = topic_graph.get_all_paths_with_ids()
+
+        # Should have 2 paths (to leaf nodes)
+        assert len(topic_paths) == 2  # noqa: PLR2004
+
+        # Extract paths and topic_ids
+        paths_dict = {tuple(tp.path): tp.topic_id for tp in topic_paths}
+
+        # Check that paths match expected
+        expected_path1 = ("Test root topic", "Child 1", "Grandchild")
+        expected_path2 = ("Test root topic", "Child 2")
+        assert expected_path1 in paths_dict
+        assert expected_path2 in paths_dict
+
+        # Check that topic_ids are the UUIDs of the leaf nodes
+        assert paths_dict[expected_path1] == node3.metadata["uuid"]
+        assert paths_dict[expected_path2] == node2.metadata["uuid"]
+
+    def test_get_path_by_id(self, topic_graph):
+        """Test looking up a path by its topic_id."""
+        node1 = topic_graph.add_node("Child 1")
+        topic_graph.add_edge(0, node1.id)
+
+        # Get the UUID of node1 (which is a leaf)
+        node1_uuid = node1.metadata["uuid"]
+
+        # Look up path by UUID
+        path = topic_graph.get_path_by_id(node1_uuid)
+        assert path == ["Test root topic", "Child 1"]
+
+        # Non-existent UUID should return None
+        path = topic_graph.get_path_by_id("non-existent-uuid")
+        assert path is None
+
     def test_has_cycle_no_cycle(self, topic_graph):
         """Test cycle detection with no cycles."""
         node1 = topic_graph.add_node("Child 1")
