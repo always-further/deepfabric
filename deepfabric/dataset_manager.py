@@ -591,9 +591,11 @@ def save_dataset(
         _save_jsonl_without_nulls(dataset, save_path)
         tui.success(f"Dataset saved to: {save_path}")
 
-        # Save failed samples if engine has any
-        if engine and engine.failed_samples:
-            _save_failed_samples(save_path, engine.failed_samples, tui)
+        # Save failed samples if engine has any (including flushed to checkpoint)
+        if engine:
+            all_failures = engine.get_all_failures()
+            if all_failures:
+                _save_failed_samples(save_path, all_failures, tui)
 
         # Handle automatic uploads if configured
         if config:

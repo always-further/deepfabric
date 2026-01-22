@@ -675,6 +675,30 @@ class DataSetGenerator:
                         all_samples.append(json.loads(stripped))
         return all_samples
 
+    def get_all_failures(self) -> list[dict]:
+        """Get all failures including those flushed to checkpoint.
+
+        This combines in-memory failures with any that were flushed to the
+        checkpoint failures file during memory optimization.
+
+        Returns:
+            List of all failure dictionaries
+        """
+        all_failures: list[dict] = []
+
+        # First load from checkpoint file if it exists
+        if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
+            with open(self._checkpoint_failures_path) as f:
+                for raw_line in f:
+                    stripped = raw_line.strip()
+                    if stripped:
+                        all_failures.append(json.loads(stripped))
+
+        # Then add any in-memory failures (if not yet flushed)
+        all_failures.extend(self.failed_samples)
+
+        return all_failures
+
     def _is_topic_processed(self, topic_path: TopicPath | None) -> bool:
         """Check if a topic has already been processed.
 
