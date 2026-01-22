@@ -2,9 +2,12 @@ import asyncio
 import json
 import logging
 import math
+import os
 import random
 
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from datasets import Dataset as HFDataset
@@ -14,6 +17,10 @@ from .builders import ConversationBuilderFactory
 from .config import _normalize_reasoning_style
 from .constants import (
     API_ERROR_INDICATORS,
+    CHECKPOINT_FAILURES_SUFFIX,
+    CHECKPOINT_METADATA_SUFFIX,
+    CHECKPOINT_SAMPLES_SUFFIX,
+    DEFAULT_CHECKPOINT_DIR,
     DEFAULT_MAX_RETRIES,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_SAMPLE_RETRIES,
@@ -193,6 +200,21 @@ class DataSetGeneratorConfig(BaseModel):
         description="Which tools to include in each sample: 'all' includes full catalog, 'used_only' includes only tools actually called (recommended for training)",
     )
 
+    # Checkpoint configuration
+    checkpoint_samples: int | None = Field(
+        default=None,
+        ge=1,
+        description="Save checkpoint every N samples. None disables checkpointing.",
+    )
+    checkpoint_dir: str = Field(
+        default=DEFAULT_CHECKPOINT_DIR,
+        description="Directory to store checkpoint files",
+    )
+    output_save_as: str | None = Field(
+        default=None,
+        description="Output file path (used to derive checkpoint file names)",
+    )
+
 
 class DataSetGenerator:
     def __init__(self, **kwargs):
@@ -242,6 +264,13 @@ class DataSetGenerator:
 
         # Progress reporter for streaming feedback (set by external callers)
         self.progress_reporter: ProgressReporter | None = None
+
+        # Checkpoint state
+        self._checkpoint_samples_since_save = 0
+        self._processed_paths: set[str] = set()  # Track processed topic paths
+        self._checkpoint_metadata_path: Path | None = None
+        self._checkpoint_samples_path: Path | None = None
+        self._checkpoint_failures_path: Path | None = None
 
     def _initialize_tool_registry(self):
         """Initialize tool registry from component configuration.
@@ -298,6 +327,252 @@ class DataSetGenerator:
 
         except Exception as e:  # noqa: BLE001
             raise DataSetGeneratorError(f"Failed to initialize tool registry: {str(e)}") from e
+
+    def _get_checkpoint_paths(self) -> tuple[Path, Path, Path]:
+        """Get checkpoint file paths based on output_save_as.
+
+        Returns:
+            Tuple of (metadata_path, samples_path, failures_path)
+        """
+        if not self.config.output_save_as:
+            raise DataSetGeneratorError(
+                "Cannot create checkpoint paths: output_save_as not configured"
+            )
+
+        # Create checkpoint directory if needed
+        checkpoint_dir = Path(self.config.checkpoint_dir)
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+        # Derive checkpoint filenames from output filename
+        output_stem = Path(self.config.output_save_as).stem
+        metadata_path = checkpoint_dir / f"{output_stem}{CHECKPOINT_METADATA_SUFFIX}"
+        samples_path = checkpoint_dir / f"{output_stem}{CHECKPOINT_SAMPLES_SUFFIX}"
+        failures_path = checkpoint_dir / f"{output_stem}{CHECKPOINT_FAILURES_SUFFIX}"
+
+        return metadata_path, samples_path, failures_path
+
+    def _initialize_checkpoint_paths(self) -> None:
+        """Initialize checkpoint file paths if checkpointing is enabled."""
+        if self.config.checkpoint_samples is not None:
+            paths = self._get_checkpoint_paths()
+            self._checkpoint_metadata_path = paths[0]
+            self._checkpoint_samples_path = paths[1]
+            self._checkpoint_failures_path = paths[2]
+            logger.info(
+                "Checkpointing enabled: saving every %d samples to %s",
+                self.config.checkpoint_samples,
+                self._checkpoint_samples_path,
+            )
+
+    def _save_checkpoint(
+        self,
+        new_samples: list[dict],
+        new_failures: list[dict],
+        processed_paths: list[list[str] | None],
+    ) -> None:
+        """Save checkpoint data incrementally.
+
+        Args:
+            new_samples: New successful samples to append
+            new_failures: New failed samples to append
+            processed_paths: Topic paths that were processed in this batch
+        """
+        if self._checkpoint_samples_path is None:
+            return
+
+        # Append new samples to checkpoint file
+        if new_samples:
+            with open(self._checkpoint_samples_path, "a") as f:
+                for sample in new_samples:
+                    f.write(json.dumps(sample, separators=(",", ":")) + "\n")
+
+        # Append new failures to failures file
+        if new_failures and self._checkpoint_failures_path:
+            with open(self._checkpoint_failures_path, "a") as f:
+                for failure in new_failures:
+                    f.write(json.dumps(failure, separators=(",", ":")) + "\n")
+
+        # Track processed paths
+        for path in processed_paths:
+            if path:
+                path_key = " -> ".join(path)
+                self._processed_paths.add(path_key)
+
+        # Update metadata
+        self._save_checkpoint_metadata()
+
+        logger.debug(
+            "Checkpoint saved: %d samples, %d failures, %d total paths processed",
+            len(new_samples),
+            len(new_failures),
+            len(self._processed_paths),
+        )
+
+    def _save_checkpoint_metadata(self) -> None:
+        """Save checkpoint metadata file."""
+        if self._checkpoint_metadata_path is None:
+            return
+
+        metadata = {
+            "version": 1,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "provider": self.provider,
+            "model_name": self.model_name,
+            "conversation_type": self.config.conversation_type,
+            "reasoning_style": self.config.reasoning_style,
+            "total_samples": len(self._samples),
+            "total_failures": len(self.failed_samples),
+            "processed_paths": list(self._processed_paths),
+            "checkpoint_samples": self.config.checkpoint_samples,
+        }
+
+        with open(self._checkpoint_metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+    def _validate_checkpoint_compatibility(self, metadata: dict) -> None:
+        """Validate that current config is compatible with checkpoint.
+
+        Logs warnings for config mismatches but allows resumption.
+
+        Args:
+            metadata: Checkpoint metadata dictionary
+        """
+        mismatches: list[str] = []
+
+        # Check provider
+        checkpoint_provider = metadata.get("provider")
+        if checkpoint_provider and checkpoint_provider != self.provider:
+            mismatches.append(f"provider: checkpoint={checkpoint_provider}, current={self.provider}")
+
+        # Check model
+        checkpoint_model = metadata.get("model_name")
+        if checkpoint_model and checkpoint_model != self.model_name:
+            mismatches.append(
+                f"model_name: checkpoint={checkpoint_model}, current={self.model_name}"
+            )
+
+        # Check conversation type
+        checkpoint_conv_type = metadata.get("conversation_type")
+        if checkpoint_conv_type and checkpoint_conv_type != self.config.conversation_type:
+            mismatches.append(
+                f"conversation_type: checkpoint={checkpoint_conv_type}, "
+                f"current={self.config.conversation_type}"
+            )
+
+        # Check reasoning style
+        checkpoint_reasoning = metadata.get("reasoning_style")
+        if checkpoint_reasoning and checkpoint_reasoning != self.config.reasoning_style:
+            mismatches.append(
+                f"reasoning_style: checkpoint={checkpoint_reasoning}, "
+                f"current={self.config.reasoning_style}"
+            )
+
+        if mismatches:
+            logger.warning(
+                "Config mismatch with checkpoint. Resuming may produce inconsistent results. "
+                "Differences: %s",
+                "; ".join(mismatches),
+            )
+
+    def load_checkpoint(self, retry_failed: bool = False) -> bool:
+        """Load checkpoint data if it exists.
+
+        Args:
+            retry_failed: If True, remove failed paths from processed set to retry them
+
+        Returns:
+            True if checkpoint was loaded, False if no checkpoint exists
+        """
+        if self.config.checkpoint_samples is None:
+            return False
+
+        self._initialize_checkpoint_paths()
+
+        if self._checkpoint_metadata_path is None or not self._checkpoint_metadata_path.exists():
+            return False
+
+        try:
+            # Load metadata
+            with open(self._checkpoint_metadata_path) as f:
+                metadata = json.load(f)
+
+            # Validate config compatibility
+            self._validate_checkpoint_compatibility(metadata)
+
+            # Restore processed paths
+            self._processed_paths = set(metadata.get("processed_paths", []))
+
+            # Load existing samples
+            if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
+                with open(self._checkpoint_samples_path) as f:
+                    for raw_line in f:
+                        stripped = raw_line.strip()
+                        if stripped:
+                            self._samples.append(json.loads(stripped))
+
+            # Load existing failures
+            failed_paths: set[str] = set()
+            if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
+                with open(self._checkpoint_failures_path) as f:
+                    for raw_line in f:
+                        stripped = raw_line.strip()
+                        if stripped:
+                            failure = json.loads(stripped)
+                            self.failed_samples.append(failure)
+                            # Track the path that failed for potential retry
+                            if "path" in failure:
+                                failed_paths.add(failure["path"])
+
+            # If retry_failed is True, remove failed paths from processed set
+            # so they will be retried during generation
+            if retry_failed and failed_paths:
+                paths_to_retry = self._processed_paths & failed_paths
+                self._processed_paths -= paths_to_retry
+                # Clear failures file since we're retrying
+                if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
+                    os.remove(self._checkpoint_failures_path)
+                self.failed_samples.clear()
+                logger.info(
+                    "Retry mode: %d failed paths will be retried",
+                    len(paths_to_retry),
+                )
+
+            logger.info(
+                "Loaded checkpoint: %d samples, %d failures, %d paths processed",
+                len(self._samples),
+                len(self.failed_samples),
+                len(self._processed_paths),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to load checkpoint: %s", e)
+            return False
+        else:
+            return True
+
+    def clear_checkpoint(self) -> None:
+        """Remove checkpoint files."""
+        if self._checkpoint_metadata_path and self._checkpoint_metadata_path.exists():
+            os.remove(self._checkpoint_metadata_path)
+        if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
+            os.remove(self._checkpoint_samples_path)
+        if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
+            os.remove(self._checkpoint_failures_path)
+        self._processed_paths.clear()
+        logger.info("Checkpoint files cleared")
+
+    def _is_path_processed(self, path: list[str] | None) -> bool:
+        """Check if a topic path has already been processed.
+
+        Args:
+            path: Topic path to check
+
+        Returns:
+            True if path was already processed in a previous run
+        """
+        if path is None:
+            return False
+        path_key = " -> ".join(path)
+        return path_key in self._processed_paths
 
     def _validate_create_data_params(
         self,
@@ -548,12 +823,17 @@ class DataSetGenerator:
             else:
                 error = payload
                 error_msg = f"Generation failed: {error}"
-                # Build failure record with raw content if available
-                failure_record = {"error": error_msg}
+                # Build failure record with raw content and path if available
+                failure_record: dict[str, str | None] = {"error": error_msg}
                 if isinstance(error, Exception):
                     context = getattr(error, "context", None)
                     if isinstance(context, dict) and "raw_content" in context:
                         failure_record["raw_content"] = context["raw_content"]
+                # Include path for checkpoint retry functionality
+                if paths_for_batch and idx < len(paths_for_batch):
+                    path = paths_for_batch[idx]
+                    if path:
+                        failure_record["path"] = " -> ".join(path)
                 failed_responses.append(failure_record)
                 failure_type = self.analyze_failure(
                     str(error), error=error if isinstance(error, Exception) else None
@@ -778,7 +1058,7 @@ class DataSetGenerator:
         ):
             yield event
 
-    async def _run_generation_loop_async(  # noqa: PLR0912
+    async def _run_generation_loop_async(  # noqa: PLR0912, PLR0915
         self,
         num_steps: int,
         batch_size: int,
@@ -791,6 +1071,16 @@ class DataSetGenerator:
         topic_model_type: str | None = None,
     ) -> AsyncGenerator[dict | HFDataset, None]:
         """Run the main generation loop yielding progress events."""
+        # Initialize checkpoint paths if checkpointing is enabled
+        if self.config.checkpoint_samples is not None:
+            self._initialize_checkpoint_paths()
+
+        # Track samples added in this run for checkpointing
+        samples_since_checkpoint = 0
+        samples_in_current_batch: list[dict] = []
+        failures_in_current_batch: list[dict] = []
+        paths_in_current_batch: list[list[str] | None] = []
+
         try:
             yield {
                 "event": "generation_start",
@@ -800,6 +1090,8 @@ class DataSetGenerator:
                 "total_samples": total_samples,
                 "root_topic_prompt": root_topic_prompt,
                 "topic_model_type": topic_model_type,
+                "resumed_from_checkpoint": len(self._processed_paths) > 0,
+                "previously_processed": len(self._processed_paths),
             }
 
             for step in range(num_steps):
@@ -818,17 +1110,75 @@ class DataSetGenerator:
                     num_example_demonstrations,
                 )
 
+                # Filter out already-processed paths when resuming
+                if self._processed_paths:
+                    filtered_prompts = []
+                    filtered_paths = []
+                    for prompt, path in zip(prompts, used_paths, strict=False):
+                        if not self._is_path_processed(path):
+                            filtered_prompts.append(prompt)
+                            filtered_paths.append(path)
+
+                    if not filtered_prompts:
+                        # All paths in this batch were already processed
+                        yield {
+                            "event": "step_complete",
+                            "step": step + 1,
+                            "samples_generated": 0,
+                            "success": True,
+                            "failed_in_step": 0,
+                            "failure_reasons": [],
+                            "skipped": len(prompts),
+                        }
+                        continue
+
+                    prompts = filtered_prompts
+                    used_paths = filtered_paths
+
                 failed_before = len(self.failed_samples)
+                samples_before = len(self._samples)
 
                 success, samples_generated = await self._process_batch_with_retries_async(
                     prompts, include_sys_msg, start_idx, used_paths
                 )
 
+                # Track new samples and failures for checkpointing
+                new_samples = self._samples[samples_before:]
+                new_failures = self.failed_samples[failed_before:]
+                samples_in_current_batch.extend(new_samples)
+                failures_in_current_batch.extend(new_failures)
+                paths_in_current_batch.extend(used_paths)
+                samples_since_checkpoint += samples_generated
+
+                # Save checkpoint if we've reached the interval
+                if (
+                    self.config.checkpoint_samples is not None
+                    and samples_since_checkpoint >= self.config.checkpoint_samples
+                ):
+                    self._save_checkpoint(
+                        samples_in_current_batch,
+                        failures_in_current_batch,
+                        paths_in_current_batch,
+                    )
+                    samples_in_current_batch = []
+                    failures_in_current_batch = []
+                    paths_in_current_batch = []
+                    samples_since_checkpoint = 0
+                    yield {
+                        "event": "checkpoint_saved",
+                        "total_samples": len(self._samples),
+                        "total_failures": len(self.failed_samples),
+                    }
+
                 failed_in_batch = len(self.failed_samples) - failed_before
-                failure_reasons = []
+                failure_reasons: list[str] = []
                 if failed_in_batch > 0 and self.failed_samples:
                     recent_failures = self.failed_samples[-failed_in_batch:]
-                    failure_reasons = recent_failures[:3]
+                    for f in recent_failures[:3]:
+                        if isinstance(f, dict):
+                            failure_reasons.append(f.get("error", str(f)))
+                        else:
+                            failure_reasons.append(str(f))
 
                 yield {
                     "event": "step_complete",
@@ -846,6 +1196,22 @@ class DataSetGenerator:
                         "message": f"Failed to process batch {step + 1} after all retries",
                     }
 
+            # Save final checkpoint with any remaining samples
+            if self.config.checkpoint_samples is not None and (
+                samples_in_current_batch or failures_in_current_batch
+            ):
+                self._save_checkpoint(
+                    samples_in_current_batch,
+                    failures_in_current_batch,
+                    paths_in_current_batch,
+                )
+                yield {
+                    "event": "checkpoint_saved",
+                    "total_samples": len(self._samples),
+                    "total_failures": len(self.failed_samples),
+                    "final": True,
+                }
+
             yield {
                 "event": "generation_complete",
                 "total_samples": len(self._samples),
@@ -853,6 +1219,15 @@ class DataSetGenerator:
             }
 
         except KeyboardInterrupt:
+            # Save checkpoint on interrupt
+            if self.config.checkpoint_samples is not None and (
+                samples_in_current_batch or failures_in_current_batch
+            ):
+                self._save_checkpoint(
+                    samples_in_current_batch,
+                    failures_in_current_batch,
+                    paths_in_current_batch,
+                )
             yield {
                 "event": "generation_interrupted",
                 "message": "Generation interrupted by user.",
@@ -861,6 +1236,15 @@ class DataSetGenerator:
             self._save_samples_to_file(INTERRUPTED_DATASET_FILENAME)
 
         except Exception as e:  # noqa: BLE001
+            # Save checkpoint on error
+            if self.config.checkpoint_samples is not None and (
+                samples_in_current_batch or failures_in_current_batch
+            ):
+                self._save_checkpoint(
+                    samples_in_current_batch,
+                    failures_in_current_batch,
+                    paths_in_current_batch,
+                )
             yield {"event": "generation_error", "error": str(e)}
             self.print_failure_summary()
             self._save_samples_to_file(ERROR_DATASET_FILENAME)
@@ -909,14 +1293,31 @@ class DataSetGenerator:
                     error_msg = f"API error for provider '{self.provider}': {str(e)[:100]}..."
                     self.failure_analysis["api_errors"].append(error_msg)
 
-                self.failed_samples.append(error_msg)
+                # Build failure records for each path in the batch
+                if paths_for_batch:
+                    for path in paths_for_batch:
+                        failure_record: dict[str, str | None] = {"error": error_msg}
+                        if path:
+                            failure_record["path"] = " -> ".join(path)
+                        self.failed_samples.append(failure_record)
+                else:
+                    self.failed_samples.append({"error": error_msg})
                 logger.exception("API error: %s", error_msg)
                 return False, 0  # Don't retry authentication/API errors
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
-                    self.failed_samples.append(str(e))
-                    failure_type = self.analyze_failure(str(e), error=e)
-                    self.failure_analysis[failure_type].append(str(e))
+                    error_msg = str(e)
+                    # Build failure records for each path in the batch
+                    if paths_for_batch:
+                        for path in paths_for_batch:
+                            failure_record_exc: dict[str, str | None] = {"error": error_msg}
+                            if path:
+                                failure_record_exc["path"] = " -> ".join(path)
+                            self.failed_samples.append(failure_record_exc)
+                    else:
+                        self.failed_samples.append({"error": error_msg})
+                    failure_type = self.analyze_failure(error_msg, error=e)
+                    self.failure_analysis[failure_type].append(error_msg)
                     return False, 0
             else:
                 # If no exception and no samples, return False, 0

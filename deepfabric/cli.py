@@ -1,7 +1,9 @@
 import contextlib
+import json
 import os
 import sys
 
+from pathlib import Path
 from typing import Literal, NoReturn, cast
 
 import click
@@ -13,6 +15,12 @@ from pydantic import ValidationError as PydanticValidationError
 from .auth import auth as auth_group
 from .config import DeepFabricConfig
 from .config_manager import apply_cli_overrides, get_final_parameters, load_config
+from .constants import (
+    CHECKPOINT_FAILURES_SUFFIX,
+    CHECKPOINT_METADATA_SUFFIX,
+    CHECKPOINT_SAMPLES_SUFFIX,
+    DEFAULT_CHECKPOINT_DIR,
+)
 from .dataset_manager import create_dataset, save_dataset
 from .exceptions import ConfigurationError
 from .generator import DataSetGenerator
@@ -107,6 +115,12 @@ class GenerateOptions(BaseModel):
 
     # Cloud upload (experimental)
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None
+
+    # Checkpointing options
+    checkpoint_samples: int | None = None
+    checkpoint_dir: str | None = None
+    resume: bool = False
+    retry_failed: bool = False
 
     @model_validator(mode="after")
     def validate_mode_constraints(self) -> "GenerateOptions":
@@ -376,9 +390,30 @@ def _run_generation(
     options: GenerateOptions,
 ) -> None:
     """Create the dataset using the prepared configuration and topic model."""
+    tui = get_tui()
 
-    generation_params = preparation.config.get_generation_params(**preparation.generation_overrides)
+    # Apply CLI checkpoint overrides
+    checkpoint_overrides = {}
+    if options.checkpoint_samples is not None:
+        checkpoint_overrides["checkpoint_samples"] = options.checkpoint_samples
+    if options.checkpoint_dir is not None:
+        checkpoint_overrides["checkpoint_dir"] = options.checkpoint_dir
+
+    generation_params = preparation.config.get_generation_params(
+        **preparation.generation_overrides, **checkpoint_overrides
+    )
     engine = DataSetGenerator(**generation_params)
+
+    # Handle resume from checkpoint
+    if options.resume:
+        if engine.load_checkpoint(retry_failed=options.retry_failed):
+            retry_msg = " (retrying failed samples)" if options.retry_failed else ""
+            tui.info(
+                f"Resuming from checkpoint: {len(engine._samples)} samples, "
+                f"{len(engine._processed_paths)} paths processed{retry_msg}"
+            )
+        else:
+            tui.info("No checkpoint found, starting fresh generation")
 
     dataset = create_dataset(
         engine=engine,
@@ -396,6 +431,11 @@ def _run_generation(
     output_config = preparation.config.get_output_config()
     output_save_path = options.output_save_as or output_config["save_as"]
     save_dataset(dataset, output_save_path, preparation.config, engine=engine)
+
+    # Clean up checkpoint files after successful completion
+    if generation_params.get("checkpoint_samples") is not None:
+        engine.clear_checkpoint()
+        tui.info("Checkpoint files cleaned up after successful generation")
 
     trace(
         "dataset_generated",
@@ -488,6 +528,26 @@ def _run_generation(
     help="Upload to DeepFabric Cloud (experimental): all, dataset, graph, or none. "
     "Enables headless mode for CI. Requires DEEPFABRIC_API_KEY or prior auth.",
 )
+@click.option(
+    "--checkpoint-samples",
+    type=int,
+    help="Save checkpoint every N samples. Enables resumable generation.",
+)
+@click.option(
+    "--checkpoint-dir",
+    type=click.Path(),
+    help="Directory for checkpoint files (default: .checkpoints)",
+)
+@click.option(
+    "--resume",
+    is_flag=True,
+    help="Resume from existing checkpoint if available",
+)
+@click.option(
+    "--retry-failed",
+    is_flag=True,
+    help="When resuming, retry previously failed samples",
+)
 def generate(  # noqa: PLR0913
     config_file: str | None,
     output_system_prompt: str | None = None,
@@ -514,6 +574,10 @@ def generate(  # noqa: PLR0913
     agent_mode: Literal["single_turn", "multi_turn"] | None = None,
     cloud_upload: Literal["all", "dataset", "graph", "none"] | None = None,
     tui: Literal["rich", "simple"] = "rich",
+    checkpoint_samples: int | None = None,
+    checkpoint_dir: str | None = None,
+    resume: bool = False,
+    retry_failed: bool = False,
 ) -> None:
     """Generate training data from a YAML configuration file or CLI parameters."""
     # Handle deprecated --agent-mode flag
@@ -571,6 +635,10 @@ def generate(  # noqa: PLR0913
             agent_mode=agent_mode,
             cloud_upload=cloud_upload,
             tui=tui,
+            checkpoint_samples=checkpoint_samples,
+            checkpoint_dir=checkpoint_dir,
+            resume=resume,
+            retry_failed=retry_failed,
         )
     except (PydanticValidationError, ValueError) as error:
         handle_error(click.get_current_context(), ConfigurationError(str(error)))
@@ -1565,6 +1633,129 @@ def import_tools(
     except Exception as e:
         tui.error(f"Failed to import tools: {str(e)}")
         sys.exit(1)
+
+
+@cli.command("checkpoint-status")
+@click.argument("config_file", type=click.Path(exists=True))
+def checkpoint_status(config_file: str) -> None:
+    """Show checkpoint status for a generation config.
+
+    Displays the current state of any checkpoint files associated with
+    the given configuration file, including progress, failures, and
+    resume instructions.
+    """
+    tui = get_tui()
+
+    try:
+        config = DeepFabricConfig.from_yaml(config_file)
+    except Exception as e:
+        tui.error(f"Failed to load config: {e}")
+        sys.exit(1)
+
+    # Get checkpoint configuration
+    output_config = config.get_output_config()
+    checkpoint_dir = output_config.get("checkpoint_dir", DEFAULT_CHECKPOINT_DIR)
+    save_as = output_config.get("save_as")
+
+    if not save_as:
+        tui.error("Config does not specify output.save_as - cannot determine checkpoint paths")
+        sys.exit(1)
+
+    # Derive checkpoint paths
+    output_stem = Path(save_as).stem
+    checkpoint_path = Path(checkpoint_dir)
+    metadata_path = checkpoint_path / f"{output_stem}{CHECKPOINT_METADATA_SUFFIX}"
+    samples_path = checkpoint_path / f"{output_stem}{CHECKPOINT_SAMPLES_SUFFIX}"
+    failures_path = checkpoint_path / f"{output_stem}{CHECKPOINT_FAILURES_SUFFIX}"
+
+    # Check if checkpoint exists
+    if not metadata_path.exists():
+        tui.info(f"No checkpoint found at: {metadata_path}")
+        tui.info("\nTo enable checkpointing, run:")
+        tui.info(f"  deepfabric generate {config_file} --checkpoint-samples 10")
+        return
+
+    # Load and display checkpoint metadata
+    try:
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+    except Exception as e:
+        tui.error(f"Failed to read checkpoint metadata: {e}")
+        sys.exit(1)
+
+    # Count samples in checkpoint file
+    checkpoint_samples = 0
+    if samples_path.exists():
+        with open(samples_path) as f:
+            checkpoint_samples = sum(1 for line in f if line.strip())
+
+    # Count failures
+    checkpoint_failures = 0
+    failure_details = []
+    if failures_path.exists():
+        with open(failures_path) as f:
+            for raw_line in f:
+                stripped = raw_line.strip()
+                if stripped:
+                    checkpoint_failures += 1
+                    try:
+                        failure = json.loads(stripped)
+                        failure_details.append(failure)
+                    except json.JSONDecodeError:
+                        pass
+
+    # Get target samples from config
+    target_samples = output_config.get("num_samples", 0)
+    batch_size = output_config.get("batch_size", 1)
+    total_target = target_samples * batch_size if target_samples else 0
+
+    # Display status
+    tui.console.print()
+    tui.console.print(f"[bold]Checkpoint Status:[/bold] {metadata_path}")
+    tui.console.print()
+
+    # Progress
+    progress_pct = (checkpoint_samples / total_target * 100) if total_target > 0 else 0
+    tui.console.print(f"  [cyan]Progress:[/cyan]     {checkpoint_samples}/{total_target} samples ({progress_pct:.1f}%)")
+    tui.console.print(f"  [cyan]Failed:[/cyan]       {checkpoint_failures} samples")
+
+    # Paths processed
+    processed_paths = metadata.get("processed_paths", [])
+    tui.console.print(f"  [cyan]Paths done:[/cyan]   {len(processed_paths)}")
+
+    # Config info
+    tui.console.print()
+    tui.console.print(f"  [dim]Provider:[/dim]      {metadata.get('provider', 'unknown')}")
+    tui.console.print(f"  [dim]Model:[/dim]         {metadata.get('model_name', 'unknown')}")
+    tui.console.print(f"  [dim]Conv type:[/dim]     {metadata.get('conversation_type', 'unknown')}")
+    if metadata.get("reasoning_style"):
+        tui.console.print(f"  [dim]Reasoning:[/dim]     {metadata.get('reasoning_style')}")
+    tui.console.print(f"  [dim]Last saved:[/dim]    {metadata.get('created_at', 'unknown')}")
+
+    # Show failed topics if any
+    max_failures_to_show = 5
+    max_error_length = 60
+    if failure_details:
+        tui.console.print()
+        tui.console.print("[yellow]Failed Topics:[/yellow]")
+        for failure in failure_details[:max_failures_to_show]:
+            error_msg = failure.get("error", "Unknown error")
+            # Truncate long error messages
+            if len(error_msg) > max_error_length:
+                error_msg = error_msg[: max_error_length - 3] + "..."
+            tui.console.print(f"  - {error_msg}")
+        if len(failure_details) > max_failures_to_show:
+            remaining = len(failure_details) - max_failures_to_show
+            tui.console.print(f"  ... and {remaining} more failures")
+
+    # Resume instructions
+    tui.console.print()
+    checkpoint_samples_arg = metadata.get("checkpoint_samples", 10)
+    tui.console.print("[green]Resume with:[/green]")
+    tui.console.print(f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume")
+    if metadata.get("total_failures", 0) > 0:
+        tui.console.print("[green]Retry failed:[/green]")
+        tui.console.print(f"  deepfabric generate {config_file} --checkpoint-samples {checkpoint_samples_arg} --resume --retry-failed")
 
 
 if __name__ == "__main__":

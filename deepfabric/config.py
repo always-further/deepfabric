@@ -7,6 +7,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .constants import (
+    DEFAULT_CHECKPOINT_DIR,
     DEFAULT_MAX_RETRIES,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
@@ -284,6 +285,17 @@ class OutputConfig(BaseModel):
         description="Number of samples to process at a time",
     )
     save_as: str = Field(..., min_length=1, description="Where to save the final dataset")
+
+    # Checkpoint configuration
+    checkpoint_samples: int | None = Field(
+        default=None,
+        ge=1,
+        description="Save checkpoint every N samples. None disables checkpointing.",
+    )
+    checkpoint_dir: str = Field(
+        default=DEFAULT_CHECKPOINT_DIR,
+        description="Directory to store checkpoint files",
+    )
 
     @field_validator("num_samples", mode="before")
     @classmethod
@@ -597,6 +609,10 @@ See documentation for full examples.
             # Output config
             "sys_msg": self.output.include_system_message,
             "dataset_system_prompt": self.output.system_prompt or self.generation.system_prompt,
+            # Checkpoint config
+            "checkpoint_samples": self.output.checkpoint_samples,
+            "checkpoint_dir": self.output.checkpoint_dir,
+            "output_save_as": self.output.save_as,
         }
 
         # Tool config
@@ -631,6 +647,8 @@ See documentation for full examples.
             "num_samples": self.output.num_samples,
             "batch_size": self.output.batch_size,
             "save_as": self.output.save_as,
+            "checkpoint_samples": self.output.checkpoint_samples,
+            "checkpoint_dir": self.output.checkpoint_dir,
         }
 
     def get_huggingface_config(self) -> dict:
