@@ -20,6 +20,7 @@ from .constants import (
 )
 from .exceptions import ConfigurationError
 from .metrics import trace
+from .utils import parse_num_samples
 
 
 def _normalize_reasoning_style(value: str | None) -> str | None:
@@ -288,33 +289,10 @@ class OutputConfig(BaseModel):
     @classmethod
     def validate_num_samples(cls, v: int | str) -> int | str:
         """Validate num_samples: integer, 'auto', or percentage like '50%'."""
-        if isinstance(v, int):
-            if v < 1:
-                raise ValueError("num_samples must be at least 1")
-            return v
-        if isinstance(v, str):
-            v_normalized = v.strip().lower()
-            if v_normalized == "auto":
-                return "auto"
-            if v_normalized.endswith("%"):
-                try:
-                    pct = float(v_normalized[:-1])
-                except ValueError as e:
-                    raise ValueError(f"Invalid percentage format: {v}") from e
-                if pct <= 0:
-                    raise ValueError("Percentage must be greater than 0")
-                return v_normalized  # Keep as string like "50%" or "500%"
-            # Try to parse as integer string
-            try:
-                parsed = int(v)
-            except ValueError as e:
-                raise ValueError(
-                    f"Invalid num_samples value: {v}. Use integer, 'auto', or percentage like '50%'"
-                ) from e
-            if parsed < 1:
-                raise ValueError("num_samples must be at least 1")
-            return parsed
-        raise ValueError(f"num_samples must be int or string, got {type(v).__name__}")
+        result = parse_num_samples(v)
+        if result is None:
+            raise ValueError("num_samples cannot be None")
+        return result
 
 
 class HuggingFaceConfig(BaseModel):

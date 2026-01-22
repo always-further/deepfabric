@@ -23,43 +23,11 @@ from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
 from .tui import configure_tui, get_tui
 from .update_checker import check_for_updates
-from .utils import get_bool_env
+from .utils import get_bool_env, parse_num_samples
 from .validation import show_validation_success, validate_path_requirements
 
 OverrideValue = str | int | float | bool | None
 OverrideMap = dict[str, OverrideValue]
-
-
-def parse_num_samples(value: str | None) -> int | str | None:
-    """Parse num_samples CLI argument: integer, 'auto', or percentage like '50%'.
-
-    Args:
-        value: Raw string from CLI, or None if not provided
-
-    Returns:
-        Parsed value: int, "auto", percentage string like "50%", or None
-    """
-    if value is None:
-        return None
-    value = value.strip().lower()
-    if value == "auto":
-        return "auto"
-    if value.endswith("%"):
-        # Validate percentage format, but keep as string
-        try:
-            pct = float(value[:-1])
-        except ValueError as e:
-            raise ValueError(f"Invalid percentage format: {value}") from e
-        if pct <= 0:
-            raise ValueError("Percentage must be greater than 0")
-        return value
-    # Try to parse as integer
-    try:
-        return int(value)
-    except ValueError as e:
-        raise ValueError(
-            f"Invalid num_samples value: {value}. Use integer, 'auto', or percentage like '50%'"
-        ) from e
 
 
 def handle_error(ctx: click.Context, error: Exception) -> NoReturn:

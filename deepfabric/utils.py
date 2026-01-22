@@ -155,6 +155,51 @@ def read_topic_tree_from_jsonl(file_path: str) -> list[dict]:
     return topic_tree
 
 
+def parse_num_samples(value: int | str | None) -> int | str | None:
+    """Parse and validate num_samples: integer, 'auto', or percentage like '50%'.
+
+    This is a shared utility used by both CLI argument parsing and config validation.
+
+    Args:
+        value: Raw value - can be int, string, or None
+
+    Returns:
+        Parsed value: int, "auto", percentage string like "50%", or None
+
+    Raises:
+        ValueError: If the value is invalid
+    """
+    if value is None:
+        return None
+    if isinstance(value, int):
+        if value < 1:
+            raise ValueError("num_samples must be at least 1")
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "auto":
+            return "auto"
+        if normalized.endswith("%"):
+            try:
+                pct = float(normalized[:-1])
+            except ValueError as e:
+                raise ValueError(f"Invalid percentage format: {value}") from e
+            if pct <= 0:
+                raise ValueError("Percentage must be greater than 0")
+            return normalized
+        # Try to parse as integer string
+        try:
+            parsed = int(normalized)
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid num_samples value: {value}. Use integer, 'auto', or percentage like '50%'"
+            ) from e
+        if parsed < 1:
+            raise ValueError("num_samples must be at least 1")
+        return parsed
+    raise ValueError(f"num_samples must be int or string, got {type(value).__name__}")
+
+
 def get_bool_env(key: str, default: bool = False) -> bool:
     """Get a boolean environment variable.
 

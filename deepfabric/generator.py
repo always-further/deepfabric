@@ -335,16 +335,11 @@ class DataSetGenerator:
                 # Each topic will be used multiple times for even coverage
                 multiplier = math.ceil(required_samples / total_paths)
                 topic_paths = (topic_paths * multiplier)[:required_samples]
-            elif required_samples == total_paths:
-                # Use all paths - no sampling needed (auto/100% case)
-                # This is an optimization for 1:1 topic-to-sample mapping
-                pass
-            else:
+            elif required_samples < total_paths:
                 # Sample subset (percentage case or explicit count < total)
                 # Bandit: not a security function
                 topic_paths = random.sample(topic_paths, required_samples)  # nosec
-
-            num_steps = math.ceil(len(topic_paths) / batch_size)
+            # else: required_samples == total_paths - use all paths as-is
 
         return topic_paths, num_steps
 
