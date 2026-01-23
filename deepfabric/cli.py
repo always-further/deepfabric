@@ -1782,11 +1782,8 @@ def checkpoint_status(config_file: str) -> None:
     # Get target samples from config
     # num_samples is the total target, not per-batch. It can be int, "auto", or percentage like "50%"
     target_samples = output_config.get("num_samples", 0)
-    if isinstance(target_samples, str):
-        # "auto" or percentage - can't determine total without topic model
-        total_target = 0
-    else:
-        total_target = target_samples if target_samples else 0
+    # "auto" or percentage strings can't be resolved without topic model
+    total_target = 0 if isinstance(target_samples, str) else (target_samples or 0)
 
     # Display status
     tui.console.print()

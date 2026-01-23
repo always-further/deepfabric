@@ -21,7 +21,7 @@ from .metrics import trace
 from .prompts import TreePromptBuilder
 from .schemas import TopicList
 from .stream_simulator import simulate_stream
-from .topic_model import TopicModel
+from .topic_model import TopicModel, TopicPath
 
 warnings.filterwarnings("ignore", message=".*Pydantic serializer warnings:.*")
 
@@ -242,7 +242,7 @@ class Tree(TopicModel):
         """Returns all the paths in the topic model."""
         return self.tree_paths
 
-    def get_all_paths_with_ids(self) -> list["TopicPath"]:
+    def get_all_paths_with_ids(self) -> list[TopicPath]:
         """Returns all paths with their unique identifiers.
 
         For Tree, we generate stable IDs by hashing the path content.
@@ -252,8 +252,6 @@ class Tree(TopicModel):
             List of TopicPath namedtuples containing (path, topic_id).
         """
         import hashlib  # noqa: PLC0415
-
-        from .topic_model import TopicPath  # noqa: PLC0415
 
         result: list[TopicPath] = []
         for path in self.tree_paths:
