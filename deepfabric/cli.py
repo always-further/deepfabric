@@ -2,6 +2,7 @@ import contextlib
 import json
 import math
 import os
+import signal
 import sys
 
 from pathlib import Path
@@ -475,18 +476,41 @@ def _run_generation(
         else:
             tui.info("No checkpoint found, starting fresh generation")
 
-    dataset = create_dataset(
-        engine=engine,
-        topic_model=topic_model,
-        config=preparation.config,
-        num_samples=preparation.num_samples,
-        batch_size=preparation.batch_size,
-        include_system_message=options.include_system_message,
-        provider=options.provider,
-        model=options.model,
-        generation_overrides=preparation.generation_overrides,
-        debug=options.debug,
-    )
+    # Set up graceful Ctrl+C handling for checkpoint-based stop
+    interrupt_count = 0
+
+    def handle_sigint(signum, frame):
+        nonlocal interrupt_count
+        interrupt_count += 1
+
+        if interrupt_count == 1:
+            engine.stop_requested = True
+            tui.warning("Stopping after current checkpoint... (Ctrl+C again to force quit)")
+            get_dataset_tui().log_event("⚠ Graceful stop requested")
+        else:
+            tui.error("Force quit!")
+            sys.exit(1)
+
+    original_handler = signal.signal(signal.SIGINT, handle_sigint)
+    try:
+        dataset = create_dataset(
+            engine=engine,
+            topic_model=topic_model,
+            config=preparation.config,
+            num_samples=preparation.num_samples,
+            batch_size=preparation.batch_size,
+            include_system_message=options.include_system_message,
+            provider=options.provider,
+            model=options.model,
+            generation_overrides=preparation.generation_overrides,
+            debug=options.debug,
+        )
+    finally:
+        signal.signal(signal.SIGINT, original_handler)
+
+    # If gracefully stopped, don't save partial dataset or clean up checkpoints
+    if engine.stop_requested:
+        return
 
     output_config = preparation.config.get_output_config()
     output_save_path = options.output_save_as or output_config["save_as"]

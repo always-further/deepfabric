@@ -233,6 +233,18 @@ async def handle_dataset_events_async(
                             checkpoint_msg = "Final " + checkpoint_msg.lower()
                         tui.info(checkpoint_msg)
 
+                elif event["event"] == "generation_stopped":
+                    # Graceful stop at checkpoint
+                    if live:
+                        live.stop()
+                    tui.console.print()
+                    tui.success(
+                        f"Gracefully stopped: {event['total_samples']} samples saved to checkpoint"
+                    )
+                    if event.get("total_failures", 0) > 0:
+                        tui.info(f"({event['total_failures']} failures recorded)")
+                    tui.info("Resume with: --resume flag")
+
                 elif event["event"] == "generation_complete":
                     if live:
                         live.stop()

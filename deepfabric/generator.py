@@ -283,6 +283,9 @@ class DataSetGenerator:
         self._flushed_samples_count = 0
         self._flushed_failures_count = 0
 
+        # Graceful stop flag - set by signal handler to stop at next checkpoint
+        self.stop_requested = False
+
     def _initialize_tool_registry(self):
         """Initialize tool registry from component configuration.
 
@@ -1331,6 +1334,16 @@ class DataSetGenerator:
                         "total_samples": self._flushed_samples_count,
                         "total_failures": self._flushed_failures_count,
                     }
+
+                    # Check for graceful stop request after checkpoint save
+                    if self.stop_requested:
+                        yield {
+                            "event": "generation_stopped",
+                            "message": "Stopped at checkpoint as requested",
+                            "total_samples": self._flushed_samples_count,
+                            "total_failures": self._flushed_failures_count,
+                        }
+                        return  # Exit generator cleanly
 
                 failed_in_batch = len(self.failed_samples) - failed_before
                 failure_reasons: list[str] = []
