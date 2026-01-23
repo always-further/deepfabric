@@ -30,7 +30,7 @@ from .llm import VerificationStatus, verify_provider_api_key
 from .metrics import set_trace_debug, trace
 from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
-from .tui import configure_tui, get_tui
+from .tui import configure_tui, get_dataset_tui, get_tui
 from .update_checker import check_for_updates
 from .utils import check_dir_writable, check_path_writable, get_bool_env, parse_num_samples
 from .validation import show_validation_success, validate_path_requirements
@@ -52,6 +52,35 @@ def handle_error(ctx: click.Context, error: Exception) -> NoReturn:
         tui.error(error_msg)
 
     sys.exit(1)
+
+
+def _get_checkpoint_topics_path(
+    checkpoint_dir: str,
+    output_save_as: str,
+) -> str | None:
+    """
+    Read checkpoint metadata to get the topics path used in the original run.
+
+    Args:
+        checkpoint_dir: Directory containing checkpoint files
+        output_save_as: Output file path (used to derive checkpoint file names)
+
+    Returns:
+        Topics file path from checkpoint metadata, or None if not available
+    """
+    checkpoint_path = Path(checkpoint_dir)
+    output_stem = Path(output_save_as).stem
+    metadata_path = checkpoint_path / f"{output_stem}{CHECKPOINT_METADATA_SUFFIX}"
+
+    if not metadata_path.exists():
+        return None
+
+    try:
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+        return metadata.get("topics_save_as")
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 @click.group()
@@ -405,16 +434,41 @@ def _run_generation(
     generation_params = preparation.config.get_generation_params(
         **preparation.generation_overrides, **checkpoint_overrides
     )
+
+    # Resolve and pass topics_save_as for checkpoint metadata
+    topics_mode = preparation.config.topics.mode
+    default_topics_path = "topic_graph.json" if topics_mode == "graph" else "topic_tree.jsonl"
+    resolved_topics_path = (
+        options.topics_save_as
+        or preparation.config.topics.save_as
+        or default_topics_path
+    )
+    generation_params["topics_save_as"] = resolved_topics_path
+
     engine = DataSetGenerator(**generation_params)
 
     # Handle resume from checkpoint
     if options.resume:
         if engine.load_checkpoint(retry_failed=options.retry_failed):
+            samples_done = engine._flushed_samples_count
+            failures_done = engine._flushed_failures_count
+            ids_processed = len(engine._processed_ids)
             retry_msg = " (retrying failed samples)" if options.retry_failed else ""
-            tui.info(
-                f"Resuming from checkpoint: {engine._flushed_samples_count} samples, "
-                f"{len(engine._processed_ids)} IDs processed{retry_msg}"
-            )
+
+            # Update TUI status panel with checkpoint progress
+            get_dataset_tui().set_checkpoint_resume_status(samples_done, failures_done)
+
+            # Log resume info including failures
+            if failures_done > 0:
+                tui.info(
+                    f"Resuming from checkpoint: {samples_done} samples, "
+                    f"{failures_done} failed, {ids_processed} IDs processed{retry_msg}"
+                )
+            else:
+                tui.info(
+                    f"Resuming from checkpoint: {samples_done} samples, "
+                    f"{ids_processed} IDs processed{retry_msg}"
+                )
         else:
             tui.info("No checkpoint found, starting fresh generation")
 
@@ -660,6 +714,22 @@ def generate(  # noqa: PLR0913
         print()
 
         preparation = _load_and_prepare_generation_context(options, skip_path_validation=topic_only)
+
+        # Auto-infer topics-load when resuming from checkpoint
+        if options.resume and not options.topics_load:
+            checkpoint_dir = options.checkpoint_path or DEFAULT_CHECKPOINT_DIR
+            output_path = options.output_save_as or preparation.config.output.save_as
+
+            inferred_topics_path = _get_checkpoint_topics_path(checkpoint_dir, output_path)
+            if inferred_topics_path:
+                if Path(inferred_topics_path).exists():
+                    tui.info(f"Resume: auto-loading topics from {inferred_topics_path}")
+                    options.topics_load = inferred_topics_path
+                else:
+                    tui.warning(
+                        f"Checkpoint references topics at {inferred_topics_path} but file not found. "
+                        "Topic graph will be regenerated."
+                    )
 
         topic_model = _initialize_topic_model(
             preparation=preparation,
@@ -1815,6 +1885,13 @@ def checkpoint_status(config_file: str) -> None:
     if metadata.get("reasoning_style"):
         tui.console.print(f"  [dim]Reasoning:[/dim]     {metadata.get('reasoning_style')}")
     tui.console.print(f"  [dim]Last saved:[/dim]    {metadata.get('created_at', 'unknown')}")
+
+    # Show topics file path if available
+    topics_path = metadata.get("topics_save_as")
+    if topics_path:
+        topics_exists = Path(topics_path).exists()
+        status = "[green]exists[/green]" if topics_exists else "[red]missing[/red]"
+        tui.console.print(f"  [dim]Topics file:[/dim]  {topics_path} ({status})")
 
     # Show failed topics if any
     max_failures_to_show = 5

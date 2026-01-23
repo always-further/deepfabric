@@ -219,6 +219,10 @@ class DataSetGeneratorConfig(BaseModel):
         default=None,
         description="Output file path (used to derive checkpoint file names)",
     )
+    topics_save_as: str | None = Field(
+        default=None,
+        description="Topics file path (stored in checkpoint metadata for auto-resume)",
+    )
 
 
 class DataSetGenerator:
@@ -447,6 +451,7 @@ class DataSetGenerator:
             "total_failures": total_failures,
             "processed_ids": list(self._processed_ids),
             "checkpoint_interval": self.config.checkpoint_interval,
+            "topics_save_as": self.config.topics_save_as,
         }
 
         with open(self._checkpoint_metadata_path, "w") as f:
@@ -1246,6 +1251,8 @@ class DataSetGenerator:
                 "topic_model_type": topic_model_type,
                 "resumed_from_checkpoint": len(self._processed_ids) > 0,
                 "previously_processed": len(self._processed_ids),
+                "resumed_samples": self._flushed_samples_count,
+                "resumed_failures": self._flushed_failures_count,
                 "checkpoint_enabled": self.config.checkpoint_interval is not None,
             }
 

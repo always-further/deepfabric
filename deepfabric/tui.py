@@ -846,10 +846,12 @@ class DatasetGenerationTUI(StreamObserver):
         self.status_samples_done = 0
         self.status_failed_total = 0
         self.status_step_started_at = 0.0
+        self.status_last_step_duration = 0.0
         # Checkpoint tracking for status panel
         self.checkpoint_enabled = False  # Set to True when checkpointing is configured
         self.checkpoint_count = 0
         self.last_checkpoint_samples = 0
+        self._resumed_from_checkpoint = False  # Set by set_checkpoint_resume_status()
         # Retry tracking for simple mode
         self.step_retries: list[dict] = []  # Retries in current step
 
@@ -1041,12 +1043,15 @@ class DatasetGenerationTUI(StreamObserver):
         self.status_total_steps = total_steps
         self.status_total_samples = total_samples
         self.status_current_step = 0
-        self.status_samples_done = 0
-        self.status_failed_total = 0
+        # Preserve samples_done and failed_total if resuming from checkpoint
+        if not getattr(self, "_resumed_from_checkpoint", False):
+            self.status_samples_done = 0
+            self.status_failed_total = 0
+            self.checkpoint_count = 0
+            self.last_checkpoint_samples = 0
         self.status_step_started_at = 0.0
+        self.status_last_step_duration = 0.0
         self.checkpoint_enabled = checkpoint_enabled
-        self.checkpoint_count = 0
-        self.last_checkpoint_samples = 0
 
     def status_step_start(self, step: int, total_steps: int | None = None) -> None:
         self.status_current_step = step
@@ -1056,8 +1061,30 @@ class DatasetGenerationTUI(StreamObserver):
         self.update_status_panel()
 
     def status_step_complete(self, samples_generated: int, failed_in_step: int = 0) -> None:
+        # Calculate step duration before updating counters
+        if self.status_step_started_at:
+            self.status_last_step_duration = max(0.0, monotonic() - self.status_step_started_at)
+            self.status_step_started_at = 0.0  # Reset for next step
         self.status_samples_done += max(0, int(samples_generated))
         self.status_failed_total += max(0, int(failed_in_step))
+        self.update_status_panel()
+
+    def set_checkpoint_resume_status(
+        self, samples_done: int, failed_total: int, checkpoint_count: int = 0
+    ) -> None:
+        """Initialize status counters from checkpoint data when resuming.
+
+        Args:
+            samples_done: Number of samples already generated in checkpoint
+            failed_total: Number of failures already recorded in checkpoint
+            checkpoint_count: Number of checkpoints already saved (optional)
+        """
+        self._resumed_from_checkpoint = True
+        self.status_samples_done = max(0, int(samples_done))
+        self.status_failed_total = max(0, int(failed_total))
+        if checkpoint_count > 0:
+            self.checkpoint_count = checkpoint_count
+            self.last_checkpoint_samples = samples_done
         self.update_status_panel()
 
     def status_checkpoint_saved(self, total_samples: int) -> None:
@@ -1067,14 +1094,12 @@ class DatasetGenerationTUI(StreamObserver):
         self.update_status_panel()
 
     def _status_panel(self) -> Panel:
-        elapsed = 0.0
-        if self.status_step_started_at:
-            elapsed = max(0.0, monotonic() - self.status_step_started_at)
         table = Table(show_header=False, box=None, padding=(0, 1))
         table.add_column(style="cyan", no_wrap=True)
         table.add_column(style="white")
         table.add_row("Step:", f"{self.status_current_step}/{self.status_total_steps}")
-        table.add_row("Step Elapsed:", f"{elapsed:0.1f}s")
+        if self.status_last_step_duration > 0:
+            table.add_row("Last Step:", f"{self.status_last_step_duration:0.1f}s")
         table.add_row("Generated:", f"{self.status_samples_done}/{self.status_total_samples}")
         if self.status_failed_total:
             table.add_row("Failed:", str(self.status_failed_total))

@@ -147,7 +147,9 @@ async def handle_dataset_events_async(
                         # Footer run status
                         footer_prog = tui.tui.create_footer(layout, title="Run Status")
                         task = footer_prog.add_task(
-                            "Generating dataset samples", total=event["total_samples"]
+                            "Generating dataset samples",
+                            total=event["total_samples"],
+                            completed=event.get("resumed_samples", 0),
                         )
 
                         # Use alternate screen to avoid scroll trails; leave a clean terminal
@@ -165,7 +167,10 @@ async def handle_dataset_events_async(
                         tui.show_generation_header(
                             event["model_name"], event["num_steps"], event["batch_size"]
                         )
-                        simple_task = {"count": 0, "total": event["total_samples"]}
+                        simple_task = {
+                            "count": event.get("resumed_samples", 0),
+                            "total": event["total_samples"],
+                        }
                 elif event["event"] == "step_complete":
                     samples_generated = event.get("samples_generated", 0)
                     if footer_prog and task is not None:
