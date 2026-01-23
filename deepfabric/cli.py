@@ -437,8 +437,11 @@ def _run_generation(
 
     # Clean up checkpoint files after successful completion
     if generation_params.get("checkpoint_interval") is not None:
-        engine.clear_checkpoint()
-        tui.info("Checkpoint files cleaned up after successful generation")
+        try:
+            engine.clear_checkpoint()
+            tui.info("Checkpoint files cleaned up after successful generation")
+        except OSError as e:
+            tui.warning(f"Failed to clean up checkpoint files: {e}")
 
     trace(
         "dataset_generated",

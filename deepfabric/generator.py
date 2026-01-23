@@ -20,6 +20,7 @@ from .constants import (
     CHECKPOINT_FAILURES_SUFFIX,
     CHECKPOINT_METADATA_SUFFIX,
     CHECKPOINT_SAMPLES_SUFFIX,
+    CHECKPOINT_VERSION,
     DEFAULT_CHECKPOINT_DIR,
     DEFAULT_MAX_RETRIES,
     DEFAULT_REQUEST_TIMEOUT,
@@ -436,7 +437,7 @@ class DataSetGenerator:
         total_failures = self._flushed_failures_count + len(self.failed_samples)
 
         metadata = {
-            "version": 2,
+            "version": CHECKPOINT_VERSION,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "provider": self.provider,
             "model_name": self.model_name,
@@ -519,8 +520,8 @@ class DataSetGenerator:
         version = metadata.get("version")
         if version is None:
             error_msg = "Missing 'version' field in checkpoint metadata"
-        elif version != 2:  # noqa: PLR2004
-            error_msg = f"Unsupported checkpoint version: {version} (expected 2)"
+        elif version != CHECKPOINT_VERSION:
+            error_msg = f"Unsupported checkpoint version: {version} (expected {CHECKPOINT_VERSION})"
 
         # Check required fields
         if error_msg is None:
