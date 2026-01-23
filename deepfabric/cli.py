@@ -1131,16 +1131,15 @@ def validate(config_file: str, check_api: bool) -> None:  # noqa: PLR0912
             for error in errors:
                 tui.console.print(f"  - {error}", style="red")
             sys.exit(1)
-        else:
-            tui.success("Configuration is valid")
 
         if warnings:
-            tui.console.print("\nWarnings:", style="yellow bold")
+            tui.console.print("Warnings:", style="yellow bold")
             for warning in warnings:
                 tui.warning(warning)
+            tui.console.print()
 
         # Print configuration summary
-        tui.console.print("\nConfiguration Summary:", style="cyan bold")
+        tui.console.print("Configuration Summary:", style="cyan bold")
 
         # Topics summary with estimated paths
         depth = config.topics.depth
@@ -1224,6 +1223,10 @@ def validate(config_file: str, check_api: bool) -> None:  # noqa: PLR0912
                 sys.exit(1)
         else:
             tui.console.print("\nSkipping API key validation (use --check-api to enable)")
+
+        # Final success message
+        tui.console.print()
+        tui.success("Configuration is valid")
 
     except FileNotFoundError:
         handle_error(
