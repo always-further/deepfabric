@@ -1,5 +1,6 @@
 import contextlib
 import json
+import math
 import os
 import sys
 
@@ -1156,8 +1157,6 @@ def validate(config_file: str, check_api: bool) -> None:  # noqa: PLR0912
         batch_size = config.output.batch_size
         # Calculate num_steps - handle 'auto' and percentage strings
         if isinstance(num_samples, int):
-            import math  # noqa: PLC0415
-
             num_steps = math.ceil(num_samples / batch_size)
             output_info = f"Output: num_samples={num_samples}, batch_size={batch_size}, num_steps={num_steps}"
         else:
@@ -1781,9 +1780,13 @@ def checkpoint_status(config_file: str) -> None:
                         pass
 
     # Get target samples from config
+    # num_samples is the total target, not per-batch. It can be int, "auto", or percentage like "50%"
     target_samples = output_config.get("num_samples", 0)
-    batch_size = output_config.get("batch_size", 1)
-    total_target = target_samples * batch_size if target_samples else 0
+    if isinstance(target_samples, str):
+        # "auto" or percentage - can't determine total without topic model
+        total_target = 0
+    else:
+        total_target = target_samples if target_samples else 0
 
     # Display status
     tui.console.print()
@@ -1798,8 +1801,8 @@ def checkpoint_status(config_file: str) -> None:
     tui.console.print(f"  [cyan]Failed:[/cyan]       {checkpoint_failures} samples")
 
     # Paths processed
-    processed_paths = metadata.get("processed_paths", [])
-    tui.console.print(f"  [cyan]Paths done:[/cyan]   {len(processed_paths)}")
+    processed_ids = metadata.get("processed_ids", [])
+    tui.console.print(f"  [cyan]Paths done:[/cyan]   {len(processed_ids)}")
 
     # Config info
     tui.console.print()

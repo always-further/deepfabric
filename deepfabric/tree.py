@@ -242,6 +242,27 @@ class Tree(TopicModel):
         """Returns all the paths in the topic model."""
         return self.tree_paths
 
+    def get_all_paths_with_ids(self) -> list["TopicPath"]:
+        """Returns all paths with their unique identifiers.
+
+        For Tree, we generate stable IDs by hashing the path content.
+        This ensures the same path always gets the same ID across runs.
+
+        Returns:
+            List of TopicPath namedtuples containing (path, topic_id).
+        """
+        import hashlib  # noqa: PLC0415
+
+        from .topic_model import TopicPath  # noqa: PLC0415
+
+        result: list[TopicPath] = []
+        for path in self.tree_paths:
+            # Generate stable ID from path content
+            path_str = "::".join(path)
+            topic_id = hashlib.sha256(path_str.encode()).hexdigest()[:16]
+            result.append(TopicPath(path=path, topic_id=topic_id))
+        return result
+
     async def get_subtopics(
         self, system_prompt: str, node_path: list[str], num_subtopics: int
     ) -> list[str]:
