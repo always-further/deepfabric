@@ -21,7 +21,6 @@ from .constants import (
     CHECKPOINT_METADATA_SUFFIX,
     CHECKPOINT_SAMPLES_SUFFIX,
     CHECKPOINT_VERSION,
-    DEFAULT_CHECKPOINT_DIR,
     DEFAULT_MAX_RETRIES,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_SAMPLE_RETRIES,
@@ -207,9 +206,9 @@ class DataSetGeneratorConfig(BaseModel):
         ge=1,
         description="Save checkpoint every N samples. None disables checkpointing.",
     )
-    checkpoint_path: str = Field(
-        default=DEFAULT_CHECKPOINT_DIR,
-        description="Directory to store checkpoint files",
+    checkpoint_path: str | None = Field(
+        default=None,
+        description="Directory to store checkpoint files. None uses fallback '.checkpoints'",
     )
     checkpoint_retry_failed: bool = Field(
         default=False,
@@ -352,7 +351,8 @@ class DataSetGenerator:
             )
 
         # Create checkpoint directory if needed
-        checkpoint_dir = Path(self.config.checkpoint_path)
+        # Use fallback if checkpoint_path not resolved by CLI
+        checkpoint_dir = Path(self.config.checkpoint_path or ".checkpoints")
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Derive checkpoint filenames from output filename

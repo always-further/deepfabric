@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import hashlib
 import importlib
 import json
 import os
@@ -325,3 +326,50 @@ def check_dir_writable(path: str, path_description: str) -> tuple[bool, str | No
         return False, f"{path_description} cannot be created (no write access to {ancestor}): {path}"
 
     return True, None
+
+
+# Checkpoint directory resolution
+APP_NAME = "deepfabric"
+
+
+def _get_deepfabric_data_dir() -> Path:
+    """Get the DeepFabric data directory using platformdirs or fallback."""
+    try:
+        from platformdirs import user_data_dir
+
+        return Path(user_data_dir(APP_NAME))
+    except ImportError:
+        # Fallback if platformdirs not available
+        if os.name == "nt":
+            base = os.environ.get("APPDATA") or os.path.expanduser(r"~\AppData\Roaming")
+        else:
+            base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        return Path(base) / APP_NAME
+
+
+def get_checkpoint_dir(config_path: str | None = None) -> str:
+    """
+    Get the checkpoint directory for a given config file.
+
+    Uses ~/.deepfabric/checkpoints/{hash}/ where hash is derived from
+    the absolute path of the config file. This ensures:
+    - Consistent location regardless of current working directory
+    - No conflicts between different projects with same output filename
+
+    Args:
+        config_path: Path to the config file. If None, uses a default subdirectory.
+
+    Returns:
+        Path to the checkpoint directory (not created, just resolved)
+    """
+    base_dir = _get_deepfabric_data_dir() / "checkpoints"
+
+    if config_path is None:
+        # No config file - use a "default" subdirectory
+        return str(base_dir / "default")
+
+    # Create a short hash from the absolute path of the config file
+    abs_path = str(Path(config_path).resolve())
+    path_hash = hashlib.sha256(abs_path.encode()).hexdigest()[:12]
+
+    return str(base_dir / path_hash)

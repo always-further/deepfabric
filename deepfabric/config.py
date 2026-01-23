@@ -7,7 +7,6 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .constants import (
-    DEFAULT_CHECKPOINT_DIR,
     DEFAULT_MAX_RETRIES,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
@@ -277,9 +276,9 @@ class CheckpointConfig(BaseModel):
         ge=1,
         description="Save checkpoint every N samples",
     )
-    path: str = Field(
-        default=DEFAULT_CHECKPOINT_DIR,
-        description="Directory to store checkpoint files",
+    path: str | None = Field(
+        default=None,
+        description="Directory to store checkpoint files. If not specified, uses ~/.deepfabric/checkpoints/{config_hash}/",
     )
     retry_failed: bool = Field(
         default=False,
@@ -628,10 +627,9 @@ See documentation for full examples.
             "dataset_system_prompt": self.output.system_prompt or self.generation.system_prompt,
             "output_save_as": self.output.save_as,
             # Checkpoint config (nested inside output)
+            # Note: checkpoint_path can be None, meaning "auto-resolve" at runtime
             "checkpoint_interval": self.output.checkpoint.interval if self.output.checkpoint else None,
-            "checkpoint_path": (
-                self.output.checkpoint.path if self.output.checkpoint else DEFAULT_CHECKPOINT_DIR
-            ),
+            "checkpoint_path": self.output.checkpoint.path if self.output.checkpoint else None,
             "checkpoint_retry_failed": (
                 self.output.checkpoint.retry_failed if self.output.checkpoint else False
             ),
@@ -676,7 +674,7 @@ See documentation for full examples.
         if self.output.checkpoint is None:
             return {
                 "interval": None,
-                "path": DEFAULT_CHECKPOINT_DIR,
+                "path": None,  # None means "auto-resolve" at runtime
                 "retry_failed": False,
             }
         return self.output.checkpoint.model_dump()

@@ -20,7 +20,6 @@ from .constants import (
     CHECKPOINT_FAILURES_SUFFIX,
     CHECKPOINT_METADATA_SUFFIX,
     CHECKPOINT_SAMPLES_SUFFIX,
-    DEFAULT_CHECKPOINT_DIR,
 )
 from .dataset_manager import create_dataset, save_dataset
 from .exceptions import ConfigurationError
@@ -32,7 +31,7 @@ from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
 from .tui import configure_tui, get_dataset_tui, get_tui
 from .update_checker import check_for_updates
-from .utils import check_dir_writable, check_path_writable, get_bool_env, parse_num_samples
+from .utils import check_dir_writable, check_path_writable, get_bool_env, get_checkpoint_dir, parse_num_samples
 from .validation import show_validation_success, validate_path_requirements
 
 OverrideValue = str | int | float | bool | None
@@ -435,6 +434,10 @@ def _run_generation(
         **preparation.generation_overrides, **checkpoint_overrides
     )
 
+    # Resolve checkpoint path if not explicitly set
+    if generation_params.get("checkpoint_path") is None:
+        generation_params["checkpoint_path"] = get_checkpoint_dir(options.config_file)
+
     # Resolve and pass topics_save_as for checkpoint metadata
     topics_mode = preparation.config.topics.mode
     default_topics_path = "topic_graph.json" if topics_mode == "graph" else "topic_tree.jsonl"
@@ -717,7 +720,7 @@ def generate(  # noqa: PLR0913
 
         # Auto-infer topics-load when resuming from checkpoint
         if options.resume and not options.topics_load:
-            checkpoint_dir = options.checkpoint_path or DEFAULT_CHECKPOINT_DIR
+            checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(options.config_file)
             output_path = options.output_save_as or preparation.config.output.save_as
 
             inferred_topics_path = _get_checkpoint_topics_path(checkpoint_dir, output_path)
@@ -1805,7 +1808,7 @@ def checkpoint_status(config_file: str) -> None:
     # Get checkpoint configuration
     checkpoint_config = config.get_checkpoint_config()
     output_config = config.get_output_config()
-    checkpoint_dir = checkpoint_config.get("path", DEFAULT_CHECKPOINT_DIR)
+    checkpoint_dir = checkpoint_config.get("path") or get_checkpoint_dir(config_file)
     save_as = output_config.get("save_as")
 
     if not save_as:
