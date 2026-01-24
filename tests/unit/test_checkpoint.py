@@ -18,7 +18,6 @@ from deepfabric.constants import (
     CHECKPOINT_METADATA_SUFFIX,
     CHECKPOINT_SAMPLES_SUFFIX,
     CHECKPOINT_VERSION,
-    DEFAULT_CHECKPOINT_DIR,
 )
 from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.generator import DataSetGenerator, DataSetGeneratorConfig

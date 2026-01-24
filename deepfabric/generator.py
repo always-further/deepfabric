@@ -47,7 +47,7 @@ from .schemas import Conversation, ToolRegistry, get_conversation_schema
 from .tools import BUILTIN_TOOL_REGISTRY
 from .tools.loader import load_tools_from_dict, load_tools_from_endpoint
 from .topic_model import TopicModel, TopicPath
-from .utils import ensure_not_running_loop, is_validation_error
+from .utils import ensure_not_running_loop, get_checkpoint_dir, is_validation_error
 
 # Handle circular import for type hints
 if TYPE_CHECKING:
@@ -354,8 +354,8 @@ class DataSetGenerator:
             )
 
         # Create checkpoint directory if needed
-        # Use fallback if checkpoint_path not resolved by CLI
-        checkpoint_dir = Path(self.config.checkpoint_path or ".checkpoints")
+        # Use XDG-compliant fallback if checkpoint_path not resolved by CLI
+        checkpoint_dir = Path(self.config.checkpoint_path or get_checkpoint_dir(config_path=None))
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Derive checkpoint filenames from output filename

@@ -335,7 +335,7 @@ APP_NAME = "deepfabric"
 def _get_deepfabric_data_dir() -> Path:
     """Get the DeepFabric data directory using platformdirs or fallback."""
     try:
-        from platformdirs import user_data_dir
+        from platformdirs import user_data_dir  # noqa: PLC0415
 
         return Path(user_data_dir(APP_NAME))
     except ImportError:
