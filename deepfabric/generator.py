@@ -399,13 +399,13 @@ class DataSetGenerator:
 
         # Append new samples to checkpoint file
         if new_samples:
-            with open(self._checkpoint_samples_path, "a") as f:
+            with open(self._checkpoint_samples_path, "a", encoding="utf-8") as f:
                 for sample in new_samples:
                     f.write(json.dumps(sample, separators=(",", ":")) + "\n")
 
         # Append new failures to failures file
         if new_failures and self._checkpoint_failures_path:
-            with open(self._checkpoint_failures_path, "a") as f:
+            with open(self._checkpoint_failures_path, "a", encoding="utf-8") as f:
                 for failure in new_failures:
                     f.write(json.dumps(failure, separators=(",", ":")) + "\n")
 
@@ -457,7 +457,7 @@ class DataSetGenerator:
             "topics_file": self.config.topics_file,
         }
 
-        with open(self._checkpoint_metadata_path, "w") as f:
+        with open(self._checkpoint_metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
 
     def _validate_checkpoint_compatibility(self, metadata: dict) -> None:
@@ -545,7 +545,7 @@ class DataSetGenerator:
             if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
                 actual_count = 0
                 try:
-                    with open(self._checkpoint_samples_path) as f:
+                    with open(self._checkpoint_samples_path, encoding="utf-8") as f:
                         for line_num, raw_line in enumerate(f, 1):
                             stripped = raw_line.strip()
                             if stripped:
@@ -602,7 +602,7 @@ class DataSetGenerator:
 
         try:
             # Load metadata
-            with open(self._checkpoint_metadata_path) as f:
+            with open(self._checkpoint_metadata_path, encoding="utf-8") as f:
                 metadata = json.load(f)
 
             # Validate checkpoint integrity
@@ -621,7 +621,7 @@ class DataSetGenerator:
             # Memory optimization: track as flushed counts instead of loading into RAM
             if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
                 sample_count = 0
-                with open(self._checkpoint_samples_path) as f:
+                with open(self._checkpoint_samples_path, encoding="utf-8") as f:
                     for raw_line in f:
                         if raw_line.strip():
                             sample_count += 1
@@ -631,7 +631,7 @@ class DataSetGenerator:
             failed_ids: set[str] = set()
             if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
                 failure_count = 0
-                with open(self._checkpoint_failures_path) as f:
+                with open(self._checkpoint_failures_path, encoding="utf-8") as f:
                     for raw_line in f:
                         stripped = raw_line.strip()
                         if stripped:
@@ -692,7 +692,7 @@ class DataSetGenerator:
         """
         all_samples: list[dict] = []
         if self._checkpoint_samples_path and self._checkpoint_samples_path.exists():
-            with open(self._checkpoint_samples_path) as f:
+            with open(self._checkpoint_samples_path, encoding="utf-8") as f:
                 for raw_line in f:
                     stripped = raw_line.strip()
                     if stripped:
@@ -712,7 +712,7 @@ class DataSetGenerator:
 
         # First load from checkpoint file if it exists
         if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
-            with open(self._checkpoint_failures_path) as f:
+            with open(self._checkpoint_failures_path, encoding="utf-8") as f:
                 for raw_line in f:
                     stripped = raw_line.strip()
                     if stripped:
@@ -1632,7 +1632,7 @@ class DataSetGenerator:
     def _save_samples_to_file(self, save_path: str):
         """Save the current samples to a JSONL file."""
 
-        with open(save_path, "w") as f:
+        with open(save_path, "w", encoding="utf-8") as f:
             for sample in self._samples:
                 f.write(json.dumps(sample, separators=(",", ":")) + "\n")
 

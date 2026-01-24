@@ -82,7 +82,7 @@ def _get_checkpoint_topics_path(
         return None
 
     try:
-        with open(metadata_path) as f:
+        with open(metadata_path, encoding="utf-8") as f:
             metadata = json.load(f)
         return metadata.get("topics_file") or metadata.get("topics_save_as")
     except (OSError, json.JSONDecodeError):
@@ -442,8 +442,11 @@ def _run_generation(
     )
 
     # Resolve checkpoint path if not explicitly set
+    # Use config file for hash, fallback to output path for config-less runs
+    # to ensure checkpoint isolation.
     if generation_params.get("checkpoint_path") is None:
-        generation_params["checkpoint_path"] = get_checkpoint_dir(options.config_file)
+        path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
+        generation_params["checkpoint_path"] = get_checkpoint_dir(path_source)
 
     # Resolve and pass topics_file for checkpoint metadata
     # Prioritize: loaded file > save path > config > default
