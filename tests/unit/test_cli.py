@@ -165,6 +165,8 @@ def test_generate_command_basic(
         ["root", "child5"],
     ]
     mock_engine_instance = Mock()
+    mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
+    mock_engine_instance.stop_requested = False  # Not gracefully stopped
     mock_dataset = Mock(spec=HFDataset)  # Make dataset a proper HFDataset mock
     mock_dataset.__len__ = Mock(return_value=5)
 
@@ -222,6 +224,8 @@ def test_generate_command_with_sys_msg_override(
         ["root", "child5"],
     ]
     mock_engine_instance = Mock()
+    mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
+    mock_engine_instance.stop_requested = False  # Not gracefully stopped
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
 
@@ -279,6 +283,8 @@ def test_generate_command_default_sys_msg(
         ["root", "child5"],
     ]
     mock_engine_instance = Mock()
+    mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
+    mock_engine_instance.stop_requested = False  # Not gracefully stopped
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
 
@@ -319,6 +325,8 @@ def test_generate_command_with_overrides(
     # Add get_all_paths for dataset_manager.resolve_num_samples (need enough for 10 samples)
     mock_tree_instance.get_all_paths.return_value = [["root", f"child{i}"] for i in range(10)]
     mock_engine_instance = Mock()
+    mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
+    mock_engine_instance.stop_requested = False  # Not gracefully stopped
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
 
@@ -402,6 +410,8 @@ def test_generate_command_with_jsonl(
     mock_read_topic_tree_from_jsonl.return_value = [{"path": ["root", "child"]}]
 
     mock_engine_instance = Mock()
+    mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
+    mock_engine_instance.stop_requested = False  # Not gracefully stopped
     mock_data_engine.return_value = mock_engine_instance
     mock_dataset = Mock(spec=HFDataset)
     mock_dataset.__len__ = Mock(return_value=5)
