@@ -238,5 +238,5 @@ def test_save_dataset(data_engine):
     with patch("builtins.open", mock_open):
         data_engine.save_dataset("test_path.jsonl")
 
-    mock_open.assert_called_once_with("test_path.jsonl", "w")
+    mock_open.assert_called_once_with("test_path.jsonl", "w", encoding="utf-8")
     mock_file.write.assert_called()
