@@ -852,6 +852,7 @@ class DatasetGenerationTUI(StreamObserver):
         self.checkpoint_count = 0
         self.last_checkpoint_samples = 0
         self._resumed_from_checkpoint = False  # Set by set_checkpoint_resume_status()
+        self._stop_requested = False  # Set when graceful stop requested via Ctrl+C
         # Retry tracking for simple mode
         self.step_retries: list[dict] = []  # Retries in current step
 
@@ -1093,6 +1094,11 @@ class DatasetGenerationTUI(StreamObserver):
         self.last_checkpoint_samples = total_samples
         self.update_status_panel()
 
+    def status_stop_requested(self) -> None:
+        """Mark that a graceful stop has been requested."""
+        self._stop_requested = True
+        self.update_status_panel()
+
     def _status_panel(self) -> Panel:
         table = Table(show_header=False, box=None, padding=(0, 1))
         table.add_column(style="cyan", no_wrap=True)
@@ -1110,6 +1116,8 @@ class DatasetGenerationTUI(StreamObserver):
                 )
             else:
                 table.add_row("Checkpoints:", "0 (enabled)")
+        if self._stop_requested:
+            table.add_row("[yellow]Stopping:[/yellow]", "[yellow]at next checkpoint[/yellow]")
         return Panel(table, title="Status", border_style="dim", padding=(0, 1))
 
     def update_status_panel(self) -> None:

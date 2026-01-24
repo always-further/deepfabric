@@ -218,7 +218,7 @@ class DataSetGeneratorConfig(BaseModel):
         default=None,
         description="Output file path (used to derive checkpoint file names)",
     )
-    topics_save_as: str | None = Field(
+    topics_file: str | None = Field(
         default=None,
         description="Topics file path (stored in checkpoint metadata for auto-resume)",
     )
@@ -454,7 +454,7 @@ class DataSetGenerator:
             "total_failures": total_failures,
             "processed_ids": list(self._processed_ids),
             "checkpoint_interval": self.config.checkpoint_interval,
-            "topics_save_as": self.config.topics_save_as,
+            "topics_file": self.config.topics_file,
         }
 
         with open(self._checkpoint_metadata_path, "w") as f:
@@ -567,6 +567,21 @@ class DataSetGenerator:
                 error_msg = f"Checkpoint metadata expects {expected_samples} samples but samples file missing"
 
         return (error_msg is None, error_msg)
+
+    def has_checkpoint(self) -> bool:
+        """Check if a checkpoint exists without loading it.
+
+        Returns:
+            True if checkpoint metadata file exists, False otherwise
+        """
+        if self.config.checkpoint_interval is None:
+            return False
+
+        self._initialize_checkpoint_paths()
+        return (
+            self._checkpoint_metadata_path is not None
+            and self._checkpoint_metadata_path.exists()
+        )
 
     def load_checkpoint(self, retry_failed: bool = False) -> bool:
         """Load checkpoint data if it exists.

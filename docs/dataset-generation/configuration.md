@@ -56,7 +56,6 @@ output:
   # Optional: Checkpoint for resumable generation
   checkpoint:
     interval: 500       # Save every 500 samples
-    path: ".checkpoints"
     retry_failed: false
 
 # Optional: Upload to HuggingFace
@@ -205,7 +204,7 @@ Configuration for checkpoint-based resume capability. Checkpoints allow pausing 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `interval` | int | required | Save checkpoint every N samples |
-| `path` | string | ".checkpoints" | Directory to store checkpoint files |
+| `path` | string | XDG data dir | Directory to store checkpoint files (auto-managed) |
 | `retry_failed` | bool | false | When resuming, retry previously failed samples |
 
 ```yaml title="Checkpoint configuration"
@@ -215,7 +214,6 @@ output:
   batch_size: 5
   checkpoint:
     interval: 500     # Save every 500 samples
-    path: "./my-checkpoints"
     retry_failed: false
 ```
 

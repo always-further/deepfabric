@@ -223,9 +223,12 @@ deepfabric generate config.yaml --resume --retry-failed
 | Parameter | Description |
 |-----------|-------------|
 | `--checkpoint-interval N` | Save checkpoint every N samples |
-| `--checkpoint-path PATH` | Directory for checkpoint files (default: `.checkpoints`) |
+| `--checkpoint-path PATH` | Override checkpoint directory (rarely needed) |
 | `--resume` | Resume from existing checkpoint |
 | `--retry-failed` | When resuming, retry previously failed samples |
+
+!!! info "Checkpoint Location"
+    Checkpoints are stored in an XDG-compliant location: `~/.local/share/deepfabric/checkpoints/` (or `$XDG_DATA_HOME/deepfabric/checkpoints/`). Each config file gets its own subdirectory based on a hash of its path, so different projects don't interfere with each other.
 
 !!! tip "Checkpoint Status"
     Use `deepfabric checkpoint-status config.yaml` to inspect checkpoint progress without resuming.
