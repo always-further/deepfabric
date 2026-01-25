@@ -5,6 +5,7 @@ import importlib
 import json
 import os
 import re
+import sys
 
 from pathlib import Path
 from typing import Any
@@ -341,8 +342,13 @@ def _get_deepfabric_data_dir() -> Path:
     except ImportError:
         # Fallback if platformdirs not available
         if os.name == "nt":
+            # Windows: APPDATA
             base = os.environ.get("APPDATA") or os.path.expanduser(r"~\AppData\Roaming")
+        elif sys.platform == "darwin":
+            # macOS: ~/Library/Application Support
+            base = os.path.expanduser("~/Library/Application Support")
         else:
+            # Linux and other Unix: XDG_DATA_HOME
             base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
         return Path(base) / APP_NAME
 
