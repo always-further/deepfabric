@@ -424,6 +424,7 @@ def _run_generation(
     preparation: GenerationPreparation,
     topic_model: TopicModel,
     options: GenerateOptions,
+    checkpoint_dir: str,
 ) -> None:
     """Create the dataset using the prepared configuration and topic model."""
     tui = get_tui()
@@ -441,12 +442,9 @@ def _run_generation(
         **preparation.generation_overrides, **checkpoint_overrides
     )
 
-    # Resolve checkpoint path if not explicitly set
-    # Use config file for hash, fallback to output path for config-less runs
-    # to ensure checkpoint isolation.
+    # Use provided checkpoint_dir if not explicitly set via CLI
     if generation_params.get("checkpoint_path") is None:
-        path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
-        generation_params["checkpoint_path"] = get_checkpoint_dir(path_source)
+        generation_params["checkpoint_path"] = checkpoint_dir
 
     # Resolve and pass topics_file for checkpoint metadata
     # Prioritize: loaded file > save path > config > default
@@ -783,10 +781,13 @@ def generate(  # noqa: PLR0913
 
         preparation = _load_and_prepare_generation_context(options, skip_path_validation=topic_only)
 
+        # Compute checkpoint directory once for consistent use throughout generation
+        # Use config file for hash, fallback to output path for config-less runs
+        path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
+        checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(path_source)
+
         # Auto-infer topics-load when resuming from checkpoint
         if options.resume and not options.topics_load:
-            path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
-            checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(path_source)
             output_path = options.output_save_as or preparation.config.output.save_as
 
             inferred_topics_path = _get_checkpoint_topics_path(checkpoint_dir, output_path)
@@ -818,6 +819,7 @@ def generate(  # noqa: PLR0913
             preparation=preparation,
             topic_model=topic_model,
             options=options,
+            checkpoint_dir=checkpoint_dir,
         )
 
     except ConfigurationError as e:

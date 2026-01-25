@@ -93,7 +93,6 @@ FAILED_TREE_SUFFIX = "_failed.jsonl"
 CHECKPOINT_METADATA_SUFFIX = ".checkpoint.json"
 CHECKPOINT_SAMPLES_SUFFIX = ".checkpoint.jsonl"
 CHECKPOINT_FAILURES_SUFFIX = ".checkpoint.failures.jsonl"
-DEFAULT_CHECKPOINT_DIR = ".checkpoints"
 CHECKPOINT_VERSION = 3  # Increment when checkpoint format changes
 
 # Stream simulation defaults
