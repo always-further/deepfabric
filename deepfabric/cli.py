@@ -785,7 +785,8 @@ def generate(  # noqa: PLR0913
 
         # Auto-infer topics-load when resuming from checkpoint
         if options.resume and not options.topics_load:
-            checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(options.config_file)
+            path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
+            checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(path_source)
             output_path = options.output_save_as or preparation.config.output.save_as
 
             inferred_topics_path = _get_checkpoint_topics_path(checkpoint_dir, output_path)
