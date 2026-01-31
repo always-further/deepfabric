@@ -95,36 +95,47 @@ deepfabric generate \
     - `generation.system_prompt` - Instructions for the LLM generating examples
     - `output.system_prompt` - The system message included in training data
 
-!!! info "Sample Size"
-    `num_samples` specifies the total number of samples to generate:
+!!! info "Sample Size and Generation Model"
+    DeepFabric uses a cycle-based generation model:
 
-    - `num_samples` - The target number of samples to generate
-    - `batch_size` - How many samples to generate per step (affects parallelism)
-    - Steps = ceil(`num_samples` / `batch_size`)
+    - **Unique topics**: Deduplicated count from topic tree/graph (by UUID)
+    - **Cycles**: Number of iterations through all unique topics
+    - **Concurrency**: `batch_size` controls parallel LLM calls
 
-    For example, `num_samples: 10` with `batch_size: 2` runs 5 steps, generating 2 samples each.
+    For example, with 4 unique topics and `num_samples: 10`:
 
-    **Special values:**
+    - Cycles needed: 3 (ceil(10/4))
+    - Cycle 1: 4 samples, Cycle 2: 4 samples, Cycle 3: 2 samples (partial)
 
-    - `"auto"` - Generate exactly one sample per topic path (100% coverage)
-    - `"50%"` - Generate samples for 50% of topic paths
-    - `"200%"` - Generate 2× the number of topic paths (cycles through topics twice)
+    **Special values for `num_samples`:**
 
-## Graph to Sample Ratio
+    - `"auto"` - Generate exactly one sample per unique topic (1 cycle)
+    - `"50%"` - Generate samples for 50% of unique topics
+    - `"200%"` - Generate 2× the number of unique topics (2 full cycles)
+
+## Topic Count and Cycles
 
 When configuring topic generation with a tree or graph, the total number of unique topics is determined by the structure:
 
-- **Tree**: Total Paths = degree^depth (leaf nodes only)
-- **Graph**: Total Paths = degree^depth (approximate, varies due to cross-connections)
+- **Tree**: Unique topics = degree^depth (each leaf node has a unique UUID)
+- **Graph**: Unique topics ≤ degree^depth (deduplicated by node UUID, may be fewer due to cross-connections)
 
-For example, a tree with `depth: 2` and `degree: 2` yields 4 unique paths (`2^2 = 4`).
+For example, a tree with `depth: 2` and `degree: 2` yields 4 unique topics (`2^2 = 4`).
 
-!!! info "Topic Cycling"
-    When `num_samples` exceeds the number of unique topic paths, DeepFabric automatically cycles through topics to ensure even coverage. For example, with 4 paths and `num_samples: 8`, each topic is used twice.
+!!! info "Cycle-Based Generation"
+    When `num_samples` exceeds the number of unique topics, DeepFabric iterates through multiple **cycles**:
 
-    This works with both integer values and percentages:
+    - Each unique topic (identified by UUID) is processed once per cycle
+    - Cycles continue until `num_samples` is reached
+    - The final cycle may be partial (fewer topics than a full cycle)
 
-    - `num_samples: 8` with 4 paths → 2x cycling
-    - `num_samples: "200%"` → 2x cycling (explicit)
+    For example, with 4 unique topics and `num_samples: 10`:
 
-    An integer value larger than the number of paths is equivalent to using a percentage. For example, with 4 paths, `num_samples: 8` behaves identically to `num_samples: "200%"`.
+    - Cycle 1: Topics 1-4 (4 samples)
+    - Cycle 2: Topics 1-4 (4 samples)
+    - Cycle 3: Topics 1-2 (2 samples, partial)
+
+    Checkpoints track progress as `(topic_uuid, cycle)` tuples, allowing precise resume from any point in any cycle.
+
+!!! tip "Graphs with Shared Nodes"
+    In graph mode, multiple paths can lead to the same topic node. DeepFabric deduplicates by node UUID, so each unique topic generates exactly one sample per cycle—regardless of how many paths lead to it.

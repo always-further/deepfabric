@@ -21,7 +21,7 @@ services:
     image: deepfabric/tools-sdk:latest
     container_name: deepfabric-spin
     ports:
-      - "${SPIN_PORT:-3000}:3000"
+      - "${SPIN_PORT:-3030}:3030"
     environment:
       # GitHub integration (optional)
       - SPIN_VARIABLE_GITHUB_TOKEN=${GITHUB_TOKEN:-}
@@ -31,7 +31,7 @@ services:
       # Persist KV store data between restarts
       - spin-data:/app/.spin
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/vfs/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3030/vfs/health"]
       interval: 30s
       timeout: 10s
       retries: 3

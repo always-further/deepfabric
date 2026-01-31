@@ -324,7 +324,10 @@ def check_dir_writable(path: str, path_description: str) -> tuple[bool, str | No
         return False, f"{path_description} cannot be created (root does not exist): {path}"
 
     if not os.access(ancestor, os.W_OK):
-        return False, f"{path_description} cannot be created (no write access to {ancestor}): {path}"
+        return (
+            False,
+            f"{path_description} cannot be created (no write access to {ancestor}): {path}",
+        )
 
     return True, None
 

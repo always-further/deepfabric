@@ -2,6 +2,7 @@ import contextlib
 import json
 import math
 import os
+import select
 import signal
 import sys
 
@@ -419,6 +420,31 @@ def _trigger_cloud_upload(
     )
 
 
+def _prompt_with_timeout(
+    choices: list[str],
+    default: str,
+    timeout: int = 20,
+) -> str:
+    """Prompt for a choice with a visible countdown, auto-selecting default on timeout."""
+    valid = set(choices)
+    for remaining in range(timeout, 0, -1):
+        sys.stdout.write(f"\r  Choose [{'/'.join(choices)}] (auto-{default} in {remaining:2d}s): ")
+        sys.stdout.flush()
+        ready, _, _ = select.select([sys.stdin], [], [], 1.0)
+        if ready:
+            line = sys.stdin.readline().strip()
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            if line in valid:
+                return line
+            if line == "":
+                return default
+            return default
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+    return default
+
+
 def _run_generation(
     *,
     preparation: GenerationPreparation,
@@ -470,14 +496,10 @@ def _run_generation(
         tui.console.print("  [cyan]3)[/cyan] Abort")
         tui.console.print()
 
-        choice = click.prompt(
-            "Choose an option",
-            type=click.Choice(["1", "2", "3"]),
-            default="1",
-        )
+        choice = _prompt_with_timeout(["1", "2", "3"], default="1", timeout=20)
 
         if choice == "1":
-            # User wants to resume
+            # User wants to resume (or auto-selected after timeout)
             options.resume = True
         elif choice == "2":
             # Clear and start fresh
@@ -493,7 +515,7 @@ def _run_generation(
         if engine.load_checkpoint(retry_failed=options.retry_failed):
             samples_done = engine._flushed_samples_count
             failures_done = engine._flushed_failures_count
-            ids_processed = len(engine._processed_ids)
+            ids_processed = len(engine._completed)
             retry_msg = " (retrying failed samples)" if options.retry_failed else ""
 
             # Update TUI status panel with checkpoint progress
@@ -503,12 +525,12 @@ def _run_generation(
             if failures_done > 0:
                 tui.info(
                     f"Resuming from checkpoint: {samples_done} samples, "
-                    f"{failures_done} failed, {ids_processed} IDs processed{retry_msg}"
+                    f"{failures_done} failed, {ids_processed} UUIDs processed{retry_msg}"
                 )
             else:
                 tui.info(
                     f"Resuming from checkpoint: {samples_done} samples, "
-                    f"{ids_processed} IDs processed{retry_msg}"
+                    f"{ids_processed} UUIDs processed{retry_msg}"
                 )
         else:
             tui.info("No checkpoint found, starting fresh generation")
@@ -783,7 +805,9 @@ def generate(  # noqa: PLR0913
 
         # Compute checkpoint directory once for consistent use throughout generation
         # Use config file for hash, fallback to output path for config-less runs
-        path_source = options.config_file or options.output_save_as or preparation.config.output.save_as
+        path_source = (
+            options.config_file or options.output_save_as or preparation.config.output.save_as
+        )
         checkpoint_dir = options.checkpoint_path or get_checkpoint_dir(path_source)
 
         # Auto-infer topics-load when resuming from checkpoint
@@ -1295,22 +1319,33 @@ def validate(config_file: str, check_api: bool) -> None:  # noqa: PLR0912
             f"estimated_paths={estimated_paths} ({degree}^{depth})"
         )
 
-        # Output summary with step size and checkpoint info
+        # Output summary with cycle-based generation info
         num_samples = config.output.num_samples
         batch_size = config.output.batch_size
-        # Calculate num_steps - handle 'auto' and percentage strings
-        if isinstance(num_samples, int):
-            num_steps = math.ceil(num_samples / batch_size)
-            output_info = f"Output: num_samples={num_samples}, batch_size={batch_size}, num_steps={num_steps}"
-        else:
-            # For 'auto' or percentage, we can't compute steps without topic count
-            output_info = f"Output: num_samples={num_samples}, batch_size={batch_size}"
 
-        # Add checkpoint info if enabled
+        # Show output configuration
+        output_info = f"Output: num_samples={num_samples}, concurrency={batch_size}"
         if config.output.checkpoint:
             checkpoint = config.output.checkpoint
             output_info += f", checkpoint_interval={checkpoint.interval}"
         tui.info(output_info)
+
+        # Calculate and display cycle-based generation info
+        if isinstance(num_samples, int):
+            cycles_needed = math.ceil(num_samples / estimated_paths)
+            final_cycle_size = num_samples - (cycles_needed - 1) * estimated_paths
+            is_partial = final_cycle_size < estimated_paths
+
+            tui.info(
+                f"  → Cycles needed: {cycles_needed} "
+                f"({num_samples} samples ÷ {estimated_paths} unique topics)"
+            )
+            if is_partial:
+                tui.info(f"  → Final cycle: {final_cycle_size} topics (partial)")
+        elif num_samples == "auto":
+            tui.info(f"  → Will generate 1 sample per unique topic ({estimated_paths} samples)")
+        else:
+            tui.info("  → Samples calculated at runtime based on topic count")
 
         if config.huggingface:
             hf_config = config.get_huggingface_config()

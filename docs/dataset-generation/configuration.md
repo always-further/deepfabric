@@ -184,7 +184,7 @@ Controls final dataset.
 | `system_prompt` | string | - | System message in training data |
 | `include_system_message` | bool | true | Include system message |
 | `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
-| `batch_size` | int | 1 | Parallel generation batch size |
+| `batch_size` | int | 1 | Parallel generation concurrency (number of simultaneous LLM calls) |
 | `save_as` | string | required | Output file path |
 | `checkpoint` | object | - | Checkpoint configuration (see below) |
 
@@ -192,10 +192,14 @@ Controls final dataset.
     `num_samples` supports special values:
 
     - **Integer** (e.g., `100`): Generate exactly this many samples
-    - **`"auto"`**: Generate one sample per topic path (100% coverage)
-    - **Percentage** (e.g., `"50%"`, `"200%"`): Generate samples relative to topic path count
+    - **`"auto"`**: Generate one sample per unique topic (100% coverage)
+    - **Percentage** (e.g., `"50%"`, `"200%"`): Generate samples relative to unique topic count
 
-    When `num_samples` exceeds the number of topic paths, topics cycle for even coverage. An integer larger than the path count is equivalent to a percentage—for example, with 50 paths, `num_samples: 100` behaves the same as `num_samples: "200%"`.
+    When `num_samples` exceeds the number of unique topics, DeepFabric iterates through multiple **cycles**. Each cycle processes all unique topics once. For example, with 50 unique topics and `num_samples: 120`:
+
+    - Cycle 1: 50 samples (topics 1-50)
+    - Cycle 2: 50 samples (topics 1-50)
+    - Cycle 3: 20 samples (topics 1-20, partial)
 
 #### output.checkpoint (Optional)
 
@@ -224,14 +228,23 @@ Checkpointing creates three files in the checkpoint directory:
 - `{name}.checkpoint.failures.jsonl` - Failed samples for debugging
 
 !!! tip "Choosing Checkpoint Interval"
-    The checkpoint `interval` specifies how many samples to generate between saves. Checkpoints save after each **step** completes (a step generates `batch_size` samples), so:
+    The checkpoint `interval` specifies how many samples to generate between saves.
 
-    - If `interval < batch_size`, checkpoints save after every step
-    - If `interval > batch_size`, checkpoints save when cumulative samples reach the threshold
+    Choose an interval that balances recovery granularity (smaller = less work lost) against I/O overhead (larger = fewer disk writes). For example, `interval: 100` saves progress every 100 samples.
 
-    For example, with `batch_size: 20` and `interval: 8`, checkpoints actually save every 20 samples (after each step) since 20 > 8. To checkpoint less frequently, set `interval` larger than `batch_size`—e.g., `interval: 100` with `batch_size: 20` saves every 5 steps (100 samples).
+!!! info "Cycle-Based Generation Model"
+    DeepFabric uses a cycle-based generation model:
 
-    Choose an interval that balances recovery granularity (smaller = less work lost) against I/O overhead (larger = fewer disk writes).
+    - **Unique topics**: Deduplicated topics from your tree/graph (by UUID)
+    - **Cycles**: Number of times to iterate through all unique topics
+    - **Concurrency**: Maximum parallel LLM calls (`batch_size`)
+
+    For example, with 100 unique topics and `num_samples: 250`:
+
+    - Cycles needed: 3 (ceil(250/100))
+    - Cycle 1: 100 samples, Cycle 2: 100 samples, Cycle 3: 50 samples (partial)
+
+    Checkpoints track progress as `(topic_uuid, cycle)` tuples, enabling precise resume from any point.
 
 !!! tip "Memory Optimization"
     When checkpointing is enabled, samples are flushed to disk periodically, keeping memory usage constant regardless of dataset size.

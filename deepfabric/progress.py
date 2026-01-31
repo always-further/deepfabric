@@ -81,6 +81,25 @@ class StreamObserver(Protocol):
         """
         ...
 
+    def on_llm_retry(
+        self,
+        provider: str,
+        attempt: int,
+        wait: float,
+        error_summary: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Called when an LLM API call is retried due to rate limiting or transient error.
+
+        Args:
+            provider: LLM provider name (e.g., "gemini", "openai")
+            attempt: Current attempt number (1-based)
+            wait: Backoff delay in seconds
+            error_summary: Brief description of the error
+            metadata: Additional context (e.g., quota_type)
+        """
+        ...
+
 
 class ProgressReporter:
     """Central progress reporter that notifies observers of generation events.
@@ -183,6 +202,29 @@ class ProgressReporter:
         for observer in self._observers:
             if hasattr(observer, "on_retry"):
                 observer.on_retry(sample_idx, attempt, max_attempts, error_summary, metadata)
+
+    def emit_llm_retry(
+        self,
+        provider: str,
+        attempt: int,
+        wait: float,
+        error_summary: str,
+        **metadata,
+    ) -> None:
+        """Emit an LLM retry event to all observers.
+
+        Used to track LLM API rate limits and transient errors.
+
+        Args:
+            provider: LLM provider name
+            attempt: Current attempt number (1-based)
+            wait: Backoff delay in seconds
+            error_summary: Brief description of the error
+            **metadata: Additional context as keyword arguments
+        """
+        for observer in self._observers:
+            if hasattr(observer, "on_llm_retry"):
+                observer.on_llm_retry(provider, attempt, wait, error_summary, metadata)
 
     def emit_tool_execution(
         self,

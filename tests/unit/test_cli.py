@@ -164,6 +164,12 @@ def test_generate_command_basic(
         ["root", "child4"],
         ["root", "child5"],
     ]
+    # Add get_unique_topics for cycle-based generation info
+    from deepfabric.topic_model import Topic  # noqa: PLC0415
+
+    mock_tree_instance.get_unique_topics.return_value = [
+        Topic(uuid=f"uuid-{i}", topic=f"child{i}") for i in range(1, 6)
+    ]
     mock_engine_instance = Mock()
     mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
     mock_engine_instance.stop_requested = False  # Not gracefully stopped
@@ -222,6 +228,12 @@ def test_generate_command_with_sys_msg_override(
         ["root", "child3"],
         ["root", "child4"],
         ["root", "child5"],
+    ]
+    # Add get_unique_topics for cycle-based generation info
+    from deepfabric.topic_model import Topic  # noqa: PLC0415
+
+    mock_tree_instance.get_unique_topics.return_value = [
+        Topic(uuid=f"uuid-{i}", topic=f"child{i}") for i in range(1, 6)
     ]
     mock_engine_instance = Mock()
     mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
@@ -282,6 +294,12 @@ def test_generate_command_default_sys_msg(
         ["root", "child4"],
         ["root", "child5"],
     ]
+    # Add get_unique_topics for cycle-based generation info
+    from deepfabric.topic_model import Topic  # noqa: PLC0415
+
+    mock_tree_instance.get_unique_topics.return_value = [
+        Topic(uuid=f"uuid-{i}", topic=f"child{i}") for i in range(1, 6)
+    ]
     mock_engine_instance = Mock()
     mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
     mock_engine_instance.stop_requested = False  # Not gracefully stopped
@@ -324,6 +342,12 @@ def test_generate_command_with_overrides(
     mock_tree_instance.tree_paths = [["root", "child1"], ["root", "child2"]]
     # Add get_all_paths for dataset_manager.resolve_num_samples (need enough for 10 samples)
     mock_tree_instance.get_all_paths.return_value = [["root", f"child{i}"] for i in range(10)]
+    # Add get_unique_topics for cycle-based generation info
+    from deepfabric.topic_model import Topic  # noqa: PLC0415
+
+    mock_tree_instance.get_unique_topics.return_value = [
+        Topic(uuid=f"uuid-{i}", topic=f"child{i}") for i in range(10)
+    ]
     mock_engine_instance = Mock()
     mock_engine_instance.has_checkpoint.return_value = False  # No checkpoint conflicts in tests
     mock_engine_instance.stop_requested = False  # Not gracefully stopped
@@ -405,6 +429,12 @@ def test_generate_command_with_jsonl(
         ["root", "child3"],
         ["root", "child4"],
         ["root", "child5"],
+    ]
+    # Add get_unique_topics for cycle-based generation info
+    from deepfabric.topic_model import Topic  # noqa: PLC0415
+
+    mock_tree_instance.get_unique_topics.return_value = [
+        Topic(uuid=f"uuid-{i}", topic=f"child{i}") for i in range(1, 6)
     ]
     mock_topic_tree.return_value = mock_tree_instance
     mock_read_topic_tree_from_jsonl.return_value = [{"path": ["root", "child"]}]

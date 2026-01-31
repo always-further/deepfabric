@@ -26,7 +26,7 @@ from .prompts import (
 )
 from .schemas import GraphSubtopics
 from .stream_simulator import simulate_stream
-from .topic_model import TopicModel, TopicPath
+from .topic_model import Topic, TopicModel, TopicPath
 
 if TYPE_CHECKING:  # only for type hints to avoid runtime cycles
     from .progress import ProgressReporter
@@ -614,6 +614,27 @@ class Graph(TopicModel):
             self._dfs_paths_with_ids(child, current_path + [child.topic], result, visited)
 
         visited.remove(node.id)
+
+    def get_unique_topics(self) -> list[Topic]:
+        """Returns deduplicated topics by UUID.
+
+        Iterates through all nodes in the graph and returns unique topics.
+        Each node has a UUID in its metadata, ensuring uniqueness.
+
+        Returns:
+            List of Topic namedtuples containing (uuid, topic).
+            Each UUID appears exactly once.
+        """
+        seen_uuids: set[str] = set()
+        result: list[Topic] = []
+
+        for node in self.nodes.values():
+            node_uuid = node.metadata.get("uuid")
+            if node_uuid and node_uuid not in seen_uuids:
+                seen_uuids.add(node_uuid)
+                result.append(Topic(uuid=node_uuid, topic=node.topic))
+
+        return result
 
     def _dfs_paths(
         self, node: Node, current_path: list[str], paths: list[list[str]], visited: set[int]

@@ -45,6 +45,8 @@ async def _process_graph_events(graph: Graph, debug: bool = False) -> dict | Non
     progress_reporter = ProgressReporter()
     progress_reporter.attach(tui)
     graph.progress_reporter = progress_reporter
+    if hasattr(graph, "llm_client"):
+        graph.llm_client.retry_handler.progress_reporter = progress_reporter
 
     tui_started = False
 
@@ -116,6 +118,8 @@ async def _process_tree_events(tree: Tree, debug: bool = False) -> dict | None:
     progress_reporter = ProgressReporter()
     progress_reporter.attach(tui)
     tree.progress_reporter = progress_reporter
+    if hasattr(tree, "llm_client"):
+        tree.llm_client.retry_handler.progress_reporter = progress_reporter
 
     final_event = None
     try:
@@ -129,6 +133,8 @@ async def _process_tree_events(tree: Tree, debug: bool = False) -> dict | None:
                     tui.add_failure()
                     if debug and "error" in event:
                         get_tui().error(f"Debug: Tree generation failure - {event['error']}")
+                else:
+                    tui.advance_simple_progress()
             elif event["event"] == "build_complete":
                 total_paths = (
                     int(event["total_paths"]) if isinstance(event["total_paths"], str | int) else 0

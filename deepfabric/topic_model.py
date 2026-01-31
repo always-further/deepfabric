@@ -9,6 +9,18 @@ class TopicPath(NamedTuple):
     topic_id: str
 
 
+class Topic(NamedTuple):
+    """A unique topic with its UUID and content.
+
+    Used for generation where we iterate over unique topics (by UUID)
+    rather than paths. This deduplicated view is essential for graphs
+    where multiple paths can lead to the same topic node.
+    """
+
+    uuid: str
+    topic: str  # The topic text/content
+
+
 class TopicModel(ABC):
     """Abstract base class for topic models like Tree and Graph."""
 
@@ -34,6 +46,20 @@ class TopicModel(ABC):
         Returns:
             List of TopicPath namedtuples containing (path, topic_id).
             The topic_id is a stable identifier for the leaf node of each path.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_unique_topics(self) -> list[Topic]:
+        """Returns deduplicated topics by UUID.
+
+        For generation, we iterate over unique topics rather than paths.
+        This is important for graphs where multiple paths can lead to the
+        same topic node - we only want to generate one sample per unique topic.
+
+        Returns:
+            List of Topic namedtuples containing (uuid, topic).
+            Each UUID appears exactly once.
         """
         raise NotImplementedError
 

@@ -21,7 +21,6 @@ from deepfabric.constants import (
 )
 from deepfabric.exceptions import DataSetGeneratorError
 from deepfabric.generator import DataSetGenerator, DataSetGeneratorConfig
-from deepfabric.topic_model import TopicPath
 
 
 @pytest.fixture
@@ -152,12 +151,12 @@ class TestCheckpointSaveLoad:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Save some samples using TopicPath objects
+        # Save some samples using (uuid, cycle) tuples
         samples = [{"question": "Q1", "answer": "A1"}]
         failures = [{"error": "Failed sample"}]
-        topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="uuid-1")]
+        completed_items = [("uuid-1", 0)]
 
-        generator._save_checkpoint(samples, failures, topic_paths)
+        generator._save_checkpoint(samples, failures, completed_items)
 
         # Check files exist
         assert generator._checkpoint_samples_path.exists()
@@ -169,15 +168,15 @@ class TestCheckpointSaveLoad:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Save first batch with TopicPath
+        # Save first batch with (uuid, cycle) tuple
         samples1 = [{"question": "Q1", "answer": "A1"}]
-        topic_path1 = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
-        generator._save_checkpoint(samples1, [], topic_path1)
+        completed1 = [("uuid-1", 0)]
+        generator._save_checkpoint(samples1, [], completed1)
 
-        # Save second batch with TopicPath
+        # Save second batch with (uuid, cycle) tuple
         samples2 = [{"question": "Q2", "answer": "A2"}]
-        topic_path2 = [TopicPath(path=["Topic2"], topic_id="uuid-2")]
-        generator._save_checkpoint(samples2, [], topic_path2)
+        completed2 = [("uuid-2", 0)]
+        generator._save_checkpoint(samples2, [], completed2)
 
         # Read samples file
         with open(generator._checkpoint_samples_path) as f:
@@ -188,7 +187,7 @@ class TestCheckpointSaveLoad:
         assert json.loads(lines[1])["question"] == "Q2"
 
     def test_load_checkpoint_restores_state(self, temp_checkpoint_dir, base_generator_params):
-        """Test that loading a checkpoint restores sample counts and processed IDs.
+        """Test that loading a checkpoint restores sample counts and completed tuples.
 
         Note: With memory optimization, samples are NOT loaded into memory on resume.
         Instead, we track counts via _flushed_samples_count/_flushed_failures_count.
@@ -197,13 +196,13 @@ class TestCheckpointSaveLoad:
         params = {**base_generator_params, "checkpoint_path": temp_checkpoint_dir}
 
         with patch("deepfabric.generator.LLMClient"):
-            # Create and save checkpoint with TopicPath
+            # Create and save checkpoint with (uuid, cycle) tuple
             generator1 = DataSetGenerator(**params)
             generator1._initialize_checkpoint_paths()
             samples = [{"question": "Q1", "answer": "A1"}]
             failures = [{"error": "Failed"}]
-            topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="test-uuid-123")]
-            generator1._save_checkpoint(samples, failures, topic_paths)
+            completed_items = [("test-uuid-123", 0)]
+            generator1._save_checkpoint(samples, failures, completed_items)
 
             # Create new generator and load checkpoint
             generator2 = DataSetGenerator(**params)
@@ -216,8 +215,8 @@ class TestCheckpointSaveLoad:
         # In-memory lists should be empty (samples are on disk)
         assert len(generator2._samples) == 0
         assert len(generator2.failed_samples) == 0
-        # Check processed IDs instead of paths
-        assert "test-uuid-123" in generator2._processed_ids
+        # Check completed tuples (uuid, cycle)
+        assert ("test-uuid-123", 0) in generator2._completed
 
         # Verify we can load samples from disk when needed
         all_samples = generator2._load_all_samples_from_checkpoint()
@@ -257,28 +256,29 @@ class TestCheckpointSaveLoad:
                     "path": "Topic2 -> Subtopic1",
                 }
             ]
-            topic_paths = [TopicPath(path=["Topic1", "Subtopic1"], topic_id="success-uuid-123")]
-            generator1._save_checkpoint(samples, failures, topic_paths)
-            # Also mark the failed topic_id as processed
-            generator1._processed_ids.add("failed-uuid-456")
+            # Mark successful as completed (uuid, cycle=0)
+            completed_items = [("success-uuid-123", 0)]
+            generator1._save_checkpoint(samples, failures, completed_items)
+            # Also mark the failed topic_id as completed (for all its cycles)
+            generator1._completed.add(("failed-uuid-456", 0))
             generator1._save_checkpoint_metadata()
 
-            # Load checkpoint without retry_failed - failed ID stays processed
+            # Load checkpoint without retry_failed - failed ID stays completed
             generator2 = DataSetGenerator(**params)
             loaded = generator2.load_checkpoint(retry_failed=False)
             assert loaded is True
-            assert "failed-uuid-456" in generator2._processed_ids
+            assert ("failed-uuid-456", 0) in generator2._completed
             # Memory optimization: failures stay on disk, we track count
             assert generator2._flushed_failures_count == 1
 
-            # Load checkpoint with retry_failed=True - failed ID removed from processed
+            # Load checkpoint with retry_failed=True - failed ID removed from completed
             generator3 = DataSetGenerator(**params)
             loaded = generator3.load_checkpoint(retry_failed=True)
             assert loaded is True
-            # Failed ID should be removed from processed so it can be retried
-            assert "failed-uuid-456" not in generator3._processed_ids
+            # Failed ID should be removed from completed so it can be retried
+            assert ("failed-uuid-456", 0) not in generator3._completed
             # Successfully processed ID should still be there
-            assert "success-uuid-123" in generator3._processed_ids
+            assert ("success-uuid-123", 0) in generator3._completed
             # Failures count should be cleared when retrying
             assert generator3._flushed_failures_count == 0
 
@@ -308,8 +308,8 @@ class TestCheckpointSaveLoad:
             generator1 = DataSetGenerator(**params)
             generator1._initialize_checkpoint_paths()
             samples = [{"question": "Q1", "answer": "A1"}]
-            topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
-            generator1._save_checkpoint(samples, [], topic_paths)
+            completed_items = [("uuid-1", 0)]
+            generator1._save_checkpoint(samples, [], completed_items)
 
             # Create generator with different model and load checkpoint
             different_params = {**params, "model_name": "gpt-3.5-turbo"}
@@ -331,10 +331,10 @@ class TestCheckpointClear:
         generator = generator_with_checkpoint
         generator._initialize_checkpoint_paths()
 
-        # Create checkpoint files with TopicPath
+        # Create checkpoint files with (uuid, cycle) tuple
         samples = [{"question": "Q1", "answer": "A1"}]
-        topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
-        generator._save_checkpoint(samples, [], topic_paths)
+        completed_items = [("uuid-1", 0)]
+        generator._save_checkpoint(samples, [], completed_items)
 
         # Verify files exist
         assert generator._checkpoint_samples_path.exists()
@@ -346,32 +346,46 @@ class TestCheckpointClear:
         # Verify files are removed
         assert not generator._checkpoint_samples_path.exists()
         assert not generator._checkpoint_metadata_path.exists()
-        assert len(generator._processed_ids) == 0
+        assert len(generator._completed) == 0
 
 
-class TestIsTopicProcessed:
-    """Tests for checking if a topic has been processed."""
+class TestIsCompleted:
+    """Tests for checking if a topic has been completed."""
 
-    def test_is_topic_processed_returns_true_for_processed(self, generator_with_checkpoint):
-        """Test that is_topic_processed returns True for processed topics."""
+    def test_is_completed_returns_true_for_completed(self, generator_with_checkpoint):
+        """Test that _is_completed returns True for completed (uuid, cycle) tuples."""
         generator = generator_with_checkpoint
-        generator._processed_ids.add("test-uuid-123")
+        generator._completed.add(("test-uuid-123", 0))
 
-        topic_path = TopicPath(path=["Topic1", "Subtopic1"], topic_id="test-uuid-123")
-        assert generator._is_topic_processed(topic_path) is True
+        assert generator._is_completed("test-uuid-123", 0) is True
 
-    def test_is_topic_processed_returns_false_for_unprocessed(self, generator_with_checkpoint):
-        """Test that is_topic_processed returns False for unprocessed topics."""
-        generator = generator_with_checkpoint
-
-        topic_path = TopicPath(path=["Topic1", "Subtopic1"], topic_id="new-uuid-456")
-        assert generator._is_topic_processed(topic_path) is False
-
-    def test_is_topic_processed_handles_none(self, generator_with_checkpoint):
-        """Test that is_topic_processed returns False for None topics."""
+    def test_is_completed_returns_false_for_unprocessed(self, generator_with_checkpoint):
+        """Test that _is_completed returns False for unprocessed tuples."""
         generator = generator_with_checkpoint
 
-        assert generator._is_topic_processed(None) is False
+        assert generator._is_completed("new-uuid-456", 0) is False
+
+    def test_is_completed_distinguishes_cycles(self, generator_with_checkpoint):
+        """Test that _is_completed distinguishes between different cycles."""
+        generator = generator_with_checkpoint
+        generator._completed.add(("test-uuid-123", 0))
+
+        # Same UUID, different cycle - not completed
+        assert generator._is_completed("test-uuid-123", 0) is True
+        assert generator._is_completed("test-uuid-123", 1) is False
+
+    def test_is_uuid_completed_any_cycle_returns_true(self, generator_with_checkpoint):
+        """Test that _is_uuid_completed_any_cycle returns True when UUID exists in any cycle."""
+        generator = generator_with_checkpoint
+        generator._completed.add(("test-uuid-123", 2))
+
+        assert generator._is_uuid_completed_any_cycle("test-uuid-123") is True
+
+    def test_is_uuid_completed_any_cycle_returns_false(self, generator_with_checkpoint):
+        """Test that _is_uuid_completed_any_cycle returns False for unknown UUIDs."""
+        generator = generator_with_checkpoint
+
+        assert generator._is_uuid_completed_any_cycle("unknown-uuid") is False
 
 
 class TestCheckpointMetadata:
@@ -384,8 +398,8 @@ class TestCheckpointMetadata:
 
         samples = [{"question": "Q1", "answer": "A1"}]
         generator._samples = samples
-        topic_paths = [TopicPath(path=["Topic1"], topic_id="uuid-1")]
-        generator._save_checkpoint(samples, [], topic_paths)
+        completed_items = [("uuid-1", 0)]
+        generator._save_checkpoint(samples, [], completed_items)
 
         # Read metadata
         with open(generator._checkpoint_metadata_path) as f:
@@ -397,13 +411,14 @@ class TestCheckpointMetadata:
         assert "model_name" in metadata
         assert "total_samples" in metadata
         assert "total_failures" in metadata
-        assert "processed_ids" in metadata
+        assert "completed" in metadata
         assert "checkpoint_interval" in metadata
 
         assert metadata["version"] == CHECKPOINT_VERSION
         assert metadata["provider"] == "openai"
         assert metadata["model_name"] == "gpt-4"
-        assert "uuid-1" in metadata["processed_ids"]
+        # completed is now a list of [uuid, cycle] arrays
+        assert ["uuid-1", 0] in metadata["completed"]
 
 
 class TestCheckpointStatusCommand:
@@ -459,9 +474,9 @@ output:
         with open(config_path, "w") as f:
             f.write(config_content)
 
-        # Create checkpoint files with version 2 format
+        # Create checkpoint files with version 4 format
         metadata = {
-            "version": 2,
+            "version": CHECKPOINT_VERSION,
             "created_at": "2024-01-01T00:00:00Z",
             "provider": "openai",
             "model_name": "gpt-4",
@@ -469,7 +484,7 @@ output:
             "reasoning_style": None,
             "total_samples": 25,
             "total_failures": 2,
-            "processed_ids": ["uuid-1", "uuid-2"],
+            "completed": [["uuid-1", 0], ["uuid-2", 0]],
             "checkpoint_interval": 10,
         }
 
@@ -516,16 +531,16 @@ output:
         with open(config_path, "w") as f:
             f.write(config_content)
 
-        # Create checkpoint metadata with version 2 format
+        # Create checkpoint metadata with version 4 format
         metadata = {
-            "version": 2,
+            "version": CHECKPOINT_VERSION,
             "created_at": "2024-01-01T00:00:00Z",
             "provider": "openai",
             "model_name": "gpt-4",
             "conversation_type": "basic",
             "total_samples": 10,
             "total_failures": 3,
-            "processed_ids": [],
+            "completed": [],
             "checkpoint_interval": 10,
         }
 

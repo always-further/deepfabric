@@ -630,9 +630,7 @@ See documentation for full examples.
             # Note: checkpoint_path can be None, meaning "auto-resolve" at runtime
             "checkpoint_interval": self.output.checkpoint.interval if self.output.checkpoint else None,
             "checkpoint_path": self.output.checkpoint.path if self.output.checkpoint else None,
-            "checkpoint_retry_failed": (
-                self.output.checkpoint.retry_failed if self.output.checkpoint else False
-            ),
+            "checkpoint_retry_failed": self.output.checkpoint.retry_failed if self.output.checkpoint else False,
         }
 
         # Tool config

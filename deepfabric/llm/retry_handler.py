@@ -7,14 +7,20 @@ import time
 
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from .rate_limit_config import BackoffStrategy, RateLimitConfig
 from .rate_limit_detector import RateLimitDetector
 
+if TYPE_CHECKING:
+    from deepfabric.progress import ProgressReporter
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+# Max chars for error summaries emitted through progress reporter
+_ERROR_SUMMARY_MAX_LENGTH = 200
 
 
 class RetryHandler:
@@ -30,6 +36,7 @@ class RetryHandler:
         self.config = config
         self.provider = provider
         self.detector = RateLimitDetector()
+        self.progress_reporter: ProgressReporter | None = None
 
     def should_retry(self, exception: Exception) -> bool:
         """Determine if an exception should trigger a retry.
@@ -126,14 +133,26 @@ class RetryHandler:
             if quota_info.quota_type:
                 quota_info_str = f" (quota_type: {quota_info.quota_type})"
 
-        logger.warning(
-            "Rate limit/transient error for %s on attempt %d, backing off %.2fs%s: %s",
-            self.provider,
-            tries,
-            wait,
-            quota_info_str,
-            exception,
-        )
+        if self.progress_reporter:
+            error_summary = str(exception)
+            if len(error_summary) > _ERROR_SUMMARY_MAX_LENGTH:
+                error_summary = error_summary[:_ERROR_SUMMARY_MAX_LENGTH] + "..."
+            self.progress_reporter.emit_llm_retry(
+                provider=self.provider,
+                attempt=tries,
+                wait=wait,
+                error_summary=error_summary,
+                quota_type=quota_info_str.strip(" ()") if quota_info_str else "",
+            )
+        else:
+            logger.warning(
+                "Rate limit/transient error for %s on attempt %d, backing off %.2fs%s: %s",
+                self.provider,
+                tries,
+                wait,
+                quota_info_str,
+                exception,
+            )
 
     def on_giveup_handler(self, details: dict[str, Any]) -> None:
         """Callback when giving up after max retries.
