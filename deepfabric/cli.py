@@ -2,6 +2,7 @@ import contextlib
 import json
 import math
 import os
+import platform
 import select
 import signal
 import sys
@@ -426,6 +427,12 @@ def _prompt_with_timeout(
     timeout: int = 20,
 ) -> str:
     """Prompt for a choice with a visible countdown, auto-selecting default on timeout."""
+    if platform.system() == "Windows":
+        return click.prompt(
+            f"  Choose [{'/'.join(choices)}]",
+            type=click.Choice(choices),
+            default=default,
+        )
     valid = set(choices)
     for remaining in range(timeout, 0, -1):
         sys.stdout.write(f"\r  Choose [{'/'.join(choices)}] (auto-{default} in {remaining:2d}s): ")
