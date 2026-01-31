@@ -308,6 +308,7 @@ class TopicGenerationTUI(StreamObserver):
 
         # Simple/headless mode: print config summary, optional progress bar, no Live
         if self._is_simple:
+            self.console.print("\n[bold cyan]Topic Generation[/bold cyan]")
             self.tui.info(f"Model: {model_name}")
             self.tui.info(f"Topic configuration: depth={depth}, degree={degree}")
             self.console.print()

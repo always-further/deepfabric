@@ -210,6 +210,7 @@ async def handle_dataset_events_async(
                         resumed_samples = event.get("resumed_samples", 0)
 
                         # Simple/headless mode: runtime summary then progress bar
+                        tui.console.print("\n[bold cyan]Dataset Generation[/bold cyan]")
                         model_line = f"Model: {event['model_name']}"
                         if event.get("topic_model_type"):
                             topic_type = event["topic_model_type"]

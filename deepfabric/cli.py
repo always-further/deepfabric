@@ -674,7 +674,6 @@ def _run_generation(
     type=click.Choice(["all", "dataset", "graph", "none"], case_sensitive=False),
     default=None,
     help="Upload to DeepFabric Cloud (experimental): all, dataset, graph, or none. "
-    "Enables headless mode for CI. Requires DEEPFABRIC_API_KEY or prior auth.",
 )
 @click.option(
     "--checkpoint-interval",
@@ -1928,7 +1927,8 @@ def checkpoint_status(config_file: str) -> None:
     # Check if checkpoint exists
     if not metadata_path.exists():
         tui.info(f"No checkpoint found at: {metadata_path}")
-        tui.info("\nTo enable checkpointing, run:")
+        tui.console.print()
+        tui.info("To enable checkpointing, run:")
         tui.info(f"  deepfabric generate {config_file} --checkpoint-interval 10")
         return
 

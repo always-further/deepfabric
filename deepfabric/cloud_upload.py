@@ -778,7 +778,7 @@ def handle_cloud_upload(  # noqa: PLR0911
 
         # Build prompt based on what's available
         if has_dataset and has_graph:
-            prompt_text = "  Upload to DeepFabric Cloud?"
+            prompt_text = "  Upload graph and dataset to DeepFabric Cloud?"
             hint = "[dim](Y=both, n=skip, c=choose)[/dim]"
         elif has_dataset:
             prompt_text = "  Upload dataset to DeepFabric Cloud?"
