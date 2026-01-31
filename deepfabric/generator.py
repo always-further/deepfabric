@@ -1318,6 +1318,7 @@ class DataSetGenerator:
                 data_creation_prompt=data_creation_prompt,
                 num_example_demonstrations=num_example_demonstrations,
                 include_sys_msg=include_sys_msg,
+                topic_model=topic_model,
             ):
                 final_result = event
         else:
@@ -1409,6 +1410,7 @@ class DataSetGenerator:
                 include_sys_msg=include_sys_msg,
                 root_topic_prompt=root_topic_prompt,
                 topic_model_type=topic_model_type,
+                topic_model=topic_model,
             ):
                 yield event
         else:
@@ -1722,6 +1724,7 @@ class DataSetGenerator:
         include_sys_msg: bool,
         root_topic_prompt: str | None = None,
         topic_model_type: str | None = None,
+        topic_model: "TopicModel | None" = None,
     ) -> AsyncGenerator[dict | HFDataset, None]:
         """Run cycle-based generation loop yielding progress events.
 
@@ -1738,6 +1741,7 @@ class DataSetGenerator:
             include_sys_msg: Whether to include system message in output.
             root_topic_prompt: Original topic prompt for display.
             topic_model_type: Type of topic model (tree, graph) for display.
+            topic_model: Topic model for path lookup (recovers full path context).
 
         Yields:
             Progress event dicts and final HFDataset.
@@ -1830,15 +1834,19 @@ class DataSetGenerator:
                         Tuple of (completed_item, success, count)
                     """
                     async with semaphore:
+                        # Recover full path context (root -> ... -> leaf) for prompt quality
+                        full_path = topic_model.get_path_by_id(topic.uuid) if topic_model else None
+                        subtopics = full_path if full_path else [topic.topic]
+
                         # Build prompt for this topic
                         sample_prompt = self.build_prompt(
                             data_creation_prompt=data_creation_prompt,
                             num_example_demonstrations=num_example_demonstrations,
-                            subtopics_list=[topic.topic],  # Use topic text as single-item list
+                            subtopics_list=subtopics,
                         )
 
                         # Use existing batch processing for a single sample
-                        topic_path = TopicPath(path=[topic.topic], topic_id=topic.uuid)
+                        topic_path = TopicPath(path=subtopics, topic_id=topic.uuid)
                         success, count = await self._process_batch_with_retries_async(
                             prompts=[sample_prompt],
                             include_sys_msg=include_sys_msg,

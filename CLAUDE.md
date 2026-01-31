@@ -59,6 +59,9 @@ The engine includes robust JSON parsing with regex extraction and retry logic fo
 - Failed samples tracked separately from successful ones
 - Comprehensive error reporting in final summary
 
+### Topic Path Context in Generation
+Dataset generation must always pass the **full hierarchical path** (root -> ... -> leaf) to `build_prompt()`, not just the leaf topic text. This applies to all generation modes (step-based and cycle-based). The full path provides essential context for the LLM to generate domain-specific samples. When modifying generation logic, verify that `subtopics_list` receives the complete path from `TopicModel.get_path_by_id()` or `TopicPath.path`, never just the leaf text in isolation.
+
 ### System Message Control
 The `sys_msg` parameter controls whether system messages are included in the final dataset format - this affects training data structure.
 
