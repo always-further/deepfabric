@@ -1359,7 +1359,10 @@ class DatasetGenerationTUI(StreamObserver):
         try:
             short_msg = f"↻ {provider} retry (attempt {attempt}), backoff {wait:.1f}s"
             self.events_log.append(short_msg)
-            self._refresh_left()
+            if self.live_layout is not None:
+                self.live_layout["main"]["left"]["events"].update(
+                    self.tui.build_events_panel(list(self.events_log))
+                )
 
             if self._is_simple:
                 if self.simple_progress is not None:
