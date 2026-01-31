@@ -289,9 +289,6 @@ class DataSetGenerator:
         # Graceful stop flag - set by signal handler to stop at next checkpoint
         self.stop_requested = False
 
-        # Graceful stop flag - set by signal handler to stop at next checkpoint
-        self.stop_requested = False
-
     def _initialize_tool_registry(self):
         """Initialize tool registry from component configuration.
 
