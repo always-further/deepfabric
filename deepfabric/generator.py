@@ -654,24 +654,35 @@ class DataSetGenerator:
             failed_ids: set[str] = set()
             if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
                 failure_count = 0
+                failed_tuples: set[tuple[str, int]] = set()
                 with open(self._checkpoint_failures_path, encoding="utf-8") as f:
                     for raw_line in f:
                         stripped = raw_line.strip()
                         if stripped:
                             failure = json.loads(stripped)
                             failure_count += 1
-                            # Track the topic_id that failed for potential retry
+                            # Track failed (topic_id, cycle) for targeted retry
                             if "topic_id" in failure:
                                 failed_ids.add(failure["topic_id"])
+                                if "cycle" in failure:
+                                    failed_tuples.add(
+                                        (failure["topic_id"], failure["cycle"])
+                                    )
                 self._flushed_failures_count = failure_count
 
-            # If retry_failed is True, remove failed UUIDs from completed set
+            # If retry_failed is True, remove failed entries from completed set
             # so they will be retried during generation
             if retry_failed and failed_ids:
-                # Remove all (uuid, cycle) tuples for failed UUIDs
-                tuples_to_remove = {
-                    (uuid, cycle) for uuid, cycle in self._completed if uuid in failed_ids
-                }
+                if failed_tuples:
+                    # Targeted retry: only remove the specific (uuid, cycle) that failed
+                    tuples_to_remove = self._completed & failed_tuples
+                else:
+                    # Legacy fallback: no cycle info, remove all cycles for failed UUIDs
+                    tuples_to_remove = {
+                        (uuid, cycle)
+                        for uuid, cycle in self._completed
+                        if uuid in failed_ids
+                    }
                 self._completed -= tuples_to_remove
                 # Clear failures file since we're retrying
                 if self._checkpoint_failures_path and self._checkpoint_failures_path.exists():
@@ -1900,6 +1911,10 @@ class DataSetGenerator:
                     # one safe slice (no concurrent tasks are running now).
                     batch_new_samples = list(self._samples[samples_before_gather:])
                     batch_new_failures = list(self.failed_samples[failures_before_gather:])
+                    # Tag each failure with the cycle number so retry logic can
+                    # target only the specific (uuid, cycle) that failed
+                    for failure in batch_new_failures:
+                        failure["cycle"] = cycle
                     pending_samples.extend(batch_new_samples)
                     pending_failures.extend(batch_new_failures)
 
