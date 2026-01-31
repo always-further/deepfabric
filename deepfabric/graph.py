@@ -629,6 +629,9 @@ class Graph(TopicModel):
         result: list[Topic] = []
 
         for node in self.nodes.values():
+            # Skip root node — it holds the generation seed prompt, not a topic
+            if node.id == self.root.id:
+                continue
             node_uuid = node.metadata.get("uuid")
             if node_uuid and node_uuid not in seen_uuids:
                 seen_uuids.add(node_uuid)
