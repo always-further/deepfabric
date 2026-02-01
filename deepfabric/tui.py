@@ -1167,7 +1167,10 @@ class DatasetGenerationTUI(StreamObserver):
             else:
                 table.add_row("Checkpoints:", "0 (enabled)")
         if self._stop_requested:
-            table.add_row("[yellow]Stopping:[/yellow]", "[yellow]at next checkpoint[/yellow]")
+            if self.checkpoint_enabled:
+                table.add_row("[yellow]Stopping:[/yellow]", "[yellow]at next checkpoint[/yellow]")
+            else:
+                table.add_row("[yellow]Stopping:[/yellow]", "[yellow]saving partial results[/yellow]")
         return Panel(table, title="Status", border_style="dim", padding=(0, 1))
 
     def update_status_panel(self) -> None:

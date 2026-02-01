@@ -542,7 +542,8 @@ def _run_generation(
         else:
             tui.info("No checkpoint found, starting fresh generation")
 
-    # Set up graceful Ctrl+C handling for checkpoint-based stop
+    # Set up graceful Ctrl+C handling
+    has_checkpoint = generation_params.get("checkpoint_interval") is not None
     interrupt_count = 0
 
     def handle_sigint(_signum, _frame):
@@ -551,7 +552,10 @@ def _run_generation(
 
         if interrupt_count == 1:
             engine.stop_requested = True
-            tui.warning("Stopping after current checkpoint... (Ctrl+C again to force quit)")
+            if has_checkpoint:
+                tui.warning("Stopping after current checkpoint... (Ctrl+C again to force quit)")
+            else:
+                tui.warning("Stopping... partial results will be saved. (Ctrl+C again to force quit)")
             dataset_tui = get_dataset_tui()
             dataset_tui.log_event("⚠ Graceful stop requested")
             dataset_tui.status_stop_requested()
@@ -576,12 +580,22 @@ def _run_generation(
     finally:
         signal.signal(signal.SIGINT, original_handler)
 
-    # If gracefully stopped, don't save partial dataset or clean up checkpoints
-    if engine.stop_requested:
-        return
-
     output_config = preparation.config.get_output_config()
     output_save_path = options.output_save_as or output_config["save_as"]
+
+    # If gracefully stopped, handle based on checkpoint availability
+    if engine.stop_requested:
+        if has_checkpoint:
+            # Checkpoint on disk — user can resume later
+            return
+        # No checkpoint — save whatever was generated so far
+        if dataset and len(dataset) > 0:
+            tui.info(f"Saving {len(dataset)} samples generated before stop")
+            save_dataset(dataset, output_save_path, preparation.config, engine=engine)
+        else:
+            tui.warning("No samples were generated before stop")
+        return
+
     save_dataset(dataset, output_save_path, preparation.config, engine=engine)
 
     # Clean up checkpoint files after successful completion
