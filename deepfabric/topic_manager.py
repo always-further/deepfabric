@@ -239,8 +239,22 @@ def load_or_build_topic_model(
     tui = get_tui()
 
     if topics_load:
-        # Determine mode from config or file extension
-        is_graph = config.topics.mode == "graph" or topics_load.endswith(".json")
+        # Config mode takes precedence; file extension is only used to warn on mismatch
+        is_graph = config.topics.mode == "graph"
+
+        # Warn if file extension doesn't match the configured mode
+        if not is_graph and topics_load.endswith(".json"):
+            tui.warning(
+                f"File '{topics_load}' has .json extension (typically a graph) "
+                f"but mode is '{config.topics.mode}'. "
+                "If this is a graph set mode: graph in config."
+            )
+        elif is_graph and topics_load.endswith(".jsonl"):
+            tui.warning(
+                f"File '{topics_load}' has .jsonl extension (typically a tree) "
+                "but mode is 'graph'. "
+                "If this is a tree set mode: tree in config."
+            )
 
         if is_graph:
             tui.info(f"Reading topic graph from JSON file: {topics_load}")
