@@ -1301,12 +1301,19 @@ class DataSetGenerator:
         total_samples = num_steps * batch_size
         data_creation_prompt = self._get_cot_prompt_template()
 
-        # Ensure checkpoint_interval is at least as large as batch_size/concurrency
+        # Ensure checkpoint_interval is at least as large as concurrency/batch_size
         # so checkpoints align with batch boundaries
         if (
             self.config.checkpoint_interval is not None
             and self.config.checkpoint_interval < batch_size
         ):
+            logger.warning(
+                "checkpoint_interval (%d) is less than concurrency/batch_size (%d), "
+                "adjusting to %d to align with batch boundaries",
+                self.config.checkpoint_interval,
+                batch_size,
+                batch_size,
+            )
             self.config.checkpoint_interval = batch_size
 
         final_result: HFDataset | dict | None = None
@@ -1387,12 +1394,19 @@ class DataSetGenerator:
         total_samples = num_steps * batch_size
         data_creation_prompt = self._get_cot_prompt_template()
 
-        # Ensure checkpoint_interval is at least as large as batch_size/concurrency
+        # Ensure checkpoint_interval is at least as large as concurrency/batch_size
         # so checkpoints align with batch boundaries
         if (
             self.config.checkpoint_interval is not None
             and self.config.checkpoint_interval < batch_size
         ):
+            logger.warning(
+                "checkpoint_interval (%d) is less than concurrency/batch_size (%d), "
+                "adjusting to %d to align with batch boundaries",
+                self.config.checkpoint_interval,
+                batch_size,
+                batch_size,
+            )
             self.config.checkpoint_interval = batch_size
 
         root_topic_prompt = None
