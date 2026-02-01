@@ -1988,12 +1988,16 @@ class DataSetGenerator:
             # Calculate total counts including flushed data
             actual_samples = self._flushed_samples_count + len(self._samples)
             actual_failures = self._flushed_failures_count + len(self.failed_samples)
+            unaccounted = total_samples - actual_samples - actual_failures
 
             logger.info(
-                "Generation complete: expected=%d, generated=%d, failed=%d",
+                "Generation complete: expected=%d, generated=%d, failed=%d, "
+                "accounted=%d, unaccounted=%d",
                 total_samples,
                 actual_samples,
                 actual_failures,
+                actual_samples + actual_failures,
+                unaccounted,
             )
 
             yield {
@@ -2001,6 +2005,7 @@ class DataSetGenerator:
                 "total_samples": actual_samples,
                 "failed_samples": actual_failures,
                 "expected_samples": total_samples,
+                "unaccounted": unaccounted,
                 "cycles_completed": cycles_needed,
                 "unique_topics": unique_topic_count,
             }

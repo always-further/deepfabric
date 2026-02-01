@@ -444,8 +444,6 @@ def _prompt_with_timeout(
             sys.stdout.flush()
             if line in valid:
                 return line
-            if line == "":
-                return default
             return default
     sys.stdout.write("\n")
     sys.stdout.flush()
