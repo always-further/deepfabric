@@ -22,6 +22,22 @@ The `topic` command group provides tools for inspecting and managing topic struc
 
     [:octicons-arrow-right-24: Reference](topic-prune.md)
 
+-   :material-chart-line: **topic score**
+
+    ---
+
+    Score topic graphs with GTD/LTD quality metrics
+
+    [:octicons-arrow-right-24: Reference](topic-score.md)
+
+-   :material-tune-variant: **topic optimize-thresholds**
+
+    ---
+
+    Search for better GTD/LTD cutoff values on an existing graph
+
+    [:octicons-arrow-right-24: Reference](topic-optimize-thresholds.md)
+
 </div>
 
 ## Workflow
@@ -35,14 +51,17 @@ deepfabric generate config.yaml --topic-only
 # 2. Inspect the result
 deepfabric topic inspect topics.json --level 1 --expand
 
-# 3. Prune if needed (preview first)
+# 3. Score graph quality
+deepfabric topic score topics.json
+
+# 4. Prune if needed (preview first)
 deepfabric topic prune topics.json --level 2 --dry-run
 deepfabric topic prune topics.json --level 2 -o refined_topics.json
 
-# 4. Verify the pruned structure
+# 5. Verify the pruned structure
 deepfabric topic inspect refined_topics.json --all
 
-# 5. Generate dataset from refined topics
+# 6. Generate dataset from refined topics
 deepfabric generate config.yaml --topics-load refined_topics.json
 ```
 

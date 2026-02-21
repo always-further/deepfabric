@@ -19,6 +19,8 @@ The command auto-detects whether the file is a tree (JSONL) or graph (JSON) and 
 | `--all` | `-a` | Show the complete tree structure |
 | `--format FMT` | `-f` | Output format: `tree` (default), `table`, or `json` |
 | `--uuid` | `-u` | Show UUID/topic_id for each node |
+| `--score-report PATH` |  | Score report JSON from `topic score` (graph files only) |
+| `--show-pruned MODE` |  | Overlay flagged/pruned nodes from `--score-report`: `all` or `flagged-only` |
 
 ## Exploring by Level
 
@@ -119,6 +121,29 @@ deepfabric topic inspect topics.json --level 2 --uuid
 
 !!! tip "Use with Prune"
     UUIDs discovered here can be passed to `deepfabric topic prune --uuid` to remove specific branches. See [topic prune](topic-prune.md).
+
+## Prune Overlay
+
+For graph JSON files, you can overlay score output to preview which nodes would be pruned:
+
+```bash title="Inspect with prune overlay"
+deepfabric topic inspect topics.json --all \
+  --score-report topics_score_report.json \
+  --show-pruned all
+```
+
+Show only affected branches:
+
+```bash
+deepfabric topic inspect topics.json --all \
+  --score-report topics_score_report.json \
+  --show-pruned flagged-only
+```
+
+Overlay legend:
+
+- yellow: directly flagged by thresholds
+- red: would be pruned (including descendants of flagged nodes)
 
 ## Format Auto-Detection
 

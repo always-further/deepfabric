@@ -75,9 +75,75 @@ def graph_json_file():
 
 
 @pytest.fixture
+def score_report_file():
+    """Create a temporary topic-score report JSON file."""
+    content = {
+        "summary": {
+            "thresholds": {"depth1_gtd": 0.25, "gtd_neg": 0.0, "ltd": 0.25},
+        },
+        "flagged_nodes": [
+            {
+                "node_id": "1",
+                "reasons": ["DEPTH1_LOW_GTD"],
+            }
+        ],
+        "removed_node_ids": ["1", "2"],
+    }
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(content, f)
+        path = f.name
+    yield path
+    Path(path).unlink(missing_ok=True)
+
+
+@pytest.fixture
 def empty_file():
     """Create an empty file."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+        path = f.name
+    yield path
+    Path(path).unlink(missing_ok=True)
+
+
+@pytest.fixture
+def graph_overlay_json_file():
+    """Create a graph file with one unaffected branch for flagged-only tests."""
+    content = {
+        "nodes": {
+            "0": {
+                "id": 0,
+                "topic": "Root",
+                "children": [1, 2, 3],
+                "parents": [],
+                "metadata": {"uuid": "overlay-uuid-0"},
+            },
+            "1": {
+                "id": 1,
+                "topic": "Flagged Node",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "overlay-uuid-1"},
+            },
+            "2": {
+                "id": 2,
+                "topic": "Pruned Node",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "overlay-uuid-2"},
+            },
+            "3": {
+                "id": 3,
+                "topic": "Safe Node",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "overlay-uuid-3"},
+            },
+        },
+        "root_id": 0,
+        "metadata": {"provider": "openai", "model": "gpt-4", "temperature": 0.7},
+    }
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(content, f)
         path = f.name
     yield path
     Path(path).unlink(missing_ok=True)
@@ -258,6 +324,49 @@ class TestTopicInspectCLI:
         assert result.exit_code == 0
         assert "Subtree from Level 1" in result.output
         assert "1 sublevel(s)" in result.output
+
+    def test_inspect_graph_with_prune_overlay(self, cli_runner, graph_json_file, score_report_file):
+        """Graph inspect can render flagged/pruned overlay from score report."""
+        result = cli_runner.invoke(
+            cli,
+            [
+                "topic",
+                "inspect",
+                graph_json_file,
+                "--all",
+                "--score-report",
+                score_report_file,
+                "--show-pruned",
+                "all",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Flagged Nodes" in result.output
+        assert "Would Prune" in result.output
+        assert "DEPTH1_LOW_GTD" in result.output
+        assert "(pruned)" in result.output
+
+    def test_inspect_graph_with_prune_overlay_flagged_only(
+        self, cli_runner, graph_overlay_json_file, score_report_file
+    ):
+        """flagged-only overlay should hide unaffected branches."""
+        result = cli_runner.invoke(
+            cli,
+            [
+                "topic",
+                "inspect",
+                graph_overlay_json_file,
+                "--all",
+                "--score-report",
+                score_report_file,
+                "--show-pruned",
+                "flagged-only",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Flagged Node" in result.output
+        assert "Pruned Node" in result.output
+        assert "Safe Node" not in result.output
 
     def test_inspect_with_uuid_flag(self, cli_runner, tree_jsonl_file):
         """--uuid flag shows UUIDs for leaf nodes."""

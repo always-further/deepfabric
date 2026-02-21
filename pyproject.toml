@@ -27,6 +27,7 @@ dependencies = [
     "ollama>=0.6.1",
     "componentize-py>=0.19.3",
     "spin-sdk>=3.4.1",
+    "sentence-transformers>=5.2.3",
 ]
 
 [project.optional-dependencies]

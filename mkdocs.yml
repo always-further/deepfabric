@@ -44,6 +44,8 @@ nav:
       - cli/topic.md
       - topic inspect: cli/topic-inspect.md
       - topic prune: cli/topic-prune.md
+      - topic score: cli/topic-score.md
+      - topic optimize-thresholds: cli/topic-optimize-thresholds.md
     - upload-hf: cli/upload-hf.md
     - upload-kaggle: cli/upload-kaggle.md
     - upload: cli/upload.md
@@ -131,4 +133,3 @@ extra:
       link: https://github.com/always-further/deepfabric
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/deepfabric/
-
