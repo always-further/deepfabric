@@ -8,7 +8,7 @@ import signal
 import sys
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 if TYPE_CHECKING:
     from rich.tree import Tree as RichTree
@@ -2103,6 +2103,18 @@ def topic() -> None:
     is_flag=True,
     help="Show UUID/topic_id for each leaf node",
 )
+@click.option(
+    "--score-report",
+    type=click.Path(exists=True),
+    default=None,
+    help="Path to topic score report JSON for prune overlay (graph files only)",
+)
+@click.option(
+    "--show-pruned",
+    type=click.Choice(["all", "flagged-only"]),
+    default=None,
+    help="Overlay score report information (all | flagged-only) in tree output",
+)
 def topic_inspect(
     file: str,
     level: int | None,
@@ -2110,6 +2122,8 @@ def topic_inspect(
     show_all: bool,
     output_format: str,
     show_uuid: bool,
+    score_report: str | None,
+    show_pruned: str | None,
 ) -> None:
     """Inspect a topic tree or graph file.
 
@@ -2151,8 +2165,17 @@ def topic_inspect(
     tui = get_tui()
 
     try:
+        if show_pruned and score_report is None:
+            tui.error("--show-pruned requires --score-report")
+            sys.exit(1)
+
         # Perform inspection
         result = inspect_topic_file(file, level=level, expand_depth=expand, show_all=show_all)
+        prune_overlay = _load_prune_overlay(score_report) if score_report else None
+
+        if show_pruned and result.format != "graph":
+            tui.error("Prune overlay is currently only supported for graph JSON files")
+            sys.exit(1)
 
         # Handle JSON output format
         if output_format == "json":
@@ -2169,11 +2192,27 @@ def topic_inspect(
                 output["expanded_paths"] = result.expanded_paths
             if result.all_paths is not None:
                 output["all_paths"] = result.all_paths
+            if prune_overlay:
+                output["prune_overlay"] = {
+                    "flagged_count": len(prune_overlay["flagged_ids"]),
+                    "removed_count": len(prune_overlay["removed_ids"]),
+                    "thresholds": prune_overlay["thresholds"],
+                }
             tui.console.print_json(json.dumps(output))
             return
 
         # Rich output (tree or table format)
-        _display_inspection_result(tui, result, output_format, level, expand, show_all, show_uuid)
+        _display_inspection_result(
+            tui,
+            result,
+            output_format,
+            level,
+            expand,
+            show_all,
+            show_uuid,
+            show_pruned_mode=show_pruned,
+            prune_overlay=prune_overlay,
+        )
 
     except FileNotFoundError as e:
         tui.error(str(e))
@@ -2186,6 +2225,35 @@ def topic_inspect(
         sys.exit(1)
 
 
+def _load_prune_overlay(score_report_path: str) -> dict[str, Any]:
+    """Load prune-overlay data from a topic score report."""
+    with open(score_report_path, encoding="utf-8") as f:
+        report = json.load(f)
+
+    flagged_nodes = report.get("flagged_nodes", [])
+    removed_node_ids = report.get("removed_node_ids", [])
+    thresholds = report.get("summary", {}).get("thresholds", {})
+
+    flagged_ids: set[str] = set()
+    reasons_by_id: dict[str, list[str]] = {}
+    for node in flagged_nodes:
+        node_id = str(node.get("node_id", ""))
+        if not node_id:
+            continue
+        flagged_ids.add(node_id)
+        reasons = node.get("reasons", [])
+        reasons_by_id[node_id] = [str(reason) for reason in reasons]
+
+    removed_ids = {str(node_id) for node_id in removed_node_ids}
+
+    return {
+        "flagged_ids": flagged_ids,
+        "removed_ids": removed_ids,
+        "reasons_by_id": reasons_by_id,
+        "thresholds": thresholds,
+    }
+
+
 def _display_inspection_result(
     tui: "DeepFabricTUI",
     result: "TopicInspectionResult",
@@ -2194,6 +2262,8 @@ def _display_inspection_result(
     expand: int | None,
     show_all: bool,
     show_uuid: bool = False,
+    show_pruned_mode: str | None = None,
+    prune_overlay: dict[str, Any] | None = None,
 ) -> None:
     """Display inspection result using rich formatting."""
     from rich.panel import Panel  # noqa: PLC0415
@@ -2238,7 +2308,21 @@ def _display_inspection_result(
     if result.metadata.get("created_at"):
         stats_table.add_row("Created:", result.metadata["created_at"])
 
+    if prune_overlay:
+        stats_table.add_row("Flagged Nodes:", str(len(prune_overlay["flagged_ids"])))
+        stats_table.add_row("Would Prune:", str(len(prune_overlay["removed_ids"])))
+
     tui.console.print(Panel(stats_table, title="Statistics", border_style="dim"))
+
+    if prune_overlay and prune_overlay.get("thresholds"):
+        thresholds = prune_overlay["thresholds"]
+        tui.console.print(
+            "[dim]Overlay thresholds:[/dim] "
+            f"depth1_gtd={thresholds.get('depth1_gtd')} "
+            f"gtd_neg={thresholds.get('gtd_neg')} "
+            f"ltd={thresholds.get('ltd')}"
+        )
+        tui.console.print("[dim]Legend:[/dim] [yellow]flagged[/yellow], [red]pruned[/red]")
 
     # Show level-specific topics (without expand) - simple list of topic names
     if level is not None and expand is None and result.paths_at_level is not None:
@@ -2291,7 +2375,22 @@ def _display_inspection_result(
         tui.console.print()
         tui.console.print("[cyan bold]Full Tree Structure:[/cyan bold]")
 
-        if output_format == "table":
+        if (
+            show_pruned_mode
+            and prune_overlay
+            and result.format == "graph"
+            and output_format == "tree"
+        ):
+            _display_graph_overlay_tree(
+                tui,
+                result.source_file,
+                flagged_ids=prune_overlay["flagged_ids"],
+                removed_ids=prune_overlay["removed_ids"],
+                reasons_by_id=prune_overlay["reasons_by_id"],
+                show_uuid=show_uuid,
+                mode=show_pruned_mode,
+            )
+        elif output_format == "table":
             _display_paths_as_table(tui, result.all_paths)
         else:
             _display_paths_as_tree(
@@ -2300,6 +2399,82 @@ def _display_inspection_result(
                 result.path_to_uuid if show_uuid else None,
                 result.topic_to_uuid if show_uuid else None,
             )
+
+
+def _display_graph_overlay_tree(
+    tui: "DeepFabricTUI",
+    graph_path: str,
+    *,
+    flagged_ids: set[str],
+    removed_ids: set[str],
+    reasons_by_id: dict[str, list[str]],
+    show_uuid: bool,
+    mode: str,
+) -> None:
+    """Display graph tree with prune overlay colors."""
+    from rich.tree import Tree as RichTree  # noqa: PLC0415
+
+    graph = Graph.load(graph_path)
+    visited: set[int] = set()
+    highlighted_ids = set(flagged_ids) | set(removed_ids)
+
+    def make_label(node_id: int) -> str:
+        node = graph.nodes[node_id]
+        node_id_str = str(node_id)
+        topic = node.topic
+
+        uuid = node.metadata.get("uuid")
+        uuid_txt = f" [dim](UUID: {uuid})[/dim]" if show_uuid and uuid else ""
+        id_txt = f" [dim](id: {node_id})[/dim]"
+
+        if node_id_str in flagged_ids:
+            reasons = ", ".join(reasons_by_id.get(node_id_str, []))
+            reason_txt = f" [yellow][{reasons}][/yellow]" if reasons else ""
+            return f"[yellow]{topic}[/yellow]{id_txt}{uuid_txt}{reason_txt} [red](pruned)[/red]"
+        if node_id_str in removed_ids:
+            return f"[red]{topic}[/red]{id_txt}{uuid_txt} [red](pruned)[/red]"
+        return f"{topic}{id_txt}{uuid_txt}"
+
+    memo_has_highlight: dict[int, bool] = {}
+
+    def subtree_has_highlight(node_id: int, stack: set[int] | None = None) -> bool:
+        if node_id in memo_has_highlight:
+            return memo_has_highlight[node_id]
+
+        local_stack = stack or set()
+        if node_id in local_stack:
+            return str(node_id) in highlighted_ids
+
+        local_stack.add(node_id)
+        has_self = str(node_id) in highlighted_ids
+        has_descendant = any(
+            subtree_has_highlight(child.id, local_stack) for child in graph.nodes[node_id].children
+        )
+        local_stack.remove(node_id)
+        result = has_self or has_descendant
+        memo_has_highlight[node_id] = result
+        return result
+
+    root_tree = RichTree(make_label(graph.root.id))
+
+    def add_children(parent_tree: "RichTree", node_id: int) -> None:
+        if node_id in visited:
+            return
+        visited.add(node_id)
+        node = graph.nodes[node_id]
+        for child in node.children:
+            if mode == "flagged-only" and not subtree_has_highlight(child.id):
+                continue
+            child_branch = parent_tree.add(make_label(child.id))
+            add_children(child_branch, child.id)
+        visited.remove(node_id)
+
+    if mode == "flagged-only" and not subtree_has_highlight(graph.root.id):
+        tui.console.print("[dim]No flagged/pruned nodes matched overlay criteria[/dim]")
+        return
+
+    add_children(root_tree, graph.root.id)
+    tui.console.print(root_tree)
 
 
 def _display_paths_as_table(tui: "DeepFabricTUI", paths: list[list[str]]) -> None:
@@ -2578,6 +2753,226 @@ def topic_prune(
         sys.exit(1)
     except ValueError as e:
         tui.error(str(e))
+        sys.exit(1)
+
+
+@topic.command("score")
+@click.argument("file", type=click.Path(exists=True))
+@click.option(
+    "--output-report",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Path to save score report JSON (default: <graph>_score_report.json)",
+)
+@click.option(
+    "--depth1-gtd",
+    type=float,
+    default=0.25,
+    show_default=True,
+    help="Flag depth-1 nodes with GTD below this threshold",
+)
+@click.option(
+    "--gtd-neg",
+    type=float,
+    default=0.0,
+    show_default=True,
+    help="Flag nodes with GTD below this threshold",
+)
+@click.option(
+    "--ltd",
+    type=float,
+    default=0.25,
+    show_default=True,
+    help="Flag nodes with LTD below this threshold",
+)
+@click.option(
+    "--embedding-key",
+    type=str,
+    default="embedding",
+    show_default=True,
+    help="Metadata key used to read/store node embeddings",
+)
+@click.option(
+    "--embedding-model",
+    type=str,
+    default="all-MiniLM-L6-v2",
+    show_default=True,
+    help="SentenceTransformer model used when embeddings are missing",
+)
+def topic_score(
+    file: str,
+    output_report: str | None,
+    depth1_gtd: float,
+    gtd_neg: float,
+    ltd: float,
+    embedding_key: str,
+    embedding_model: str,
+) -> None:
+    """Score a topic graph using GTD/LTD quality metrics."""
+    from .topic_quality import (  # noqa: PLC0415
+        derive_topic_score_report_path,
+        score_topic_graph,
+        write_topic_score_report,
+    )
+
+    tui = get_tui()
+
+    try:
+        report = score_topic_graph(
+            file,
+            depth1_gtd=depth1_gtd,
+            gtd_neg=gtd_neg,
+            ltd=ltd,
+            embedding_key=embedding_key,
+            embedding_model=embedding_model,
+        )
+        report_path = output_report or derive_topic_score_report_path(file)
+        write_topic_score_report(report, report_path)
+
+        summary = report["summary"]
+        tui.console.print()
+        tui.success("Topic graph scored successfully")
+        tui.console.print(f"  Nodes:         {summary['original_node_count']}")
+        tui.console.print(f"  Flagged:       {summary['flagged_node_count']}")
+        tui.console.print(f"  Would remove:  {summary['removed_node_count']}")
+        tui.console.print(f"  Remaining:     {summary['remaining_node_count']}")
+        tui.console.print(f"  Report:        {report_path}")
+    except FileNotFoundError as e:
+        tui.error(str(e))
+        sys.exit(1)
+    except ValueError as e:
+        tui.error(str(e))
+        sys.exit(1)
+    except ConfigurationError as e:
+        tui.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        tui.error(f"Error scoring graph: {e}")
+        sys.exit(1)
+
+
+@topic.command("optimize-thresholds")
+@click.argument("file", type=click.Path(exists=True))
+@click.option(
+    "--output-report",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Path to save threshold optimization report JSON",
+)
+@click.option(
+    "--search",
+    type=click.Choice(["random", "grid"]),
+    default="random",
+    show_default=True,
+    help="Search strategy for threshold candidates",
+)
+@click.option(
+    "--trials",
+    type=int,
+    default=40,
+    show_default=True,
+    help="Number of threshold combinations to evaluate",
+)
+@click.option("--depth1-gtd-min", type=float, default=0.10, show_default=True)
+@click.option("--depth1-gtd-max", type=float, default=0.50, show_default=True)
+@click.option("--gtd-neg-min", type=float, default=-0.10, show_default=True)
+@click.option("--gtd-neg-max", type=float, default=0.10, show_default=True)
+@click.option("--ltd-min", type=float, default=0.10, show_default=True)
+@click.option("--ltd-max", type=float, default=0.50, show_default=True)
+@click.option("--seed", type=int, default=42, show_default=True)
+@click.option("--embedding-key", type=str, default="embedding", show_default=True)
+@click.option("--embedding-model", type=str, default="all-MiniLM-L6-v2", show_default=True)
+@click.option(
+    "--max-removed-ratio",
+    type=float,
+    default=None,
+    help="Optional constraint: maximum allowed removed ratio",
+)
+@click.option(
+    "--max-internal-removed",
+    type=int,
+    default=None,
+    help="Optional constraint: maximum allowed internal removed node count",
+)
+@click.option("--top-k", type=int, default=10, show_default=True)
+def topic_optimize_thresholds(
+    file: str,
+    output_report: str | None,
+    search: str,
+    trials: int,
+    depth1_gtd_min: float,
+    depth1_gtd_max: float,
+    gtd_neg_min: float,
+    gtd_neg_max: float,
+    ltd_min: float,
+    ltd_max: float,
+    seed: int,
+    embedding_key: str,
+    embedding_model: str,
+    max_removed_ratio: float | None,
+    max_internal_removed: int | None,
+    top_k: int,
+) -> None:
+    """Find the best GTD/LTD thresholds for one topic graph."""
+    from .topic_quality import (  # noqa: PLC0415
+        derive_topic_threshold_optimization_report_path,
+        optimize_topic_thresholds,
+        write_topic_score_report,
+    )
+
+    tui = get_tui()
+
+    try:
+        report = optimize_topic_thresholds(
+            file,
+            search=search,
+            trials=trials,
+            depth1_min=depth1_gtd_min,
+            depth1_max=depth1_gtd_max,
+            gtd_neg_min=gtd_neg_min,
+            gtd_neg_max=gtd_neg_max,
+            ltd_min=ltd_min,
+            ltd_max=ltd_max,
+            seed=seed,
+            embedding_key=embedding_key,
+            embedding_model=embedding_model,
+            max_removed_ratio=max_removed_ratio,
+            max_internal_removed=max_internal_removed,
+            top_k=top_k,
+        )
+        report_path = output_report or derive_topic_threshold_optimization_report_path(file)
+        write_topic_score_report(report, report_path)
+
+        best = report.get("best")
+        if not best:
+            tui.error("No optimization trials were executed")
+            sys.exit(1)
+
+        tui.console.print()
+        tui.success("Threshold optimization completed")
+        tui.console.print(
+            "  Best thresholds: "
+            f"depth1_gtd={best['thresholds']['depth1_gtd']:.4f} "
+            f"gtd_neg={best['thresholds']['gtd_neg']:.4f} "
+            f"ltd={best['thresholds']['ltd']:.4f}"
+        )
+        tui.console.print(f"  Objective:      {best['objective']:.6f}")
+        tui.console.print(
+            f"  Removed:        {best['removed_count']} "
+            f"({best['removed_ratio'] * 100:.2f}%)"
+        )
+        tui.console.print(
+            f"  Internal:       {best['internal_removed_count']} "
+            f"({best['internal_removed_ratio'] * 100:.2f}%)"
+        )
+        tui.console.print(f"  Report:         {report_path}")
+    except (FileNotFoundError, ValueError, ConfigurationError) as e:
+        tui.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        tui.error(f"Error optimizing thresholds: {e}")
         sys.exit(1)
 
 
