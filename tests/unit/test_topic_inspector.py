@@ -79,12 +79,16 @@ def score_report_file():
     """Create a temporary topic-score report JSON file."""
     content = {
         "summary": {
-            "thresholds": {"depth1_gtd": 0.25, "gtd_neg": 0.0, "ltd": 0.25},
+            "thresholds": {
+                "parent_coherence": 0.25,
+                "sibling_coherence_lower": 0.2,
+                "sibling_coherence_upper": 0.68,
+            },
         },
         "flagged_nodes": [
             {
                 "node_id": "1",
-                "reasons": ["DEPTH1_LOW_GTD"],
+                "reasons": ["LOW_PARENT_COHERENCE"],
             }
         ],
         "removed_node_ids": ["1", "2"],
@@ -140,7 +144,12 @@ def graph_overlay_json_file():
             },
         },
         "root_id": 0,
-        "metadata": {"provider": "openai", "model": "gpt-4", "temperature": 0.7},
+        "metadata": {
+            "provider": "openai",
+            "model": "gpt-4",
+            "temperature": 0.7,
+            "created_at": "2024-01-01T00:00:00+00:00",
+        },
     }
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         json.dump(content, f)
@@ -343,7 +352,7 @@ class TestTopicInspectCLI:
         assert result.exit_code == 0
         assert "Flagged Nodes" in result.output
         assert "Would Prune" in result.output
-        assert "DEPTH1_LOW_GTD" in result.output
+        assert "LOW_PARENT_COHERENCE" in result.output
         assert "(pruned)" in result.output
 
     def test_inspect_graph_with_prune_overlay_flagged_only(

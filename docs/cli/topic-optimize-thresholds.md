@@ -1,8 +1,10 @@
 # topic optimize-thresholds
 
-The `topic optimize-thresholds` command searches for better GTD/LTD cutoff values on an existing graph.
+The `topic optimize-thresholds` command searches for better coherence cutoff values on an existing graph.
 
 It does **not** regenerate the graph. It re-scores the same graph across multiple threshold combinations.
+
+The search space covers three tunable thresholds: `parent_coherence`, `sibling_coherence_lower`, and `sibling_coherence_upper`. The `global_coherence < 0` check is hardcoded and not part of the optimization.
 
 ## Usage
 
@@ -19,9 +21,9 @@ By default this runs random search with 40 trials and writes:
 deepfabric topic optimize-thresholds topic_graph.json \
   --search random \
   --trials 40 \
-  --depth1-gtd-min 0.10 --depth1-gtd-max 0.50 \
-  --gtd-neg-min -0.10 --gtd-neg-max 0.10 \
-  --ltd-min 0.10 --ltd-max 0.50 \
+  --parent-coherence-min 0.10 --parent-coherence-max 0.50 \
+  --sibling-coherence-lower-min 0.05 --sibling-coherence-lower-max 0.40 \
+  --sibling-coherence-upper-min 0.50 --sibling-coherence-upper-max 0.85 \
   --output-report best_thresholds.json
 ```
 

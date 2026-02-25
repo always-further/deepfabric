@@ -20,13 +20,22 @@ from deepfabric.topic_quality import (
 
 @pytest.fixture
 def graph_with_embeddings_file():
-    """Create a temporary graph JSON file with precomputed embeddings."""
+    """Create a temporary graph JSON file with precomputed embeddings.
+
+    Graph structure:
+        0 (root) -> 1, 2, 5
+        1 -> 4
+        2 -> 3
+
+    Node 2 has negative global coherence (embedding [-0.3, 0.9] vs root [1.0, 0.0]).
+    Nodes 1 and 5 are siblings with high mutual coherence.
+    """
     content = {
         "nodes": {
             "0": {
                 "id": 0,
                 "topic": "SEO Root",
-                "children": [1, 2],
+                "children": [1, 2, 5],
                 "parents": [],
                 "metadata": {"uuid": "uuid-0", "embedding": [1.0, 0.0]},
             },
@@ -42,7 +51,7 @@ def graph_with_embeddings_file():
                 "topic": "Off-topic branch",
                 "children": [3],
                 "parents": [0],
-                "metadata": {"uuid": "uuid-2", "embedding": [-0.8, 0.2]},
+                "metadata": {"uuid": "uuid-2", "embedding": [-0.3, 0.9]},
             },
             "3": {
                 "id": 3,
@@ -56,7 +65,14 @@ def graph_with_embeddings_file():
                 "topic": "On-topic child",
                 "children": [],
                 "parents": [1],
-                "metadata": {"uuid": "uuid-4", "embedding": [0.6, 0.3]},
+                "metadata": {"uuid": "uuid-4", "embedding": [0.85, 0.15]},
+            },
+            "5": {
+                "id": 5,
+                "topic": "Another on-topic branch",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "uuid-5", "embedding": [0.8, 0.2]},
             },
         },
         "root_id": 0,
@@ -75,20 +91,35 @@ def graph_with_embeddings_file():
 
 
 def test_score_topic_graph_flags_and_removals(graph_with_embeddings_file):
-    """Scoring should flag drift nodes and include descendant removal estimate."""
+    """Scoring should flag negative-coherence nodes and include descendant removal estimate."""
     report = score_topic_graph(graph_with_embeddings_file)
     summary = report["summary"]
 
-    assert summary["original_node_count"] == 5  # noqa: PLR2004
+    assert summary["original_node_count"] == 6  # noqa: PLR2004
     assert summary["flagged_node_count"] >= 1
-    assert summary["removed_node_count"] == 2  # noqa: PLR2004  # node 2 and descendant 3
+    # Node 2 (negative global coherence) and its descendant node 3 should be removed
     assert "2" in report["removed_node_ids"]
     assert "3" in report["removed_node_ids"]
 
     flagged = {item["node_id"]: item for item in report["flagged_nodes"]}
     assert "2" in flagged
-    assert "DEPTH1_LOW_GTD" in flagged["2"]["reasons"]
-    assert "GTD_NEGATIVE" in flagged["2"]["reasons"]
+    assert "NEGATIVE_GLOBAL_COHERENCE" in flagged["2"]["reasons"]
+
+    # Verify new metric keys are present in flagged nodes
+    assert "global_coherence" in flagged["2"]
+    assert "parent_coherence" in flagged["2"]
+    assert "sibling_coherence" in flagged["2"]
+
+    # Verify metrics_per_node uses new key names
+    assert "global_coherence" in report["metrics_per_node"]["0"]
+    assert "parent_coherence" in report["metrics_per_node"]["0"]
+    assert "sibling_coherence" in report["metrics_per_node"]["0"]
+
+    # Verify summary has new stats keys
+    assert "global_coherence_stats" in summary
+    assert "parent_coherence_stats" in summary
+    assert "sibling_coherence_stats" in summary
+    assert "step_removals" in summary
 
 
 def test_derive_topic_score_report_path(graph_with_embeddings_file):
@@ -116,7 +147,7 @@ def test_topic_score_cli_writes_report(graph_with_embeddings_file, tmp_path):
     assert report_path.exists()
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert report["summary"]["original_node_count"] == 5  # noqa: PLR2004
+    assert report["summary"]["original_node_count"] == 6  # noqa: PLR2004
 
 
 def test_optimize_topic_thresholds_returns_best(graph_with_embeddings_file):
@@ -124,12 +155,12 @@ def test_optimize_topic_thresholds_returns_best(graph_with_embeddings_file):
         graph_with_embeddings_file,
         search="grid",
         trials=8,
-        depth1_min=0.1,
-        depth1_max=0.3,
-        gtd_neg_min=-0.1,
-        gtd_neg_max=0.0,
-        ltd_min=0.1,
-        ltd_max=0.3,
+        parent_coherence_min=0.1,
+        parent_coherence_max=0.3,
+        sibling_coherence_lower_min=0.05,
+        sibling_coherence_lower_max=0.25,
+        sibling_coherence_upper_min=0.5,
+        sibling_coherence_upper_max=0.8,
         seed=7,
         top_k=3,
     )
@@ -138,6 +169,9 @@ def test_optimize_topic_thresholds_returns_best(graph_with_embeddings_file):
     assert len(report["all_trials"]) > 0
     assert len(report["top_trials"]) <= 3  # noqa: PLR2004
     assert "thresholds" in report["best"]
+    assert "parent_coherence" in report["best"]["thresholds"]
+    assert "sibling_coherence_lower" in report["best"]["thresholds"]
+    assert "sibling_coherence_upper" in report["best"]["thresholds"]
     assert "objective" in report["best"]
 
 

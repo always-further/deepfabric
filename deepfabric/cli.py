@@ -2318,9 +2318,9 @@ def _display_inspection_result(
         thresholds = prune_overlay["thresholds"]
         tui.console.print(
             "[dim]Overlay thresholds:[/dim] "
-            f"depth1_gtd={thresholds.get('depth1_gtd')} "
-            f"gtd_neg={thresholds.get('gtd_neg')} "
-            f"ltd={thresholds.get('ltd')}"
+            f"parent_coherence={thresholds.get('parent_coherence')} "
+            f"sibling_coherence_lower={thresholds.get('sibling_coherence_lower')} "
+            f"sibling_coherence_upper={thresholds.get('sibling_coherence_upper')}"
         )
         tui.console.print("[dim]Legend:[/dim] [yellow]flagged[/yellow], [red]pruned[/red]")
 
@@ -2766,25 +2766,25 @@ def topic_prune(
     help="Path to save score report JSON (default: <graph>_score_report.json)",
 )
 @click.option(
-    "--depth1-gtd",
+    "--parent-coherence",
     type=float,
     default=0.25,
     show_default=True,
-    help="Flag depth-1 nodes with GTD below this threshold",
+    help="Flag nodes with parent coherence below this threshold",
 )
 @click.option(
-    "--gtd-neg",
+    "--sibling-coherence-lower",
     type=float,
-    default=0.0,
+    default=0.2,
     show_default=True,
-    help="Flag nodes with GTD below this threshold",
+    help="Flag nodes with sibling coherence below this threshold (outliers)",
 )
 @click.option(
-    "--ltd",
+    "--sibling-coherence-upper",
     type=float,
-    default=0.25,
+    default=0.68,
     show_default=True,
-    help="Flag nodes with LTD below this threshold",
+    help="Flag nodes with sibling coherence above this threshold (repetitive)",
 )
 @click.option(
     "--embedding-key",
@@ -2803,13 +2803,13 @@ def topic_prune(
 def topic_score(
     file: str,
     output_report: str | None,
-    depth1_gtd: float,
-    gtd_neg: float,
-    ltd: float,
+    parent_coherence: float,
+    sibling_coherence_lower: float,
+    sibling_coherence_upper: float,
     embedding_key: str,
     embedding_model: str,
 ) -> None:
-    """Score a topic graph using GTD/LTD quality metrics."""
+    """Score a topic graph using coherence quality metrics."""
     from .topic_quality import (  # noqa: PLC0415
         derive_topic_score_report_path,
         score_topic_graph,
@@ -2821,9 +2821,9 @@ def topic_score(
     try:
         report = score_topic_graph(
             file,
-            depth1_gtd=depth1_gtd,
-            gtd_neg=gtd_neg,
-            ltd=ltd,
+            parent_coherence=parent_coherence,
+            sibling_coherence_lower=sibling_coherence_lower,
+            sibling_coherence_upper=sibling_coherence_upper,
             embedding_key=embedding_key,
             embedding_model=embedding_model,
         )
@@ -2837,6 +2837,21 @@ def topic_score(
         tui.console.print(f"  Flagged:       {summary['flagged_node_count']}")
         tui.console.print(f"  Would remove:  {summary['removed_node_count']}")
         tui.console.print(f"  Remaining:     {summary['remaining_node_count']}")
+
+        step_removals = summary.get("step_removals", {})
+        if step_removals:
+            tui.console.print()
+            tui.console.print("  [dim]Per-step removals:[/dim]")
+            step_labels = {
+                "step1_negative_global_coherence": "Step 1 (negative global coherence)",
+                "step2_low_parent_coherence": "Step 2 (low parent coherence)",
+                "step3_low_sibling_coherence": "Step 3 (low sibling coherence)",
+                "step4_high_sibling_coherence": "Step 4 (high sibling coherence)",
+            }
+            for key, label in step_labels.items():
+                count = step_removals.get(key, 0)
+                tui.console.print(f"    {label}: {count}")
+
         tui.console.print(f"  Report:        {report_path}")
     except FileNotFoundError as e:
         tui.error(str(e))
@@ -2875,12 +2890,12 @@ def topic_score(
     show_default=True,
     help="Number of threshold combinations to evaluate",
 )
-@click.option("--depth1-gtd-min", type=float, default=0.10, show_default=True)
-@click.option("--depth1-gtd-max", type=float, default=0.50, show_default=True)
-@click.option("--gtd-neg-min", type=float, default=-0.10, show_default=True)
-@click.option("--gtd-neg-max", type=float, default=0.10, show_default=True)
-@click.option("--ltd-min", type=float, default=0.10, show_default=True)
-@click.option("--ltd-max", type=float, default=0.50, show_default=True)
+@click.option("--parent-coherence-min", type=float, default=0.10, show_default=True)
+@click.option("--parent-coherence-max", type=float, default=0.50, show_default=True)
+@click.option("--sibling-coherence-lower-min", type=float, default=0.05, show_default=True)
+@click.option("--sibling-coherence-lower-max", type=float, default=0.40, show_default=True)
+@click.option("--sibling-coherence-upper-min", type=float, default=0.50, show_default=True)
+@click.option("--sibling-coherence-upper-max", type=float, default=0.85, show_default=True)
 @click.option("--seed", type=int, default=42, show_default=True)
 @click.option("--embedding-key", type=str, default="embedding", show_default=True)
 @click.option("--embedding-model", type=str, default="all-MiniLM-L6-v2", show_default=True)
@@ -2902,12 +2917,12 @@ def topic_optimize_thresholds(
     output_report: str | None,
     search: str,
     trials: int,
-    depth1_gtd_min: float,
-    depth1_gtd_max: float,
-    gtd_neg_min: float,
-    gtd_neg_max: float,
-    ltd_min: float,
-    ltd_max: float,
+    parent_coherence_min: float,
+    parent_coherence_max: float,
+    sibling_coherence_lower_min: float,
+    sibling_coherence_lower_max: float,
+    sibling_coherence_upper_min: float,
+    sibling_coherence_upper_max: float,
     seed: int,
     embedding_key: str,
     embedding_model: str,
@@ -2915,7 +2930,7 @@ def topic_optimize_thresholds(
     max_internal_removed: int | None,
     top_k: int,
 ) -> None:
-    """Find the best GTD/LTD thresholds for one topic graph."""
+    """Find the best coherence thresholds for one topic graph."""
     from .topic_quality import (  # noqa: PLC0415
         derive_topic_threshold_optimization_report_path,
         optimize_topic_thresholds,
@@ -2929,12 +2944,12 @@ def topic_optimize_thresholds(
             file,
             search=search,
             trials=trials,
-            depth1_min=depth1_gtd_min,
-            depth1_max=depth1_gtd_max,
-            gtd_neg_min=gtd_neg_min,
-            gtd_neg_max=gtd_neg_max,
-            ltd_min=ltd_min,
-            ltd_max=ltd_max,
+            parent_coherence_min=parent_coherence_min,
+            parent_coherence_max=parent_coherence_max,
+            sibling_coherence_lower_min=sibling_coherence_lower_min,
+            sibling_coherence_lower_max=sibling_coherence_lower_max,
+            sibling_coherence_upper_min=sibling_coherence_upper_min,
+            sibling_coherence_upper_max=sibling_coherence_upper_max,
             seed=seed,
             embedding_key=embedding_key,
             embedding_model=embedding_model,
@@ -2954,14 +2969,13 @@ def topic_optimize_thresholds(
         tui.success("Threshold optimization completed")
         tui.console.print(
             "  Best thresholds: "
-            f"depth1_gtd={best['thresholds']['depth1_gtd']:.4f} "
-            f"gtd_neg={best['thresholds']['gtd_neg']:.4f} "
-            f"ltd={best['thresholds']['ltd']:.4f}"
+            f"parent_coherence={best['thresholds']['parent_coherence']:.4f} "
+            f"sibling_coherence_lower={best['thresholds']['sibling_coherence_lower']:.4f} "
+            f"sibling_coherence_upper={best['thresholds']['sibling_coherence_upper']:.4f}"
         )
         tui.console.print(f"  Objective:      {best['objective']:.6f}")
         tui.console.print(
-            f"  Removed:        {best['removed_count']} "
-            f"({best['removed_ratio'] * 100:.2f}%)"
+            f"  Removed:        {best['removed_count']} ({best['removed_ratio'] * 100:.2f}%)"
         )
         tui.console.print(
             f"  Internal:       {best['internal_removed_count']} "

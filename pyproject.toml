@@ -21,13 +21,11 @@ dependencies = [
     "google-api-core>=2.0.0",
     "posthog>=3.0.0",
     "packaging>=25.0",
-    "transformers==5.0.0",
     "protobuf>=3.20.0",
     "sentencepiece>=0.1.99",
     "ollama>=0.6.1",
     "componentize-py>=0.19.3",
     "spin-sdk>=3.4.1",
-    "sentence-transformers>=5.2.3",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +44,9 @@ dev = [
 docs = [
     "mkdocs-material>=9.0.0",
     "mkdocstrings[python]>=0.30.0",
+]
+scoring = [
+    "sentence-transformers>=5.2.3",
 ]
 training = [
     "torch>=2.4.0",

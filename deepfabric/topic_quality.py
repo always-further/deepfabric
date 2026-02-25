@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 
 from collections import deque
@@ -16,6 +17,12 @@ from .exceptions import ConfigurationError
 from .graph import Graph
 
 _EPSILON = 1e-12
+
+DEFAULT_THRESHOLDS = {
+    "parent_coherence": 0.25,
+    "sibling_coherence_lower": 0.2,
+    "sibling_coherence_upper": 0.68,
+}
 
 
 def _safe_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
@@ -102,6 +109,49 @@ def _fill_missing_embeddings(
     return embeddings
 
 
+def _compute_sibling_coherence_by_id(
+    graph: Graph,
+    embeddings: dict[int, np.ndarray],
+) -> dict[int, float | None]:
+    """Compute per-node sibling coherence: mean cosine similarity to siblings.
+
+    Siblings are children of the same parent(s), excluding the node itself.
+    Returns None for the root node, only-children (no siblings exist), and
+    nodes with missing embeddings. Nodes with None sibling coherence are
+    skipped by the sibling coherence pruning steps (3 and 4).
+    """
+    sibling_coherence_by_id: dict[int, float | None] = {}
+
+    for node_id, node in graph.nodes.items():
+        node_embedding = embeddings.get(node_id)
+        if node_embedding is None:
+            sibling_coherence_by_id[node_id] = None
+            continue
+
+        sibling_ids: set[int] = set()
+        for parent in node.parents:
+            for child in parent.children:
+                if child.id != node_id:
+                    sibling_ids.add(child.id)
+
+        if not sibling_ids:
+            sibling_coherence_by_id[node_id] = None
+            continue
+
+        sims: list[float] = []
+        for sib_id in sibling_ids:
+            sib_embedding = embeddings.get(sib_id)
+            if sib_embedding is not None:
+                sims.append(_safe_cosine_similarity(node_embedding, sib_embedding))
+
+        if not sims:
+            sibling_coherence_by_id[node_id] = None
+        else:
+            sibling_coherence_by_id[node_id] = float(np.mean(sims))
+
+    return sibling_coherence_by_id
+
+
 def _collect_descendants(graph: Graph, start_id: int) -> set[int]:
     """Collect all descendants including the start node."""
     seen: set[int] = set()
@@ -174,7 +224,7 @@ def _build_topic_quality_context(
     embedding_key: str = "embedding",
     embedding_model: str = "all-MiniLM-L6-v2",
 ) -> dict[str, Any]:
-    """Load graph and precompute per-node GTD/LTD metrics once."""
+    """Load graph and precompute per-node coherence metrics once."""
     graph = Graph.load(graph_path)
     depths = _compute_depths(graph)
     max_depth = max(depths.values(), default=0)
@@ -193,18 +243,18 @@ def _build_topic_quality_context(
             f"Root node is missing embedding under metadata['{embedding_key}'] and could not be generated."
         )
 
-    gtd_values: list[float] = []
-    ltd_values: list[float] = []
-    gtd_by_id: dict[int, float | None] = {}
-    ltd_by_id: dict[int, float | None] = {}
+    global_coherence_values: list[float] = []
+    parent_coherence_values: list[float] = []
+    global_coherence_by_id: dict[int, float | None] = {}
+    parent_coherence_by_id: dict[int, float | None] = {}
 
     for node_id, node in graph.nodes.items():
         node_embedding = embeddings.get(node_id)
         if node_embedding is None:
-            gtd_val = None
+            gc_val = None
         else:
-            gtd_val = _safe_cosine_similarity(node_embedding, root_embedding)
-            gtd_values.append(gtd_val)
+            gc_val = _safe_cosine_similarity(node_embedding, root_embedding)
+            global_coherence_values.append(gc_val)
 
         parent_sims: list[float] = []
         for parent in node.parents:
@@ -213,19 +263,26 @@ def _build_topic_quality_context(
                 continue
             parent_sims.append(_safe_cosine_similarity(node_embedding, parent_embedding))
 
-        ltd_val = max(parent_sims) if parent_sims else None
-        if ltd_val is not None:
-            ltd_values.append(ltd_val)
+        pc_val = max(parent_sims) if parent_sims else None
+        if pc_val is not None:
+            parent_coherence_values.append(pc_val)
 
-        gtd_by_id[node_id] = gtd_val
-        ltd_by_id[node_id] = ltd_val
+        global_coherence_by_id[node_id] = gc_val
+        parent_coherence_by_id[node_id] = pc_val
+
+    sibling_coherence_by_id = _compute_sibling_coherence_by_id(graph, embeddings)
+    sibling_coherence_values = [v for v in sibling_coherence_by_id.values() if v is not None]
 
     depth_counts: dict[str, int] = {}
     for depth in depths.values():
         depth_counts[str(depth)] = depth_counts.get(str(depth), 0) + 1
 
     metrics_per_node = {
-        str(node_id): {"gtd": gtd_by_id[node_id], "ltd": ltd_by_id[node_id]}
+        str(node_id): {
+            "global_coherence": global_coherence_by_id[node_id],
+            "parent_coherence": parent_coherence_by_id[node_id],
+            "sibling_coherence": sibling_coherence_by_id[node_id],
+        }
         for node_id in graph.nodes
     }
 
@@ -233,11 +290,13 @@ def _build_topic_quality_context(
         "graph": graph,
         "depths": depths,
         "max_depth": max_depth,
-        "gtd_by_id": gtd_by_id,
-        "ltd_by_id": ltd_by_id,
+        "global_coherence_by_id": global_coherence_by_id,
+        "parent_coherence_by_id": parent_coherence_by_id,
+        "sibling_coherence_by_id": sibling_coherence_by_id,
         "metrics_per_node": metrics_per_node,
-        "gtd_stats": _summarize(gtd_values),
-        "ltd_stats": _summarize(ltd_values),
+        "global_coherence_stats": _summarize(global_coherence_values),
+        "parent_coherence_stats": _summarize(parent_coherence_values),
+        "sibling_coherence_stats": _summarize(sibling_coherence_values),
         "depth_counts": depth_counts,
         "descendants_cache": {},
     }
@@ -246,51 +305,115 @@ def _build_topic_quality_context(
 def _evaluate_thresholds(
     context: dict[str, Any],
     *,
-    depth1_gtd: float,
-    gtd_neg: float,
-    ltd: float,
+    parent_coherence: float,
+    sibling_coherence_lower: float,
+    sibling_coherence_upper: float,
     include_metrics_per_node: bool = True,
 ) -> dict[str, Any]:
-    """Evaluate a specific threshold combination using precomputed metrics."""
+    """Evaluate a threshold combination using the 4-step cascading pipeline."""
     graph: Graph = context["graph"]
     depths: dict[int, int] = context["depths"]
     max_depth: int = context["max_depth"]
-    gtd_by_id: dict[int, float | None] = context["gtd_by_id"]
-    ltd_by_id: dict[int, float | None] = context["ltd_by_id"]
+    gc_by_id: dict[int, float | None] = context["global_coherence_by_id"]
+    pc_by_id: dict[int, float | None] = context["parent_coherence_by_id"]
+    sc_by_id: dict[int, float | None] = context["sibling_coherence_by_id"]
     descendants_cache: dict[int, set[int]] = context["descendants_cache"]
 
-    flagged_ids: set[int] = set()
+    all_ids = set(graph.nodes.keys())
     flagged_nodes: list[dict[str, Any]] = []
+    step_removals = {
+        "step1_negative_global_coherence": 0,
+        "step2_low_parent_coherence": 0,
+        "step3_low_sibling_coherence": 0,
+        "step4_high_sibling_coherence": 0,
+    }
 
-    for node_id, node in graph.nodes.items():
-        gtd_val = gtd_by_id[node_id]
-        ltd_val = ltd_by_id[node_id]
+    # Step 1: global_coherence < 0 (hardcoded gate)
+    step1_flagged: set[int] = set()
+    for node_id in all_ids:
+        gc_val = gc_by_id[node_id]
+        if gc_val is not None and gc_val < 0:
+            step1_flagged.add(node_id)
+
+    step1_removed: set[int] = set()
+    for node_id in step1_flagged:
+        step1_removed.update(
+            _collect_descendants_with_cache(graph, node_id, descendants_cache) & all_ids
+        )
+    step_removals["step1_negative_global_coherence"] = len(step1_removed)
+    surviving = all_ids - step1_removed
+
+    # Step 2: parent_coherence < threshold
+    step2_flagged: set[int] = set()
+    for node_id in surviving:
+        pc_val = pc_by_id[node_id]
+        if pc_val is not None and pc_val < parent_coherence:
+            step2_flagged.add(node_id)
+
+    step2_removed: set[int] = set()
+    for node_id in step2_flagged:
+        step2_removed.update(
+            _collect_descendants_with_cache(graph, node_id, descendants_cache) & surviving
+        )
+    step_removals["step2_low_parent_coherence"] = len(step2_removed)
+    surviving = surviving - step2_removed
+
+    # Step 3: sibling_coherence < lower threshold (outliers)
+    step3_flagged: set[int] = set()
+    for node_id in surviving:
+        sc_val = sc_by_id[node_id]
+        if sc_val is not None and sc_val < sibling_coherence_lower:
+            step3_flagged.add(node_id)
+
+    step3_removed: set[int] = set()
+    for node_id in step3_flagged:
+        step3_removed.update(
+            _collect_descendants_with_cache(graph, node_id, descendants_cache) & surviving
+        )
+    step_removals["step3_low_sibling_coherence"] = len(step3_removed)
+    surviving = surviving - step3_removed
+
+    # Step 4: sibling_coherence > upper threshold (repetitive)
+    step4_flagged: set[int] = set()
+    for node_id in surviving:
+        sc_val = sc_by_id[node_id]
+        if sc_val is not None and sc_val > sibling_coherence_upper:
+            step4_flagged.add(node_id)
+
+    step4_removed: set[int] = set()
+    for node_id in step4_flagged:
+        step4_removed.update(
+            _collect_descendants_with_cache(graph, node_id, descendants_cache) & surviving
+        )
+    step_removals["step4_high_sibling_coherence"] = len(step4_removed)
+
+    # Build flagged nodes list (directly flagged at any step)
+    all_flagged = step1_flagged | step2_flagged | step3_flagged | step4_flagged
+    for node_id in sorted(all_flagged):
+        node = graph.nodes[node_id]
         node_depth = depths.get(node_id, 0)
         reasons: list[str] = []
+        if node_id in step1_flagged:
+            reasons.append("NEGATIVE_GLOBAL_COHERENCE")
+        if node_id in step2_flagged:
+            reasons.append("LOW_PARENT_COHERENCE")
+        if node_id in step3_flagged:
+            reasons.append("LOW_SIBLING_COHERENCE")
+        if node_id in step4_flagged:
+            reasons.append("HIGH_SIBLING_COHERENCE")
+        flagged_nodes.append(
+            {
+                "node_id": str(node_id),
+                "topic": node.topic,
+                "depth": node_depth,
+                "reasons": reasons,
+                "global_coherence": gc_by_id[node_id],
+                "parent_coherence": pc_by_id[node_id],
+                "sibling_coherence": sc_by_id[node_id],
+            }
+        )
 
-        if gtd_val is not None and node_depth == 1 and gtd_val < depth1_gtd:
-            reasons.append("DEPTH1_LOW_GTD")
-        if gtd_val is not None and gtd_val < gtd_neg:
-            reasons.append("GTD_NEGATIVE")
-        if ltd_val is not None and ltd_val < ltd:
-            reasons.append("LOW_LTD")
-
-        if reasons:
-            flagged_ids.add(node_id)
-            flagged_nodes.append(
-                {
-                    "node_id": str(node_id),
-                    "topic": node.topic,
-                    "depth": node_depth,
-                    "reasons": reasons,
-                    "gtd": gtd_val,
-                    "ltd": ltd_val,
-                }
-            )
-
-    removed_ids: set[int] = set()
-    for node_id in flagged_ids:
-        removed_ids.update(_collect_descendants_with_cache(graph, node_id, descendants_cache))
+    removed_ids = step1_removed | step2_removed | step3_removed | step4_removed
 
     removed_depth_counts: dict[str, int] = {}
     for node_id in removed_ids:
@@ -309,18 +432,20 @@ def _evaluate_thresholds(
 
     summary = {
         "original_node_count": total_nodes,
-        "flagged_node_count": len(flagged_ids),
+        "flagged_node_count": len(all_flagged),
         "removed_node_count": removed_count,
         "remaining_node_count": total_nodes - removed_count,
-        "gtd_stats": context["gtd_stats"],
-        "ltd_stats": context["ltd_stats"],
+        "global_coherence_stats": context["global_coherence_stats"],
+        "parent_coherence_stats": context["parent_coherence_stats"],
+        "sibling_coherence_stats": context["sibling_coherence_stats"],
         "depth_counts": context["depth_counts"],
         "removed_depth_counts": removed_depth_counts,
         "thresholds": {
-            "depth1_gtd": depth1_gtd,
-            "gtd_neg": gtd_neg,
-            "ltd": ltd,
+            "parent_coherence": parent_coherence,
+            "sibling_coherence_lower": sibling_coherence_lower,
+            "sibling_coherence_upper": sibling_coherence_upper,
         },
+        "step_removals": step_removals,
         "objective": objective,
         "removed_ratio": removed_ratio,
         "internal_removed_ratio": internal_removed_ratio,
@@ -340,13 +465,13 @@ def _evaluate_thresholds(
 def score_topic_graph(
     graph_path: str,
     *,
-    depth1_gtd: float = 0.25,
-    gtd_neg: float = 0.0,
-    ltd: float = 0.25,
+    parent_coherence: float = DEFAULT_THRESHOLDS["parent_coherence"],
+    sibling_coherence_lower: float = DEFAULT_THRESHOLDS["sibling_coherence_lower"],
+    sibling_coherence_upper: float = DEFAULT_THRESHOLDS["sibling_coherence_upper"],
     embedding_key: str = "embedding",
     embedding_model: str = "all-MiniLM-L6-v2",
 ) -> dict[str, Any]:
-    """Score a topic graph using GTD/LTD metrics and pruning thresholds."""
+    """Score a topic graph using coherence metrics and pruning thresholds."""
     context = _build_topic_quality_context(
         graph_path,
         embedding_key=embedding_key,
@@ -354,9 +479,9 @@ def score_topic_graph(
     )
     return _evaluate_thresholds(
         context,
-        depth1_gtd=depth1_gtd,
-        gtd_neg=gtd_neg,
-        ltd=ltd,
+        parent_coherence=parent_coherence,
+        sibling_coherence_lower=sibling_coherence_lower,
+        sibling_coherence_upper=sibling_coherence_upper,
         include_metrics_per_node=True,
     )
 
@@ -365,12 +490,12 @@ def _generate_threshold_candidates(
     *,
     search: str,
     trials: int,
-    depth1_min: float,
-    depth1_max: float,
-    gtd_neg_min: float,
-    gtd_neg_max: float,
-    ltd_min: float,
-    ltd_max: float,
+    parent_coherence_min: float,
+    parent_coherence_max: float,
+    sibling_coherence_lower_min: float,
+    sibling_coherence_lower_max: float,
+    sibling_coherence_upper_min: float,
+    sibling_coherence_upper_max: float,
     seed: int,
 ) -> list[dict[str, float]]:
     """Generate threshold candidates for optimization."""
@@ -378,23 +503,35 @@ def _generate_threshold_candidates(
         raise ValueError("trials must be greater than zero")
 
     if search == "random":
-        rng = random.Random(seed)
+        rng = random.Random(seed)  # noqa: S311
         return [
             {
-                "depth1_gtd": rng.uniform(depth1_min, depth1_max),
-                "gtd_neg": rng.uniform(gtd_neg_min, gtd_neg_max),
-                "ltd": rng.uniform(ltd_min, ltd_max),
+                "parent_coherence": rng.uniform(parent_coherence_min, parent_coherence_max),
+                "sibling_coherence_lower": rng.uniform(
+                    sibling_coherence_lower_min, sibling_coherence_lower_max
+                ),
+                "sibling_coherence_upper": rng.uniform(
+                    sibling_coherence_upper_min, sibling_coherence_upper_max
+                ),
             }
             for _ in range(trials)
         ]
 
-    per_dim = max(2, round(trials ** (1 / 3)))
-    depth1_values = np.linspace(depth1_min, depth1_max, per_dim).tolist()
-    gtd_neg_values = np.linspace(gtd_neg_min, gtd_neg_max, per_dim).tolist()
-    ltd_values = np.linspace(ltd_min, ltd_max, per_dim).tolist()
+    per_dim = max(2, math.ceil(trials ** (1 / 3)))
+    pc_values = np.linspace(parent_coherence_min, parent_coherence_max, per_dim).tolist()
+    scl_values = np.linspace(
+        sibling_coherence_lower_min, sibling_coherence_lower_max, per_dim
+    ).tolist()
+    scu_values = np.linspace(
+        sibling_coherence_upper_min, sibling_coherence_upper_max, per_dim
+    ).tolist()
     combos = [
-        {"depth1_gtd": d1, "gtd_neg": gn, "ltd": l}
-        for d1, gn, l in product(depth1_values, gtd_neg_values, ltd_values)
+        {
+            "parent_coherence": pc,
+            "sibling_coherence_lower": scl,
+            "sibling_coherence_upper": scu,
+        }
+        for pc, scl, scu in product(pc_values, scl_values, scu_values)
     ]
     return combos[:trials]
 
@@ -404,12 +541,12 @@ def optimize_topic_thresholds(
     *,
     search: str = "random",
     trials: int = 40,
-    depth1_min: float = 0.10,
-    depth1_max: float = 0.50,
-    gtd_neg_min: float = -0.10,
-    gtd_neg_max: float = 0.10,
-    ltd_min: float = 0.10,
-    ltd_max: float = 0.50,
+    parent_coherence_min: float = 0.10,
+    parent_coherence_max: float = 0.50,
+    sibling_coherence_lower_min: float = 0.05,
+    sibling_coherence_lower_max: float = 0.40,
+    sibling_coherence_upper_min: float = 0.50,
+    sibling_coherence_upper_max: float = 0.85,
     seed: int = 42,
     embedding_key: str = "embedding",
     embedding_model: str = "all-MiniLM-L6-v2",
@@ -430,27 +567,31 @@ def optimize_topic_thresholds(
     candidates = _generate_threshold_candidates(
         search=search,
         trials=trials,
-        depth1_min=depth1_min,
-        depth1_max=depth1_max,
-        gtd_neg_min=gtd_neg_min,
-        gtd_neg_max=gtd_neg_max,
-        ltd_min=ltd_min,
-        ltd_max=ltd_max,
+        parent_coherence_min=parent_coherence_min,
+        parent_coherence_max=parent_coherence_max,
+        sibling_coherence_lower_min=sibling_coherence_lower_min,
+        sibling_coherence_lower_max=sibling_coherence_lower_max,
+        sibling_coherence_upper_min=sibling_coherence_upper_min,
+        sibling_coherence_upper_max=sibling_coherence_upper_max,
         seed=seed,
     )
 
-    baseline = {"depth1_gtd": 0.25, "gtd_neg": 0.0, "ltd": 0.25}
+    baseline = {
+        "parent_coherence": DEFAULT_THRESHOLDS["parent_coherence"],
+        "sibling_coherence_lower": DEFAULT_THRESHOLDS["sibling_coherence_lower"],
+        "sibling_coherence_upper": DEFAULT_THRESHOLDS["sibling_coherence_upper"],
+    }
     if baseline not in candidates:
         candidates.insert(0, baseline)
-    candidates = candidates[: max(trials, 1)]
+    candidates = candidates[:trials]
 
     evaluations: list[dict[str, Any]] = []
     for idx, candidate in enumerate(candidates):
         report = _evaluate_thresholds(
             context,
-            depth1_gtd=float(candidate["depth1_gtd"]),
-            gtd_neg=float(candidate["gtd_neg"]),
-            ltd=float(candidate["ltd"]),
+            parent_coherence=float(candidate["parent_coherence"]),
+            sibling_coherence_lower=float(candidate["sibling_coherence_lower"]),
+            sibling_coherence_upper=float(candidate["sibling_coherence_upper"]),
             include_metrics_per_node=False,
         )
         summary = report["summary"]
@@ -489,9 +630,15 @@ def optimize_topic_thresholds(
             "trials_executed": len(evaluations),
             "seed": seed,
             "ranges": {
-                "depth1_gtd": [depth1_min, depth1_max],
-                "gtd_neg": [gtd_neg_min, gtd_neg_max],
-                "ltd": [ltd_min, ltd_max],
+                "parent_coherence": [parent_coherence_min, parent_coherence_max],
+                "sibling_coherence_lower": [
+                    sibling_coherence_lower_min,
+                    sibling_coherence_lower_max,
+                ],
+                "sibling_coherence_upper": [
+                    sibling_coherence_upper_min,
+                    sibling_coherence_upper_max,
+                ],
             },
         },
         "constraints": {
