@@ -63,4 +63,8 @@ The report includes:
 - `removed_node_ids` estimated by subtree propagation from flagged nodes
 
 !!! note
-    If embeddings are not present in node metadata, DeepFabric attempts to generate them with `sentence-transformers`.
+    If embeddings are not present in node metadata, DeepFabric attempts to generate them with `sentence-transformers`. Install with: `pip install deepfabric[scoring]`
+
+## Pipeline Integration
+
+Scoring can also run automatically during `deepfabric generate` by adding a `scoring` section to your YAML configuration. When `prune: true`, the pipeline removes flagged subtrees before dataset generation. See [Configuration Reference](../dataset-generation/configuration.md#topicsscoring-graph-mode-only-optional) for details.

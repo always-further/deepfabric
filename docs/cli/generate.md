@@ -5,7 +5,8 @@ The `generate` command executes the complete synthetic data generation pipeline 
 ```mermaid
 graph LR
     A[YAML Config] --> B[Topic Generation]
-    B --> C[Dataset Creation]
+    B --> S[Scoring & Pruning]
+    S --> C[Dataset Creation]
     C --> D[Output Files]
 ```
 
@@ -78,6 +79,51 @@ Generate and save only the topic structure without proceeding to dataset creatio
     ```
 
 The `--topic-only` flag stops the pipeline after topic generation and saves the topic structure to the configured location.
+
+## Topic Scoring and Pruning
+
+When a `scoring` section is present in the YAML configuration under `topics`, the pipeline automatically scores the topic graph and optionally prunes low-quality subtrees before dataset generation:
+
+```yaml title="config.yaml"
+topics:
+  prompt: "Python programming fundamentals"
+  mode: graph
+  save_as: "topics.json"
+  scoring:
+    parent_coherence: 0.25
+    sibling_coherence_lower: 0.2
+    sibling_coherence_upper: 0.68
+    prune: true
+    save_report: true
+```
+
+```bash title="Generate with automatic scoring and pruning"
+deepfabric generate config.yaml
+```
+
+When `prune: true`, the pipeline:
+
+1. Scores all nodes using embedding-based coherence metrics
+2. Removes flagged subtrees via the [4-step cascading pipeline](topic-score.md#4-step-pruning-pipeline)
+3. Saves the pruned graph as a `_scored` derivative (e.g., `topics_scored.json`)
+4. Preserves the original graph untouched at its configured path
+5. Continues to dataset generation using the pruned graph
+
+When `prune: false`, scoring runs and reports metrics without modifying the graph. Dataset generation uses the full original graph.
+
+!!! tip "Inspect Before Pruning"
+    To preview what scoring would remove before committing, use `prune: false` with `save_report: true`, then visualize with:
+
+    ```bash
+    deepfabric topic inspect topics.json \
+      --score-report topics_score_report.json \
+      --show-pruned
+    ```
+
+    See [Configuration Reference](../dataset-generation/configuration.md#topicsscoring-graph-mode-only-optional) for all scoring options.
+
+!!! note "Scoring is Optional"
+    If the `scoring` section is absent from the YAML, the pipeline skips scoring entirely. Existing configurations work without changes.
 
 ## Topic Modeling Parameters
 

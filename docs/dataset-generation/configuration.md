@@ -21,6 +21,12 @@ topics:
   save_as: "topics.json"
   llm:                    # Override shared LLM
     model: "gpt-4o-mini"
+  scoring:                # Optional: quality scoring and pruning (graph mode only)
+    parent_coherence: 0.25
+    sibling_coherence_lower: 0.2
+    sibling_coherence_upper: 0.68
+    prune: true
+    save_report: true
 
 # Sample generation
 generation:
@@ -131,6 +137,39 @@ These files contain error details for each failed generation attempt, useful for
 
 !!! tip "Truncation Detection"
     DeepFabric detects truncated LLM responses ("EOF while parsing" errors) and suggests increasing `max_tokens` in the topic configuration.
+
+#### topics.scoring (Graph Mode Only, Optional)
+
+Enables automatic quality scoring and pruning of the topic graph before dataset generation. When present, the pipeline scores every node using embedding-based coherence metrics and optionally removes low-quality subtrees.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `parent_coherence` | float | 0.25 | Flag nodes with parent coherence below this (0.0–1.0) |
+| `sibling_coherence_lower` | float | 0.2 | Flag outlier nodes with sibling coherence below this (0.0–1.0) |
+| `sibling_coherence_upper` | float | 0.68 | Flag repetitive nodes with sibling coherence above this (0.0–1.0) |
+| `prune` | bool | true | Remove flagged nodes; `false` = score and report only |
+| `save_report` | bool | false | Save score report JSON alongside the graph |
+| `embedding_model` | string | "all-MiniLM-L6-v2" | SentenceTransformer model for missing embeddings |
+| `embedding_key` | string | "embedding" | Metadata key for node embeddings |
+
+```yaml title="Score-only mode (no pruning)"
+topics:
+  prompt: "Python programming fundamentals"
+  mode: graph
+  scoring:
+    prune: false
+    save_report: true
+```
+
+!!! note "Output Files"
+    When `prune: true`, the original graph is preserved at the configured `save_as` path and the pruned graph is saved as a `_scored` derivative (e.g., `topics_scored.json`). The pipeline uses the pruned graph for dataset generation while keeping the original intact.
+
+    When `save_report: true`, a score report is written to `{save_as}_score_report.json`. Use this with [`topic inspect --score-report`](../cli/topic-inspect.md) to visualize flagged nodes.
+
+!!! tip "Scoring requires `sentence-transformers`"
+    Install the scoring extra: `pip install deepfabric[scoring]`
+
+See [`topic score`](../cli/topic-score.md) for details on the 4-step cascading pruning pipeline and coherence metrics.
 
 ### generation
 
