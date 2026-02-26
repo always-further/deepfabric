@@ -4,16 +4,20 @@ import json
 import tempfile
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from click.testing import CliRunner
 
-from deepfabric.cli import cli
+from deepfabric.cli import _score_and_prune_topic_model, cli
+from deepfabric.config import ScoringConfig
+from deepfabric.graph import Graph
 from deepfabric.topic_quality import (
     derive_topic_score_report_path,
     derive_topic_threshold_optimization_report_path,
     optimize_topic_thresholds,
+    prune_graph,
     score_topic_graph,
 )
 
@@ -206,3 +210,151 @@ def test_topic_optimize_thresholds_cli_writes_report(graph_with_embeddings_file,
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["best"] is not None
     assert len(report["all_trials"]) > 0
+
+
+def test_prune_graph_removes_flagged_nodes(graph_with_embeddings_file):
+    """prune_graph should remove flagged nodes from the Graph object in-place."""
+    graph = Graph.load(graph_with_embeddings_file)
+    original_count = len(graph.nodes)
+
+    pruned_graph, report = prune_graph(graph)
+
+    # Node 2 (negative global coherence) and descendant 3 should be removed
+    assert "2" in report["removed_node_ids"]
+    assert "3" in report["removed_node_ids"]
+
+    # Graph should have fewer nodes after pruning
+    assert len(pruned_graph.nodes) < original_count
+    assert 2 not in pruned_graph.nodes  # noqa: PLR2004
+    assert 3 not in pruned_graph.nodes  # noqa: PLR2004
+
+    # Surviving nodes should still be present
+    assert 0 in pruned_graph.nodes  # noqa: PLR2004
+    assert 1 in pruned_graph.nodes  # noqa: PLR2004
+
+    # The returned graph is the same object (mutated in-place)
+    assert pruned_graph is graph
+
+
+def test_prune_graph_no_removals():
+    """prune_graph on a clean graph should remove nothing."""
+    content = {
+        "nodes": {
+            "0": {
+                "id": 0,
+                "topic": "Root",
+                "children": [1, 2],
+                "parents": [],
+                "metadata": {"uuid": "uuid-0", "embedding": [1.0, 0.0]},
+            },
+            "1": {
+                "id": 1,
+                "topic": "Child A",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "uuid-1", "embedding": [0.8, 0.6]},
+            },
+            "2": {
+                "id": 2,
+                "topic": "Child B",
+                "children": [],
+                "parents": [0],
+                "metadata": {"uuid": "uuid-2", "embedding": [0.6, -0.3]},
+            },
+        },
+        "root_id": 0,
+        "metadata": {
+            "provider": "openai",
+            "model": "gpt-4",
+            "temperature": 0.7,
+            "created_at": "2024-01-01T00:00:00+00:00",
+        },
+    }
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(content, f)
+        path = f.name
+
+    try:
+        graph = Graph.load(path)
+        pruned_graph, report = prune_graph(graph)
+
+        assert len(report["removed_node_ids"]) == 0
+        assert len(pruned_graph.nodes) == 3  # noqa: PLR2004
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_score_and_prune_skips_tree():
+    """_score_and_prune_topic_model should pass through Tree models unchanged."""
+    tree_mock = MagicMock()
+    tree_mock.__class__ = type("Tree", (), {})  # not a Graph instance
+
+    config = MagicMock()
+    config.topics.scoring = MagicMock()
+
+    result = _score_and_prune_topic_model(tree_mock, config=config)
+    assert result is tree_mock
+
+
+def test_score_and_prune_skips_when_no_scoring_config(graph_with_embeddings_file):
+    """_score_and_prune_topic_model should pass through when scoring is None."""
+    graph = Graph.load(graph_with_embeddings_file)
+    original_count = len(graph.nodes)
+
+    config = MagicMock()
+    config.topics.scoring = None
+
+    result = _score_and_prune_topic_model(graph, config=config)
+    assert result is graph
+    assert len(result.nodes) == original_count
+
+
+def test_score_and_prune_prune_false(graph_with_embeddings_file, tmp_path):
+    """With prune=False, scoring should report but not modify the graph."""
+    graph = Graph.load(graph_with_embeddings_file)
+    graph_path = tmp_path / "graph.json"
+    graph.save(str(graph_path))
+
+    scoring = ScoringConfig(prune=False, save_report=True)
+    config = MagicMock()
+    config.topics.scoring = scoring
+    config.topics.save_as = str(graph_path)
+
+    original_count = len(graph.nodes)
+    result = _score_and_prune_topic_model(graph, config=config)
+
+    # Graph should be unchanged (no pruning)
+    assert result is graph
+    assert len(result.nodes) == original_count
+
+    # Report should have been saved
+    report_path = tmp_path / "graph_score_report.json"
+    assert report_path.exists()
+
+
+def test_score_and_prune_saves_scored_graph(graph_with_embeddings_file, tmp_path):
+    """When prune=True, pruned graph is saved as _scored and original is preserved."""
+    graph = Graph.load(graph_with_embeddings_file)
+    graph_path = tmp_path / "graph.json"
+    graph.save(str(graph_path))
+    original_count = len(graph.nodes)
+
+    scoring = ScoringConfig(prune=True, save_report=True)
+    config = MagicMock()
+    config.topics.scoring = scoring
+    config.topics.save_as = str(graph_path)
+
+    result = _score_and_prune_topic_model(graph, config=config)
+
+    # Pruned graph should have fewer nodes
+    assert len(result.nodes) < original_count
+
+    # Original graph should be untouched
+    original_graph = Graph.load(str(graph_path))
+    assert len(original_graph.nodes) == original_count
+
+    # Scored (pruned) graph should exist as derived artifact
+    scored_path = tmp_path / "graph_scored.json"
+    assert scored_path.exists()
+    scored_graph = Graph.load(str(scored_path))
+    assert len(scored_graph.nodes) == len(result.nodes)

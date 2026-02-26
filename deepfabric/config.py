@@ -1,6 +1,6 @@
 import warnings
 
-from typing import Literal
+from typing import Literal, Self
 
 import yaml
 
@@ -80,6 +80,43 @@ class LLMConfig(BaseModel):
     )
 
 
+class ScoringConfig(BaseModel):
+    """Configuration for topic graph scoring and pruning."""
+
+    parent_coherence: float = Field(
+        default=0.25, ge=0.0, le=1.0, description="Flag nodes with parent coherence below this"
+    )
+    sibling_coherence_lower: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Flag nodes with sibling coherence below this (outliers)",
+    )
+    sibling_coherence_upper: float = Field(
+        default=0.68,
+        ge=0.0,
+        le=1.0,
+        description="Flag nodes with sibling coherence above this (repetitive)",
+    )
+    prune: bool = Field(
+        default=True, description="Whether to prune flagged nodes (false = score and report only)"
+    )
+    save_report: bool = Field(default=False, description="Save score report JSON alongside graph")
+    embedding_model: str = Field(
+        default="all-MiniLM-L6-v2", description="SentenceTransformer model for missing embeddings"
+    )
+    embedding_key: str = Field(default="embedding", description="Metadata key for node embeddings")
+
+    @model_validator(mode="after")
+    def validate_sibling_coherence_ordering(self) -> Self:
+        if self.sibling_coherence_lower >= self.sibling_coherence_upper:
+            raise ValueError(
+                f"sibling_coherence_lower ({self.sibling_coherence_lower}) "
+                f"must be less than sibling_coherence_upper ({self.sibling_coherence_upper})"
+            )
+        return self
+
+
 class TopicsConfig(BaseModel):
     """Configuration for topic generation (tree or graph mode)."""
 
@@ -124,6 +161,11 @@ class TopicsConfig(BaseModel):
     # Optional LLM overrides (inherits from top-level llm if not specified)
     llm: LLMConfig | None = Field(
         default=None, description="Optional LLM configuration overrides for topics"
+    )
+
+    # Optional scoring configuration (graph mode only)
+    scoring: ScoringConfig | None = Field(
+        default=None, description="Topic graph scoring and pruning configuration"
     )
 
 

@@ -38,6 +38,12 @@ from .llm import VerificationStatus, verify_provider_api_key
 from .metrics import set_trace_debug, trace
 from .topic_manager import load_or_build_topic_model, save_topic_model
 from .topic_model import TopicModel
+from .topic_quality import (
+    derive_topic_score_report_path,
+    prune_graph,
+    score_topic_graph,
+    write_topic_score_report,
+)
 from .tui import configure_tui, get_dataset_tui, get_tui
 from .update_checker import check_for_updates
 from .utils import (
@@ -393,6 +399,81 @@ def _initialize_topic_model(
             config=preparation.config,
             topics_save_as=options.topics_save_as,
         )
+
+    return topic_model
+
+
+def _score_and_prune_topic_model(
+    topic_model: TopicModel,
+    config: DeepFabricConfig,
+    topics_save_as: str | None = None,
+) -> TopicModel:
+    """Score and optionally prune a topic graph using config scoring settings.
+
+    Only applies to Graph models with a scoring config present.
+    Returns the (possibly pruned) topic model.
+    """
+    if not isinstance(topic_model, Graph):
+        return topic_model
+
+    scoring = config.topics.scoring
+    if scoring is None:
+        return topic_model
+
+    tui = get_tui()
+    graph_save_path = topics_save_as or config.topics.save_as or "topic_graph.json"
+
+    if scoring.prune:
+        graph, report = prune_graph(
+            topic_model,
+            parent_coherence=scoring.parent_coherence,
+            sibling_coherence_lower=scoring.sibling_coherence_lower,
+            sibling_coherence_upper=scoring.sibling_coherence_upper,
+            embedding_key=scoring.embedding_key,
+            embedding_model=scoring.embedding_model,
+        )
+
+        summary = report["summary"]
+        tui.success("Topic graph scored and pruned")
+        tui.console.print(f"  Nodes:         {summary['original_node_count']}")
+        tui.console.print(f"  Flagged:       {summary['flagged_node_count']}")
+        tui.console.print(f"  Pruned:        {summary['removed_node_count']}")
+        tui.console.print(f"  Remaining:     {summary['remaining_node_count']}")
+
+        # Save pruned graph as derived artifact, original stays untouched
+        p = Path(graph_save_path)
+        scored_path = str(p.with_stem(f"{p.stem}_scored"))
+        graph.save(scored_path)
+        tui.info(f"Pruned graph saved to {scored_path}")
+        tui.info(f"Original graph preserved at {graph_save_path}")
+
+        if scoring.save_report:
+            report_path = derive_topic_score_report_path(graph_save_path)
+            write_topic_score_report(report, report_path)
+            tui.info(f"Score report saved to {report_path}")
+
+        return graph
+
+    # score-only mode: generate report without pruning
+    report = score_topic_graph(
+        topic_model,
+        parent_coherence=scoring.parent_coherence,
+        sibling_coherence_lower=scoring.sibling_coherence_lower,
+        sibling_coherence_upper=scoring.sibling_coherence_upper,
+        embedding_key=scoring.embedding_key,
+        embedding_model=scoring.embedding_model,
+    )
+
+    summary = report["summary"]
+    tui.success("Topic graph scored (prune disabled)")
+    tui.console.print(f"  Nodes:         {summary['original_node_count']}")
+    tui.console.print(f"  Flagged:       {summary['flagged_node_count']}")
+    tui.console.print(f"  Would remove:  {summary['removed_node_count']}")
+
+    if scoring.save_report:
+        report_path = derive_topic_score_report_path(graph_save_path)
+        write_topic_score_report(report, report_path)
+        tui.info(f"Score report saved to {report_path}")
 
     return topic_model
 
@@ -854,6 +935,12 @@ def generate(  # noqa: PLR0913
         topic_model = _initialize_topic_model(
             preparation=preparation,
             options=options,
+        )
+
+        topic_model = _score_and_prune_topic_model(
+            topic_model,
+            config=preparation.config,
+            topics_save_as=options.topics_save_as,
         )
 
         if topic_only:

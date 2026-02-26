@@ -6,7 +6,7 @@ import tempfile
 import pytest
 import yaml
 
-from deepfabric.config import DeepFabricConfig
+from deepfabric.config import DeepFabricConfig, ScoringConfig
 from deepfabric.exceptions import ConfigurationError
 
 
@@ -275,6 +275,84 @@ def test_old_format_rejected():
         # Check that the migration message is included
         assert "Configuration format has changed" in str(exc_info.value)
         assert "output.system_prompt" in str(exc_info.value)
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def test_scoring_config_defaults():
+    """ScoringConfig should have sensible defaults."""
+    sc = ScoringConfig()
+    assert sc.parent_coherence == 0.25  # noqa: PLR2004
+    assert sc.sibling_coherence_lower == 0.2  # noqa: PLR2004
+    assert sc.sibling_coherence_upper == 0.68  # noqa: PLR2004
+    assert sc.prune is True
+    assert sc.save_report is False
+    assert sc.embedding_model == "all-MiniLM-L6-v2"
+
+
+def test_scoring_config_from_yaml():
+    """Scoring section in YAML should be parsed into TopicsConfig."""
+    config_dict = {
+        "topics": {
+            "prompt": "Test",
+            "mode": "graph",
+            "scoring": {
+                "parent_coherence": 0.3,
+                "sibling_coherence_lower": 0.15,
+                "sibling_coherence_upper": 0.7,
+                "prune": False,
+                "save_report": True,
+            },
+        },
+        "generation": {"system_prompt": "Test"},
+        "output": {"save_as": "test.jsonl"},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_dict, f)
+        temp_path = f.name
+
+    try:
+        config = DeepFabricConfig.from_yaml(temp_path)
+        assert config.topics.scoring is not None
+        assert config.topics.scoring.parent_coherence == 0.3  # noqa: PLR2004
+        assert config.topics.scoring.sibling_coherence_lower == 0.15  # noqa: PLR2004
+        assert config.topics.scoring.sibling_coherence_upper == 0.7  # noqa: PLR2004
+        assert config.topics.scoring.prune is False
+        assert config.topics.scoring.save_report is True
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def test_scoring_config_rejects_inverted_sibling_thresholds():
+    """sibling_coherence_lower must be less than sibling_coherence_upper."""
+    with pytest.raises(ValueError, match="sibling_coherence_lower.*must be less than"):
+        ScoringConfig(sibling_coherence_lower=0.7, sibling_coherence_upper=0.3)
+
+
+def test_scoring_config_rejects_equal_sibling_thresholds():
+    """Equal sibling coherence bounds are also rejected."""
+    with pytest.raises(ValueError, match="sibling_coherence_lower.*must be less than"):
+        ScoringConfig(sibling_coherence_lower=0.5, sibling_coherence_upper=0.5)
+
+
+def test_scoring_config_absent_is_none():
+    """Config without scoring section should have scoring=None."""
+    config_dict = {
+        "topics": {"prompt": "Test", "mode": "graph"},
+        "generation": {"system_prompt": "Test"},
+        "output": {"save_as": "test.jsonl"},
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        yaml.dump(config_dict, f)
+        temp_path = f.name
+
+    try:
+        config = DeepFabricConfig.from_yaml(temp_path)
+        assert config.topics.scoring is None
     finally:
         if os.path.exists(temp_path):
             os.unlink(temp_path)

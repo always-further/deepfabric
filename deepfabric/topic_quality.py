@@ -219,13 +219,13 @@ def derive_topic_threshold_optimization_report_path(graph_path: str) -> str:
 
 
 def _build_topic_quality_context(
-    graph_path: str,
+    graph_or_path: str | Graph,
     *,
     embedding_key: str = "embedding",
     embedding_model: str = "all-MiniLM-L6-v2",
 ) -> dict[str, Any]:
     """Load graph and precompute per-node coherence metrics once."""
-    graph = Graph.load(graph_path)
+    graph = Graph.load(graph_or_path) if isinstance(graph_or_path, str) else graph_or_path
     depths = _compute_depths(graph)
     max_depth = max(depths.values(), default=0)
 
@@ -463,7 +463,7 @@ def _evaluate_thresholds(
 
 
 def score_topic_graph(
-    graph_path: str,
+    graph_or_path: str | Graph,
     *,
     parent_coherence: float = DEFAULT_THRESHOLDS["parent_coherence"],
     sibling_coherence_lower: float = DEFAULT_THRESHOLDS["sibling_coherence_lower"],
@@ -473,7 +473,7 @@ def score_topic_graph(
 ) -> dict[str, Any]:
     """Score a topic graph using coherence metrics and pruning thresholds."""
     context = _build_topic_quality_context(
-        graph_path,
+        graph_or_path,
         embedding_key=embedding_key,
         embedding_model=embedding_model,
     )
@@ -658,3 +658,45 @@ def write_topic_score_report(report: dict[str, Any], output_path: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
+
+
+def prune_graph(
+    graph: Graph,
+    *,
+    parent_coherence: float = DEFAULT_THRESHOLDS["parent_coherence"],
+    sibling_coherence_lower: float = DEFAULT_THRESHOLDS["sibling_coherence_lower"],
+    sibling_coherence_upper: float = DEFAULT_THRESHOLDS["sibling_coherence_upper"],
+    embedding_key: str = "embedding",
+    embedding_model: str = "all-MiniLM-L6-v2",
+) -> tuple[Graph, dict[str, Any]]:
+    """Score and prune a Graph in-place using the 4-step coherence pipeline.
+
+    Mutates the input Graph by removing flagged subtrees via
+    Graph.remove_subtree(). Returns the same (now pruned) Graph object
+    and the score report dict.
+    """
+    context = _build_topic_quality_context(
+        graph,
+        embedding_key=embedding_key,
+        embedding_model=embedding_model,
+    )
+    report = _evaluate_thresholds(
+        context,
+        parent_coherence=parent_coherence,
+        sibling_coherence_lower=sibling_coherence_lower,
+        sibling_coherence_upper=sibling_coherence_upper,
+        include_metrics_per_node=True,
+    )
+
+    removed_ids = {int(nid) for nid in report["removed_node_ids"]}
+    # Root node must never be pruned — remove_subtree would raise ValueError.
+    # The scoring steps cannot flag the root (cosine similarity to itself is
+    # 1.0, and it has no parent/siblings), but guard defensively.
+    removed_ids.discard(graph.root.id)
+    # Remove in deterministic order; remove_subtree handles descendants,
+    # so skip IDs already removed by a prior subtree removal.
+    for node_id in sorted(removed_ids):
+        if node_id in graph.nodes:
+            graph.remove_subtree(node_id)
+
+    return graph, report
