@@ -96,7 +96,7 @@ def handle_gemini_error(e: Exception, provider: str, model_name: str) -> DataSet
 
 def handle_provider_error(e: Exception, provider: str, model_name: str) -> DataSetGeneratorError:
     """Handle errors for any provider with appropriate error handler."""
-    if provider in ["openai", "ollama"]:
+    if provider in ["openai", "ollama", "azure"]:
         return handle_openai_error(e, provider, model_name)
     if provider == "anthropic":
         return handle_anthropic_error(e, provider, model_name)

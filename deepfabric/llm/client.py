@@ -555,6 +555,7 @@ PROVIDER_API_KEY_MAP: dict[str, list[str]] = {
     "anthropic": ["ANTHROPIC_API_KEY"],
     "gemini": ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
     "openrouter": ["OPENROUTER_API_KEY"],
+    "azure": ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     "ollama": [],  # No API key required
     # Test providers for unit tests, no API key required
     "test": [],
@@ -1154,6 +1155,28 @@ def make_outlines_model(provider: str, model_name: str, **kwargs) -> Any:
             client = genai.Client(api_key=api_key)
             return GeminiModel(client, model_name)
 
+        if provider == "azure":
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+            if not api_key:
+                raise DataSetGeneratorError(
+                    "AZURE_OPENAI_API_KEY environment variable is not set. "
+                    "Please set it to your Azure OpenAI API key."
+                )
+            if not azure_endpoint:
+                raise DataSetGeneratorError(
+                    "AZURE_OPENAI_ENDPOINT environment variable is not set. "
+                    "Please set it to your Azure OpenAI endpoint URL "
+                    "(e.g., https://your-resource.openai.azure.com/)"
+                )
+
+            client = openai.OpenAI(
+                api_key=api_key,
+                base_url=f"{azure_endpoint.rstrip('/')}/openai",
+            )
+            return outlines.from_openai(client, model_name)
+
         _raise_unsupported_provider_error(provider)
 
     except DataSetGeneratorError:
@@ -1209,6 +1232,28 @@ def make_async_outlines_model(provider: str, model_name: str, **kwargs) -> Any |
             # Use direct async Gemini API for better structured output reliability
             client = genai.Client(api_key=api_key)
             return GeminiModel(client, model_name)
+
+        if provider == "azure":
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+            if not api_key:
+                raise DataSetGeneratorError(
+                    "AZURE_OPENAI_API_KEY environment variable is not set. "
+                    "Please set it to your Azure OpenAI API key."
+                )
+            if not azure_endpoint:
+                raise DataSetGeneratorError(
+                    "AZURE_OPENAI_ENDPOINT environment variable is not set. "
+                    "Please set it to your Azure OpenAI endpoint URL "
+                    "(e.g., https://your-resource.openai.azure.com/)"
+                )
+
+            client = openai.AsyncOpenAI(
+                api_key=api_key,
+                base_url=f"{azure_endpoint.rstrip('/')}/openai",
+            )
+            return outlines.from_openai(client, model_name)
 
     except DataSetGeneratorError:
         raise

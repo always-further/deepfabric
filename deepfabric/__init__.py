@@ -30,6 +30,7 @@ from .generator import DataSetGenerator, DataSetGeneratorConfig
 from .graph import Graph, GraphConfig
 from .hf_hub import HFUploader
 from .loader import load_dataset
+from .sdk import DeepFabricSDK, GenerationResult
 from .training import DeepFabricCallback, MetricsSender
 from .tree import Tree, TreeConfig
 
@@ -43,6 +44,8 @@ __all__ = [
     "DataSetGenerator",
     "DataSetGeneratorConfig",
     "DeepFabricConfig",
+    "DeepFabricSDK",
+    "GenerationResult",
     "HFUploader",
     "cli",
     # Dataset loading

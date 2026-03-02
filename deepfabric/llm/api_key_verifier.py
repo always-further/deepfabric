@@ -357,6 +357,101 @@ def verify_openrouter_api_key(api_key: str | None = None) -> VerificationResult:
         )
 
 
+def verify_azure_openai_api_key(
+    api_key: str | None = None, endpoint: str | None = None
+) -> VerificationResult:
+    """Verify Azure OpenAI API key and endpoint by making a lightweight API call.
+
+    Args:
+        api_key: Optional API key to verify. If not provided, uses AZURE_OPENAI_API_KEY env var.
+        endpoint: Optional endpoint URL. If not provided, uses AZURE_OPENAI_ENDPOINT env var.
+
+    Returns:
+        VerificationResult with status and details
+    """
+    api_key_env_var = "AZURE_OPENAI_API_KEY"
+    endpoint_env_var = "AZURE_OPENAI_ENDPOINT"
+
+    if api_key is None:
+        api_key = os.getenv(api_key_env_var)
+    if endpoint is None:
+        endpoint = os.getenv(endpoint_env_var)
+
+    if not api_key:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.MISSING,
+            message=f"{api_key_env_var} environment variable is not set",
+            api_key_env_var=api_key_env_var,
+        )
+
+    if not endpoint:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.MISSING,
+            message=(
+                f"{endpoint_env_var} environment variable is not set. "
+                f"Please set it to your Azure OpenAI endpoint URL "
+                f"(e.g., https://your-resource.openai.azure.com/)"
+            ),
+            api_key_env_var=endpoint_env_var,
+        )
+
+    try:
+        # Azure OpenAI uses OpenAI-compatible API
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url=f"{endpoint.rstrip('/')}/openai",
+        )
+        # List models to verify auth and connection
+        models = client.models.list()
+        model_count = sum(1 for _ in models)
+
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.VALID,
+            message="API key and endpoint are valid",
+            api_key_env_var=api_key_env_var,
+            details={"models_available": model_count, "endpoint": endpoint},
+        )
+
+    except openai.AuthenticationError as e:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.INVALID,
+            message="Invalid API key for Azure OpenAI",
+            api_key_env_var=api_key_env_var,
+            details={"error": str(e)},
+        )
+
+    except openai.RateLimitError as e:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.RATE_LIMITED,
+            message="Rate limit exceeded (key may be valid but quota exhausted)",
+            api_key_env_var=api_key_env_var,
+            details={"error": str(e)},
+        )
+
+    except openai.APIConnectionError as e:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.CONNECTION_ERROR,
+            message=f"Failed to connect to Azure OpenAI at {endpoint}",
+            api_key_env_var=api_key_env_var,
+            details={"error": str(e), "endpoint": endpoint},
+        )
+
+    except Exception as e:
+        return VerificationResult(
+            provider="azure",
+            status=VerificationStatus.UNKNOWN_ERROR,
+            message=f"Unexpected error: {e}",
+            api_key_env_var=api_key_env_var,
+            details={"error": str(e), "error_type": type(e).__name__},
+        )
+
+
 def verify_ollama_connection(base_url: str | None = None) -> VerificationResult:
     """Verify Ollama is running and accessible.
 
@@ -416,9 +511,9 @@ def verify_provider_api_key(
     """Verify an API key for a specific provider.
 
     Args:
-        provider: Provider name (openai, anthropic, gemini, openrouter, ollama)
+        provider: Provider name (openai, anthropic, gemini, openrouter, ollama, azure)
         api_key: Optional API key to verify. If not provided, uses environment variables.
-        **kwargs: Additional provider-specific options (e.g., base_url for ollama)
+        **kwargs: Additional provider-specific options (e.g., base_url for ollama, endpoint for azure)
 
     Returns:
         VerificationResult with status and details
@@ -431,6 +526,7 @@ def verify_provider_api_key(
         "anthropic": lambda: verify_anthropic_api_key(api_key),
         "gemini": lambda: verify_gemini_api_key(api_key),
         "openrouter": lambda: verify_openrouter_api_key(api_key),
+        "azure": lambda: verify_azure_openai_api_key(api_key, kwargs.get("endpoint")),
         "ollama": lambda: verify_ollama_connection(kwargs.get("base_url")),
     }
 
