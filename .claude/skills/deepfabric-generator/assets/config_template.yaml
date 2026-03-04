@@ -1,0 +1,153 @@
+#####################################################################
+# DeepFabric Configuration Template
+#####################################################################
+# This template uses the current config format with three main
+# sections: topics, generation, and output.
+#
+# For more information, visit: https://docs.deepfabric.dev/
+#####################################################################
+
+#####################################################################
+# TOPICS: Generates the topic tree/graph that guides sample generation
+#####################################################################
+topics:
+  # REQUIRED: Root prompt that defines the domain
+  prompt: "Your domain topic here"
+
+  # OPTIONS: tree | graph
+  # "tree": Hierarchical breakdown, ideal for clear categorical structures
+  # "graph": Allows cross-connections, better for interconnected domains
+  mode: graph
+
+  # Optional: prompt style for graph mode
+  # prompt_style: anchored
+
+  # Optional: System prompt for the LLM during topic generation
+  # Omit or leave commented out if not needed — an empty string can cause
+  # unexpected behavior with some providers.
+  # system_prompt: "Your custom instructions for topic generation here"
+
+  # Depth of the topic tree/graph (number of levels)
+  # Total topics is approximately degree^depth
+  # e.g. depth=3, degree=3 -> ~27 topics; depth=3, degree=2 -> ~8 topics
+  depth: 3
+
+  # Number of subtopics per parent node (branching factor)
+  degree: 3
+
+  # Filepath to save the generated topics
+  # NOTE: This path is relative to where `deepfabric generate` is run from,
+  # NOT relative to this config file. Run from the same directory as this file.
+  save_as: "topics.jsonl"
+
+  # LLM configuration for topic generation
+  llm:
+    # OPTIONS: "openai" | "anthropic" | "gemini" | "ollama" | "together" | "groq"
+    provider: "gemini"          # For Anthropic: provider: "anthropic"
+    model: "gemini-2.5-flash"   # For Anthropic: model: "claude-sonnet-4-6"
+    temperature: 0.8
+
+#####################################################################
+# GENERATION: Creates training samples from topics
+#####################################################################
+generation:
+  # System prompt that instructs the LLM how to generate samples
+  system_prompt: "Generate clear, educational Q&A pairs."
+
+  # Additional instructions for sample generation
+  instructions: "Create diverse questions and detailed answers."
+
+  # Conversation structure configuration
+  conversation:
+    # OPTIONS: basic | cot
+    type: basic
+
+    # Only used when type is "cot"
+    # OPTIONS: freetext | agent
+    # Use "agent" when tools are configured
+    # reasoning_style: agent
+
+  max_retries: 3
+  # max_tokens: 2000
+
+  #################################################################
+  # TOOLS CONFIGURATION (Optional — for mock files / tool use)
+  #################################################################
+  # Uncomment this section when the user wants mock files or
+  # tool-use agent conversations. Requires a running Spin server:
+  #   cd tools-sdk && docker compose up -d
+  #
+  # When tools are configured, set conversation.type to "cot"
+  # and conversation.reasoning_style to "agent".
+  #
+  # IMPORTANT: All keys (spin_endpoint, components, scenario_seed,
+  # max_per_query, max_agent_steps) are siblings under "tools:".
+  # Only "files:" goes under scenario_seed.
+  #################################################################
+  # tools:
+  #   spin_endpoint: "http://localhost:3030"
+  #   components:
+  #     builtin:
+  #       - read_file
+  #       - write_file
+  #       - list_files
+  #   scenario_seed:
+  #     files:
+  #       "main.py": |
+  #         def greet(name):
+  #             return f"Hello, {name}!"
+  #       "Dockerfile": |
+  #         FROM python:3.9-slim
+  #         COPY . /app
+  #         RUN pip install -r /app/requirements.txt
+  #   max_per_query: 3
+  #   max_agent_steps: 5
+
+  # LLM configuration for generation
+  # IMPORTANT: Must match the provider chosen in topics.llm above
+  llm:
+    provider: "gemini"          # For Anthropic: provider: "anthropic"
+    model: "gemini-2.5-flash"   # For Anthropic: model: "claude-sonnet-4-6"
+    temperature: 0.7
+
+#####################################################################
+# OUTPUT: Final dataset configuration
+#####################################################################
+output:
+  # System prompt that goes INTO the training data
+  # This is what the trained model will see as its system message
+  system_prompt: |
+    You are a helpful AI assistant that provides accurate and informative responses.
+
+  include_system_message: true
+  num_samples: 50
+  batch_size: 5
+  # NOTE: This path is relative to where `deepfabric generate` is run from.
+  save_as: "dataset.jsonl"
+
+#####################################################################
+# OPTIONAL INTEGRATIONS
+#####################################################################
+# huggingface:
+#   repository: "username/dataset-name"
+#   tags:
+#     - "deepfabric"
+#     - "synthetic"
+
+#####################################################################
+# COMMAND LINE USAGE
+#####################################################################
+#
+# Generate dataset:
+#   deepfabric generate config.yaml
+#
+# Generate with overrides:
+#   deepfabric generate config.yaml --num-samples 100 --batch-size 5
+#
+# Load existing topics:
+#   deepfabric generate config.yaml --topics-load topics.jsonl
+#
+# Generate topics only:
+#   deepfabric generate config.yaml --topic-only
+#
+####################################################################
