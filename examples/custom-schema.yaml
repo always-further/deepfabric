@@ -1,0 +1,51 @@
+#####################################################################
+# Custom Structured Output Configuration
+#####################################################################
+# Demonstrates generation.output_schema: instead of the default
+# conversation (messages) format, each sample is generated directly
+# into a user-defined JSON Schema via constrained decoding.
+#####################################################################
+
+# Topic generation - creates a graph of related topics
+topics:
+  prompt: "Consumer electronics products"
+  mode: graph
+  prompt_style: anchored
+  depth: 2
+  degree: 4
+  save_as: "custom-schema-topics.jsonl"
+
+  llm:
+    provider: "openai"
+    model: "gpt-4o"
+    temperature: 0.8
+
+# Data generation - generates directly into output_schema, bypassing
+# the conversation/messages format entirely.
+generation:
+  system_prompt: "Extract structured product information for the given topic."
+  instructions: "Populate every field with realistic, specific values."
+
+  output_schema:
+    type: object
+    properties:
+      product_name: {type: string}
+      category: {type: string}
+      price_usd: {type: number}
+      in_stock: {type: boolean}
+    required: [product_name, category, price_usd, in_stock]
+
+  max_retries: 3
+  sample_retries: 2
+
+  llm:
+    provider: "openai"
+    model: "gpt-4o"
+    temperature: 0.5
+
+# Output configuration
+output:
+  format: custom   # records match generation.output_schema, not messages
+  num_samples: 10
+  batch_size: 3
+  save_as: "custom-schema-dataset.jsonl"
