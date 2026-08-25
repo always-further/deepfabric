@@ -145,7 +145,41 @@ Controls sample generation.
 | `max_retries` | int | 3 | Retries on API failures |
 | `sample_retries` | int | 2 | Retries on validation failures |
 | `max_tokens` | int | 2000 | Max tokens per generation |
+| `output_schema` | object | - | Custom JSON Schema for structured output (see below) |
 | `llm` | object | - | Override shared LLM settings |
+
+#### generation.output_schema (Custom Structured Output)
+
+By default, DeepFabric generates samples in a conversation format (`basic` or `cot`, made up of messages). Setting `output_schema` bypasses the conversation format entirely: DeepFabric generates directly into your JSON Schema via constrained decoding, and each output record matches that schema instead of the OpenAI messages format.
+
+```yaml title="Example: Custom schema output"
+generation:
+  system_prompt: "Extract structured product information from the topic."
+  instructions: "Populate every field with realistic, specific values."
+  output_schema:
+    type: object
+    properties:
+      product_name: {type: string}
+      category: {type: string}
+      price_usd: {type: number}
+      in_stock: {type: boolean}
+    required: [product_name, category, price_usd, in_stock]
+
+output:
+  format: custom   # documents intent; the switch is driven by output_schema
+  num_samples: 100
+  batch_size: 5
+  save_as: "products.jsonl"
+```
+
+Set `output.format: custom` alongside it to document the intent in your config — see the `output` section below for how `format` is used.
+
+!!! warning "Limitations"
+    - **No field-level validation.** DeepFabric confirms the model's response is valid JSON but does not check it against `required`, types, `enum`, or nested `properties` in your schema. Malformed or incomplete-but-valid JSON will pass through into the dataset.
+    - **No example demonstrations.** Unlike the standard conversation prompts, the custom-schema prompt does not support `generation.example_data`; example demonstrations have no effect in this mode.
+    - **Constrained decoding depends on the provider.** OpenAI, OpenRouter, Ollama, and local providers enforce the schema via [Outlines](https://github.com/dottxt-ai/outlines); Gemini and Anthropic use their native structured-output APIs. Enforcement quality varies by provider and model.
+    - **No CLI override.** `output_schema` can only be set via YAML config or the Python API (`DataSetGenerator(output_schema={...}, ...)`); there is no `--output-schema` flag.
+    - **Retries follow the same validation-error heuristics** as normal generation (`sample_retries`). If a schema-related error isn't recognized as a validation error, it fails immediately instead of retrying.
 
 #### generation.conversation
 
@@ -199,6 +233,7 @@ Controls final dataset.
 | `num_samples` | int \| string | required | Total samples: integer, `"auto"`, or percentage like `"50%"` |
 | `batch_size` | int | 1 | Parallel generation concurrency (number of simultaneous LLM calls) |
 | `save_as` | string | required | Output file path |
+| `format` | string | "messages" | `messages` (OpenAI chat format) or `custom` (matches `generation.output_schema`) |
 | `checkpoint` | object | - | Checkpoint configuration (see below) |
 
 !!! tip "Auto and Percentage Samples"
